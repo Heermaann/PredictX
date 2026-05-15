@@ -624,9 +624,40 @@ function bnSearch(btn) {
   document.querySelectorAll('.bn-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   closeSidebar();
-  // Focus search input
-  const si = document.getElementById('search-input') || document.querySelector('.nav-search input');
-  if (si) { si.focus(); si.scrollIntoView({behavior:'smooth'}); }
+  closeBetslip();
+  // On mobile open the dedicated search overlay; on desktop focus the nav input
+  if (window.innerWidth <= 600) {
+    openMobSearch();
+  } else {
+    const si = document.getElementById('search-inp') || document.querySelector('.nav-search input');
+    if (si) { si.focus(); si.scrollIntoView({behavior:'smooth'}); }
+  }
+}
+
+function openMobSearch() {
+  const overlay = document.getElementById('mob-search-overlay');
+  if (!overlay) return;
+  overlay.classList.add('open');
+  setTimeout(() => {
+    const inp = document.getElementById('mob-search-inp');
+    if (inp) inp.focus();
+  }, 100);
+}
+
+function closeMobSearch() {
+  const overlay = document.getElementById('mob-search-overlay');
+  if (overlay) overlay.classList.remove('open');
+  clearSearch();
+  // Restore home button active state
+  document.querySelectorAll('.bn-btn').forEach((b,i) => b.classList.toggle('active', i===0));
+}
+
+function clearMobSearch() {
+  const inp = document.getElementById('mob-search-inp');
+  if (inp) { inp.value = ''; inp.focus(); }
+  const drop = document.getElementById('mob-search-drop');
+  if (drop) drop.style.display = 'none';
+  clearSearch();
 }
 function bnSports(btn) {
   document.querySelectorAll('.bn-btn').forEach(b => b.classList.remove('active'));
@@ -1520,15 +1551,29 @@ function sortBy(v) { S.sort=v; applyFilters(); }
 ════════════════════════════════════════════════ */
 let _searchIdx = -1;
 
+function getSearchDrop() {
+  // Returns the active search dropdown: mobile overlay one if open, else desktop
+  const mobOverlay = document.getElementById('mob-search-overlay');
+  if (mobOverlay && mobOverlay.classList.contains('open')) {
+    return document.getElementById('mob-search-drop');
+  }
+  return document.getElementById('search-drop');
+}
+
 function onSearch(q) {
   S.searchQ = q.trim();
+  // Sync both inputs
+  const desktopInp = document.getElementById('search-inp');
+  const mobInp     = document.getElementById('mob-search-inp');
+  if (desktopInp && document.activeElement !== desktopInp) desktopInp.value = q;
+  if (mobInp     && document.activeElement !== mobInp)     mobInp.value     = q;
   if (!q.trim()) { hideSearchDrop(); applyFilters(); return; }
   showSearchDrop();
   renderSearchDrop(q.trim());
 }
 
 function renderSearchDrop(q) {
-  const drop = document.getElementById('search-drop');
+  const drop = getSearchDrop();
   if (!drop) return;
   const lq = q.toLowerCase();
   _searchIdx = -1;
@@ -1586,7 +1631,7 @@ function highlight(text, q) {
 
 function searchPickEvent(idx) {
   clearSearch();
-  // Switch to list view first, then open detail
+  closeMobSearch();
   S.navMode = 'home';
   S.searchQ = '';
   applyFilters();
@@ -1594,30 +1639,37 @@ function searchPickEvent(idx) {
 }
 
 function showSearchDrop() {
-  const drop = document.getElementById('search-drop');
+  const drop = getSearchDrop();
   if (drop) drop.style.display = 'block';
   const inp = document.getElementById('search-inp');
   if (inp) inp.setAttribute('aria-expanded', 'true');
-  // Close when clicking outside
   setTimeout(() => document.addEventListener('click', hideSearchOnClick), 10);
 }
 
 function hideSearchDrop() {
-  const drop = document.getElementById('search-drop');
-  if (drop) drop.style.display = 'none';
+  // Hide both dropdowns
+  const d1 = document.getElementById('search-drop');
+  const d2 = document.getElementById('mob-search-drop');
+  if (d1) d1.style.display = 'none';
+  if (d2) d2.style.display = 'none';
   const inp = document.getElementById('search-inp');
   if (inp) inp.setAttribute('aria-expanded', 'false');
   document.removeEventListener('click', hideSearchOnClick);
 }
 
 function hideSearchOnClick(e) {
-  const wrap = document.getElementById('search-wrap');
-  if (wrap && !wrap.contains(e.target)) hideSearchDrop();
+  const wrap    = document.getElementById('search-wrap');
+  const mobOver = document.getElementById('mob-search-overlay');
+  if (wrap    && wrap.contains(e.target))    return;
+  if (mobOver && mobOver.contains(e.target)) return;
+  hideSearchDrop();
 }
 
 function clearSearch() {
-  const inp = document.getElementById('search-inp');
-  if (inp) inp.value = '';
+  const inp  = document.getElementById('search-inp');
+  const mobInp = document.getElementById('mob-search-inp');
+  if (inp)    inp.value    = '';
+  if (mobInp) mobInp.value = '';
   S.searchQ = '';
   hideSearchDrop();
   applyFilters();
