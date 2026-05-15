@@ -1648,21 +1648,84 @@ input,select,textarea{font-family:var(--font)}
   -webkit-tap-highlight-color: transparent;
 }
 .sb-close-btn:active { background: var(--bg4); }
+/* ── Betslip close button (mobile) ── */
+.slip-head-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
 .slip-close-mobile {
   display: none;
-  position: absolute; top: 14px; right: 50px;
   width: 30px; height: 30px; border-radius: 8px;
   background: var(--bg3); border: 1px solid var(--border);
   color: var(--text2); font-size: 16px; cursor: pointer;
   align-items: center; justify-content: center;
+  flex-shrink: 0;
   -webkit-tap-highlight-color: transparent;
-  z-index: 1;
 }
 .slip-close-mobile:active { background: var(--bg4); }
 @media (max-width: 900px) { .sb-close-row { display: flex; } }
 @media (max-width: 600px) {
   .slip-close-mobile { display: flex; }
   .slip-head { position: relative; }
+}
+
+/* ── Mobile search overlay ── */
+.mob-search-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 400;
+  background: var(--bg);
+  flex-direction: column;
+}
+.mob-search-overlay.open { display: flex; }
+
+.mob-search-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.mob-search-back {
+  width: 36px; height: 36px;
+  border: none; background: transparent;
+  color: var(--text1); font-size: 20px;
+  cursor: pointer; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  -webkit-tap-highlight-color: transparent;
+}
+.mob-search-inp {
+  flex: 1;
+  height: 38px;
+  padding: 0 10px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--bg3);
+  color: var(--text1);
+  font-size: 15px;
+  outline: none;
+}
+.mob-search-inp:focus { border-color: var(--border2); }
+.mob-search-clear {
+  width: 30px; height: 30px;
+  border: none; background: transparent;
+  color: var(--text3); font-size: 16px;
+  cursor: pointer; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  -webkit-tap-highlight-color: transparent;
+}
+.mob-search-drop {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  position: static !important;
+  box-shadow: none !important;
+  border: none !important;
+  border-radius: 0 !important;
+  max-height: none !important;
 }
 
 /* ════════════════════════════════════════════════════
