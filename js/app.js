@@ -151,7 +151,7 @@ async function oddsApiFetch(sport, force=false) {
     oddsFormat: 'decimal',
     force:      force ? '1' : '0',
   });
-  const res = await fetch('/.netlify/functions/proxy?' + params.toString(), {
+  const res = await fetch('/api/proxy?' + params.toString(), {
     signal: AbortSignal.timeout(20000)
   });
   return res;
@@ -161,7 +161,7 @@ async function oddsApiFetch(sport, force=false) {
 async function fetchEventMarkets(sport, eventId, markets) {
   const params = new URLSearchParams({ sport, eventId, markets, regions: 'eu,uk,us' });
   try {
-    const res = await fetch('/.netlify/functions/proxy?' + params.toString(), {
+    const res = await fetch('/api/proxy?' + params.toString(), {
       signal: AbortSignal.timeout(15000)
     });
     if (!res.ok) return null;
@@ -1987,9 +1987,10 @@ const _SB = supabase.createClient('https://ghgkvtdhuqfpigbtzefz.supabase.co', 'e
 
 // localStorage sigue usándose solo para preferencias de UI (tema, deporte)
 const DB = {
-  get: k => { try { return JSON.parse(localStorage.getItem('px_'+k)||'null'); } catch(e){ return null; } },
-  set: (k,v) => localStorage.setItem('px_'+k, JSON.stringify(v)),
-  del: k => localStorage.removeItem('px_'+k),
+  get:    k => { try { return JSON.parse(localStorage.getItem('px_'+k)||'null'); } catch(e){ return null; } },
+  set:    (k,v) => localStorage.setItem('px_'+k, JSON.stringify(v)),
+  del:    k => localStorage.removeItem('px_'+k),
+  remove: k => localStorage.removeItem('px_'+k),
 };
 
 /* ── Session ── */
@@ -2092,7 +2093,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const email = sbSession.user.email;
     const profile = await loadProfile(email);
     const name = profile?.name || email.split('@')[0];
-    SESSION = { id: sbSession.user.id, email, name };
+    SESSION = { id: sbSession.user.id, email, name, role: profile?.role || 'user' };
     onLoginSuccess(false);
   } else {
     // Fallback: check localStorage session — only restore if Supabase has a live token
@@ -2110,6 +2111,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
   loadMarkets();
+  // Load site config from Supabase (for config enforcement)
+  await loadSiteConfig();
+  // Show maintenance banner if active and user is not owner
+  const cfg = getSiteConfig();
+  if (cfg.maintenance && !isOwner()) {
+    showToast('🔧 Sitio en mantenimiento — algunas funciones no disponibles');
+  }
 });
 
 /* ── Show/hide auth forms ── */
@@ -2256,7 +2264,7 @@ async function doLogin() {
   const profile = await loadProfile(email);
   const name = profile?.name || authData.user?.user_metadata?.name || email.split('@')[0];
 
-  SESSION = { id: authData.user?.id, email, name };
+  SESSION = { id: authData.user?.id, email, name, role: profile?.role || 'user' };
   if (remember) DB.set('session', SESSION);
 
   if (btn) { btn.disabled = false; btn.textContent = 'Entrar →'; }
@@ -2446,6 +2454,13 @@ window.openAdmin = function() {
 /* ── PAYMENT system ── */
 function openPayModal(mode) {
   if (!SESSION) { openAuthGate(); return; }
+  const cfg = getSiteConfig();
+  if (mode === 'deposit' && !cfg.allowDeposits) {
+    showToast('⛔ Los depósitos están temporalmente desactivados'); return;
+  }
+  if (cfg.maintenance && !isOwner()) {
+    showToast('🔧 Sitio en mantenimiento — operaciones no disponibles'); return;
+  }
   document.getElementById('pay-modal-title').textContent = mode==='withdraw' ? 'Retirar fondos' : 'Depositar fondos';
   document.getElementById('pay-step1').style.display = 'block';
   document.getElementById('pay-step2').style.display = 'none';
@@ -2542,7 +2557,7 @@ async function creditBalance(amt, method, orderId) {
 async function izipayRequestToken(amt) {
   const email = SESSION?.email || 'cliente@predictx.com';
   const orderId = 'PX-' + Date.now();
-  const resp = await fetch('/.netlify/functions/izipay-token', {
+  const resp = await fetch('/api/izipay-token', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ amount: amt, currency: 'PEN', email, orderId }),
@@ -2552,66 +2567,89 @@ async function izipayRequestToken(amt) {
   return data; // { formToken, mode, shopId, publicKey }
 }
 
-/* ─── Init Izipay widget when card step opens ─── */
+/* ─── Init Izipay widget cuando se abre el paso de tarjeta ─── */
 async function initIzipayForm() {
-  const amt = parseFloat(document.getElementById('pay-amount').value) || 0;
+  const amt   = parseFloat(document.getElementById('pay-amount').value) || 0;
   const izAmt = document.getElementById('iz-amt-show');
   const izErr = document.getElementById('iz-error');
   if (izAmt) izAmt.textContent = 'S/ ' + amt.toFixed(2);
   if (izErr) { izErr.classList.remove('show'); izErr.textContent = ''; }
 
+  // Limpiar formulario anterior si existe
+  const container = document.getElementById('iz-form-container');
+  if (container) container.innerHTML =
+    '<div class="kr-pan"></div><div class="kr-expiry"></div>' +
+    '<div class="kr-security-code"></div>' +
+    '<button class="kr-payment-button">Pagar con tarjeta →</button>';
+
   try {
-    const { formToken, mode, publicKey } = await izipayRequestToken(amt);
-    // Update env badge
+    const { formToken, publicKey, mode } = await izipayRequestToken(amt);
+
+    // Actualizar badge de entorno
     const badge = document.getElementById('iz-env-badge');
     const hint  = document.getElementById('iz-test-hint');
     if (badge) {
-      badge.className = 'izipay-env-badge' + (mode==='prod'?' prod':'');
-      badge.textContent = mode === 'prod' ? '✅ Modo Producción' : '🧪 Modo TEST — usa tarjeta de prueba';
+      badge.className = 'izipay-env-badge' + (mode === 'prod' ? ' prod' : '');
+      badge.textContent = mode === 'prod'
+        ? '✅ Modo Producción'
+        : '🧪 Modo TEST — usa tarjeta de prueba';
     }
     if (hint) hint.style.display = mode === 'prod' ? 'none' : 'block';
 
-    // Set form token in Izipay SDK
+    // Cargar SDK de Izipay con la clave pública correcta
     KRGlue.loadLibrary('https://static.micuentaweb.pe', publicKey)
-      .then(({ KR }) => KR.setFormConfig({ formToken, 'kr-language': 'es-PE' }))
+      .then(({ KR }) => KR.setFormConfig({
+        formToken,
+        'kr-language': 'es-PE',
+      }))
       .then(({ KR }) => KR.addForm('#iz-form-container'))
-      .then(({ KR }) => KR.showForm())
+      .then(({ KR }) => KR.showForm(KR.result))
       .then(({ KR }) => {
-        // Listen for successful payment
-        KR.onSubmit(async (result) => {
-          // Verify server-side
-          const vResp = await fetch('/.netlify/functions/izipay-verify', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              kr_answer: result.clientAnswer,
-              kr_hash:   result.hash,
-              kr_hash_algorithm: result.hashAlgorithm,
-            }),
-          });
-          const vData = await vResp.json();
-          if (vData.paid) {
-            const paidAmt = (vData.amount || amt * 100) / 100;
-            await creditBalance(paidAmt, 'IZIPAY', vData.orderId);
-          } else {
-            const izErr2 = document.getElementById('iz-error');
-            if (izErr2) { izErr2.textContent = '❌ Pago no verificado: ' + (vData.error || vData.status); izErr2.classList.add('show'); }
+        // Pago completado — verificar server-side
+        KR.onSubmit(async (paymentData) => {
+          try {
+            const vResp = await fetch('/api/izipay-verify', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                kr_answer:        paymentData.clientAnswer,
+                kr_hash:          paymentData.hash,
+                kr_hash_algorithm: paymentData.hashAlgorithm || 'sha256',
+              }),
+            });
+            const vData = await vResp.json();
+            if (vData.paid) {
+              // Monto en céntimos → soles
+              const paidAmt = (vData.amount || amt * 100) / 100;
+              await creditBalance(paidAmt, 'Tarjeta Visa/Mastercard (Izipay)', vData.orderId);
+            } else {
+              const el = document.getElementById('iz-error');
+              if (el) { el.textContent = '❌ Pago no verificado: ' + (vData.error || vData.status || 'Error desconocido'); el.classList.add('show'); }
+            }
+          } catch(err) {
+            const el = document.getElementById('iz-error');
+            if (el) { el.textContent = '❌ Error al verificar el pago: ' + err.message; el.classList.add('show'); }
           }
-          return false; // prevent default redirect
+          return false; // Evitar redirección automática
         });
+
         KR.onError(err => {
-          const izErr3 = document.getElementById('iz-error');
-          if (izErr3) { izErr3.textContent = '❌ ' + (err.errorMessage || 'Error en el formulario'); izErr3.classList.add('show'); }
+          const el = document.getElementById('iz-error');
+          if (el) {
+            el.textContent = '❌ ' + (err.errorMessage || 'Error en el formulario de pago');
+            el.classList.add('show');
+          }
         });
       })
       .catch(err => {
-        const izErr4 = document.getElementById('iz-error');
-        if (izErr4) { izErr4.textContent = '❌ No se pudo cargar el formulario de pago.'; izErr4.classList.add('show'); }
-        console.error('Izipay init error:', err);
+        const el = document.getElementById('iz-error');
+        if (el) { el.textContent = '❌ No se pudo cargar el formulario de pago. Inténtalo de nuevo.'; el.classList.add('show'); }
+        console.error('Izipay SDK error:', err);
       });
+
   } catch(err) {
-    const izErr5 = document.getElementById('iz-error');
-    if (izErr5) { izErr5.textContent = '❌ ' + err.message; izErr5.classList.add('show'); }
+    const el = document.getElementById('iz-error');
+    if (el) { el.textContent = '❌ ' + err.message; el.classList.add('show'); }
   }
 }
 
@@ -2636,6 +2674,8 @@ function formatCard(inp) {
 /* ── Hook into placeBets to require login + deduct balance ── */
 window.placeBets = function() {
   if (!SESSION) { openAuthGate(); return; }
+  const cfg = getSiteConfig();
+  if (!cfg.allowBets) { showToast('⛔ Las apuestas están temporalmente desactivadas'); return; }
   const items = Object.values(SLIP);
   if (!items.length) return;
   const d = adminData();
@@ -3126,9 +3166,12 @@ async function promoteUser() {
   if (!email) return showToast('⚠️ Escribe un email');
   const { error } = await _SB.from('profiles').update({ role:'owner' }).eq('email', email);
   if (error) { showToast('❌ Error: ' + error.message); return; }
+  // Update SESSION in real-time if it's the current user
+  if (SESSION?.email === email) { SESSION.role = 'owner'; DB.set('session', SESSION); }
   showToast('✅ ' + email + ' ahora es Owner');
   await ownerFetchAll();
 }
+
 async function demoteUser() {
   const email = document.getElementById('cfg-promote-email')?.value.trim().toLowerCase();
   if (!email) return showToast('⚠️ Escribe un email');
@@ -3144,9 +3187,109 @@ function viewUserDetail(email) {
   const bets = _ownerCache.bets.filter(b => b.user_email === email);
   const txs  = _ownerCache.tx.filter(t => t.user_email === email);
   if (!u) return;
-  const won  = bets.filter(b=>b.status==='win').length;
-  const total = bets.length;
-  showToast(`👤 ${u.name||email} | Saldo:€${(+u.balance).toFixed(2)} | Apuestas:${total} (${won} ganadas) | Txs:${txs.length}`);
+
+  const won      = bets.filter(b => b.status === 'win').length;
+  const lost     = bets.filter(b => b.status === 'loss').length;
+  const open     = bets.filter(b => b.status === 'open').length;
+  const staked   = bets.reduce((a,b) => a + (+b.stake||0), 0);
+  const returned = bets.filter(b=>b.status==='win').reduce((a,b) => a + (+b.ret||0), 0);
+  const netPnL   = returned - staked;
+
+  // Build modal content
+  const html = `
+  <div id="user-detail-modal" style="
+    position:fixed;inset:0;z-index:700;
+    background:rgba(0,0,0,.7);
+    display:flex;align-items:center;justify-content:center;padding:16px">
+    <div style="
+      background:var(--bg2);border:1px solid var(--border2);border-radius:16px;
+      width:100%;max-width:520px;max-height:85vh;overflow-y:auto;
+      box-shadow:0 8px 40px rgba(0,0,0,.5)">
+      <!-- Header -->
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:20px 20px 0">
+        <div style="display:flex;align-items:center;gap:12px">
+          <div class="user-row-avatar" style="width:44px;height:44px;font-size:18px;border-radius:12px">
+            ${(u.name||u.email||'?')[0].toUpperCase()}
+          </div>
+          <div>
+            <div style="font-size:16px;font-weight:700">${esc(u.name||'Sin nombre')}</div>
+            <div style="font-size:12px;color:var(--text2)">${esc(u.email)}</div>
+          </div>
+        </div>
+        <button onclick="document.getElementById('user-detail-modal').remove()"
+          style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;
+                 width:32px;height:32px;font-size:16px;color:var(--text2);cursor:pointer">✕</button>
+      </div>
+
+      <!-- KPIs -->
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;padding:16px 20px">
+        <div style="background:var(--bg3);border-radius:10px;padding:12px;text-align:center">
+          <div style="font-size:11px;color:var(--text2);margin-bottom:4px">Saldo actual</div>
+          <div style="font-size:17px;font-weight:700;font-family:var(--mono)">€${(+u.balance||0).toFixed(2)}</div>
+        </div>
+        <div style="background:var(--bg3);border-radius:10px;padding:12px;text-align:center">
+          <div style="font-size:11px;color:var(--text2);margin-bottom:4px">Total depositado</div>
+          <div style="font-size:17px;font-weight:700;font-family:var(--mono);color:var(--green)">€${(+u.deposited||0).toFixed(2)}</div>
+        </div>
+        <div style="background:var(--bg3);border-radius:10px;padding:12px;text-align:center">
+          <div style="font-size:11px;color:var(--text2);margin-bottom:4px">P&L neto</div>
+          <div style="font-size:17px;font-weight:700;font-family:var(--mono);color:${netPnL>=0?'var(--green)':'var(--red)'}">
+            ${netPnL>=0?'+':''}€${netPnL.toFixed(2)}
+          </div>
+        </div>
+      </div>
+
+      <!-- Bet stats -->
+      <div style="padding:0 20px 16px">
+        <div style="font-size:13px;font-weight:600;margin-bottom:10px">Historial de apuestas</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+          <span style="padding:4px 10px;border-radius:6px;font-size:12px;background:var(--yellow-bg,rgba(255,184,0,.12));color:var(--yellow);border:1px solid rgba(255,184,0,.25)">
+            🎟 ${open} activas
+          </span>
+          <span style="padding:4px 10px;border-radius:6px;font-size:12px;background:var(--green-bg);color:var(--green);border:1px solid var(--green-bd)">
+            ✓ ${won} ganadas
+          </span>
+          <span style="padding:4px 10px;border-radius:6px;font-size:12px;background:var(--red-bg);color:var(--red);border:1px solid var(--red-bd)">
+            ✗ ${lost} perdidas
+          </span>
+        </div>
+        ${bets.length ? `
+        <div style="overflow-x:auto">
+          <table class="adm-table">
+            <thead><tr><th>Partido</th><th>Selección</th><th>Cuota</th><th>Apuesta</th><th>Estado</th></tr></thead>
+            <tbody>
+              ${bets.slice(0,8).map(b=>`
+              <tr>
+                <td style="font-size:11px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(b.match_name||b.match||'—')}</td>
+                <td style="font-size:11px;font-weight:600">${esc(b.pick||'—')}</td>
+                <td style="font-family:var(--mono);font-size:11px">${(+b.odd||0).toFixed(2)}</td>
+                <td style="font-family:var(--mono);font-size:11px">€${(+b.stake||0).toFixed(2)}</td>
+                <td>${badgeHtml(b.status)}</td>
+              </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>` : '<div style="color:var(--text3);font-size:13px;text-align:center;padding:16px">Sin apuestas</div>'}
+      </div>
+
+      <!-- Actions -->
+      <div style="padding:14px 20px;border-top:1px solid var(--border);display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end">
+        ${u.is_suspended
+          ? `<button class="tbl-action success" onclick="toggleSuspend('${esc(u.email)}',false);document.getElementById('user-detail-modal').remove()">✅ Reactivar cuenta</button>`
+          : u.role !== 'owner'
+            ? `<button class="tbl-action danger" onclick="toggleSuspend('${esc(u.email)}',true);document.getElementById('user-detail-modal').remove()">🚫 Suspender cuenta</button>`
+            : ''}
+        <button onclick="document.getElementById('user-detail-modal').remove()"
+          style="padding:7px 16px;border-radius:8px;background:var(--bg3);border:1px solid var(--border);color:var(--text2);cursor:pointer;font-size:13px">
+          Cerrar
+        </button>
+      </div>
+    </div>
+  </div>`;
+
+  // Remove existing modal if any
+  const existing = document.getElementById('user-detail-modal');
+  if (existing) existing.remove();
+  document.body.insertAdjacentHTML('beforeend', html);
 }
 
 /* ════════════════════════════════════════════════
@@ -3281,10 +3424,9 @@ function filterOwnerTx(filter) {
    OWNER — CONFIGURACIÓN
 ════════════════════════════════════════════════ */
 function renderOwnerConfig() {
-  // Load saved config from localStorage (could be Supabase in production)
   const cfg = DB.get('site_config') || {};
-  const setv = (id, v) => { const e=document.getElementById(id); if(e && v!==undefined) e.value = v; };
-  const setc = (id, v) => { const e=document.getElementById(id); if(e) e.checked = !!v; };
+  const setv = (id, v) => { const e=document.getElementById(id); if(e && v!==undefined) e.value=v; };
+  const setc = (id, v) => { const e=document.getElementById(id); if(e) e.checked=!!v; };
   setv('cfg-bonus-pct',        cfg.bonusPct       ?? 100);
   setv('cfg-bonus-max',        cfg.bonusMax        ?? 100);
   setv('cfg-dep-min',          cfg.depMin          ?? 10);
@@ -3297,24 +3439,73 @@ function renderOwnerConfig() {
   setc('cfg-maintenance',      cfg.maintenance     ?? false);
 }
 
-function saveOwnerConfig() {
+async function saveOwnerConfig() {
   const gv = id => { const e=document.getElementById(id); return e ? +e.value : 0; };
   const gc = id => { const e=document.getElementById(id); return e ? e.checked : true; };
   const cfg = {
-    bonusPct:      gv('cfg-bonus-pct'),
-    bonusMax:      gv('cfg-bonus-max'),
-    depMin:        gv('cfg-dep-min'),
-    witMin:        gv('cfg-wit-min'),
-    initialBalance:gv('cfg-initial-balance'),
-    houseMargin:   gv('cfg-house-margin'),
-    allowRegister: gc('cfg-allow-register'),
-    allowDeposits: gc('cfg-allow-deposits'),
-    allowBets:     gc('cfg-allow-bets'),
-    maintenance:   gc('cfg-maintenance'),
+    bonusPct:       gv('cfg-bonus-pct'),
+    bonusMax:       gv('cfg-bonus-max'),
+    depMin:         gv('cfg-dep-min'),
+    witMin:         gv('cfg-wit-min'),
+    initialBalance: gv('cfg-initial-balance'),
+    houseMargin:    gv('cfg-house-margin'),
+    allowRegister:  gc('cfg-allow-register'),
+    allowDeposits:  gc('cfg-allow-deposits'),
+    allowBets:      gc('cfg-allow-bets'),
+    maintenance:    gc('cfg-maintenance'),
   };
+  // Persist locally (immediate effect)
   DB.set('site_config', cfg);
-  showToast('✅ Configuración guardada');
-  if (cfg.maintenance) showToast('⚠️ Modo mantenimiento ACTIVADO');
+  // Persist in Supabase (cross-device)
+  const { error } = await _SB.from('site_config').update({
+    bonus_pct:       cfg.bonusPct,
+    bonus_max:       cfg.bonusMax,
+    dep_min:         cfg.depMin,
+    wit_min:         cfg.witMin,
+    initial_balance: cfg.initialBalance,
+    house_margin:    cfg.houseMargin,
+    allow_register:  cfg.allowRegister,
+    allow_deposits:  cfg.allowDeposits,
+    allow_bets:      cfg.allowBets,
+    maintenance:     cfg.maintenance,
+    updated_at:      new Date().toISOString(),
+  }).eq('id', 1);
+  if (error) {
+    showToast('⚠️ Guardado localmente (Supabase: ' + error.message + ')');
+  } else {
+    showToast('✅ Configuración guardada');
+  }
+  if (cfg.maintenance) showToast('⚠️ Modo mantenimiento ACTIVADO — los usuarios verán un aviso');
+}
+
+/* Load site config from Supabase on init and cache locally */
+async function loadSiteConfig() {
+  try {
+    const { data } = await _SB.from('site_config').select('*').eq('id', 1).single();
+    if (data) {
+      const cfg = {
+        bonusPct:       data.bonus_pct,
+        bonusMax:       data.bonus_max,
+        depMin:         data.dep_min,
+        witMin:         data.wit_min,
+        initialBalance: data.initial_balance,
+        houseMargin:    data.house_margin,
+        allowRegister:  data.allow_register,
+        allowDeposits:  data.allow_deposits,
+        allowBets:      data.allow_bets,
+        maintenance:    data.maintenance,
+      };
+      DB.set('site_config', cfg);
+    }
+  } catch(_) { /* use localStorage fallback */ }
+}
+
+/* Get current site config (always from cache) */
+function getSiteConfig() {
+  return DB.get('site_config') || {
+    allowRegister: true, allowDeposits: true, allowBets: true, maintenance: false,
+    depMin: 10, witMin: 20, bonusPct: 100, bonusMax: 100
+  };
 }
 
 /* ════════════════════════════════════════════════

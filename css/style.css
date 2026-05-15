@@ -717,6 +717,17 @@ input,select,textarea{font-family:var(--font)}
   .nav-desktop{display:none!important}
 }
 
+@media (max-width:600px){
+  .sidebar{
+    /* Ensure sidebar scrolls and content isn't hidden behind bottom nav */
+    bottom: calc(56px + env(safe-area-inset-bottom, 0px));
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    padding-bottom: 16px;
+  }
+}
+
 /* ════════════════════════════════════════════════
    BOTTOM NAV — always defined, shown only on mobile
 ════════════════════════════════════════════════ */
@@ -1906,4 +1917,9 @@ input,select,textarea{font-family:var(--font)}
   .xmkt-row-3 { grid-template-columns: 1fr; }
   .xmkt-btn { padding: 10px 6px; }
   .xmkt-odd { font-size: 14px; }
+}
+
+/* ── Owner panel additions ── */
+:root {
+  --yellow-bg: rgba(244,185,66,.12);
 }
