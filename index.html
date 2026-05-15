@@ -62,6 +62,20 @@
 <div class="overlay" id="overlay" onclick="closeSidebar()" ontouchend="event.preventDefault();closeSidebar()"></div>
 <div class="overlay-slip" id="overlay-slip" onclick="closeBetslip()" ontouchend="event.preventDefault();closeBetslip()"></div>
 
+<!-- ── Mobile search overlay ── -->
+<div class="mob-search-overlay" id="mob-search-overlay">
+  <div class="mob-search-bar">
+    <button class="mob-search-back" onclick="closeMobSearch()" aria-label="Volver">←</button>
+    <input type="text" class="mob-search-inp" id="mob-search-inp"
+      placeholder="Buscar equipo, liga o deporte…"
+      oninput="onSearch(this.value)"
+      onkeydown="searchKeyNav(event)"
+      autocomplete="off">
+    <button class="mob-search-clear" onclick="clearMobSearch()" id="mob-search-clear-btn">✕</button>
+  </div>
+  <div class="search-drop mob-search-drop" id="mob-search-drop" style="display:none"></div>
+</div>
+
 <!-- ════ LAYOUT ════ -->
 <div class="layout">
 
@@ -864,9 +878,11 @@
   <!-- BETSLIP -->
   <aside class="betslip" id="betslip">
     <div class="slip-head">
-      <button class="slip-close-mobile" onclick="closeBetslip()" aria-label="Cerrar boleto">✕</button>
       <div class="slip-title">🎟 Boleto</div>
-      <div class="slip-clear" onclick="clearSlip()">Limpiar</div>
+      <div class="slip-head-right">
+        <div class="slip-clear" onclick="clearSlip()">Limpiar</div>
+        <button class="slip-close-mobile" onclick="closeBetslip()" aria-label="Cerrar boleto">✕</button>
+      </div>
     </div>
     <div class="slip-mode">
       <div class="slip-mode-btn active" onclick="setSlipMode('single',this)">Simple</div>
