@@ -13,30 +13,65 @@ export default async function handler(req, res) {
 
   if (!HMAC_KEY) return res.status(500).json({ error: 'HMAC key no configurada.' });
 
-  const { kr_answer, kr_hash, kr_hash_algorithm } = req.body;
-  if (!kr_answer || !kr_hash) return res.status(400).json({ error: 'Faltan kr_answer o kr_hash' });
+  const { kr_answer, kr_hash } = req.body;
 
-  const algo     = (kr_hash_algorithm || 'sha256').replace('hmac_', '');
+  if (!kr_answer || !kr_hash) {
+    return res.status(400).json({ error: 'Faltan kr_answer o kr_hash' });
+  }
+
+  // SEC: Limit payload size to prevent DoS
+  if (typeof kr_answer !== 'string' || kr_answer.length > 100000) {
+    return res.status(400).json({ error: 'Payload inválido' });
+  }
+
+  // SEC: Whitelist algorithm — only sha256, ignore client-supplied algorithm
+  // (prevents algorithm injection attacks)
+  const algo     = 'sha256';
   const computed = crypto.createHmac(algo, HMAC_KEY).update(kr_answer).digest('hex');
 
+  // SEC: Use timingSafeEqual to prevent timing attacks
   let hashMatch = false;
   try {
-    hashMatch = crypto.timingSafeEqual(Buffer.from(computed, 'hex'), Buffer.from(kr_hash, 'hex'));
+    const hashBuf     = Buffer.from(kr_hash.toLowerCase(),  'hex');
+    const computedBuf = Buffer.from(computed,               'hex');
+    if (hashBuf.length === computedBuf.length) {
+      hashMatch = crypto.timingSafeEqual(computedBuf, hashBuf);
+    }
   } catch(_) { hashMatch = false; }
 
-  if (!hashMatch) return res.status(403).json({ error: 'Firma inválida — pago no verificado' });
+  if (!hashMatch) {
+    console.error('HMAC mismatch — posible respuesta manipulada');
+    return res.status(403).json({ error: 'Firma inválida — pago no verificado' });
+  }
 
   let answer;
   try { answer = JSON.parse(kr_answer); } catch(e) {
     return res.status(400).json({ error: 'Error al parsear kr_answer' });
   }
 
+  // Validate payment status strictly
   const transaction = answer.transactions?.[0];
-  const status      = transaction?.detailedStatus || answer.orderStatus;
-  const paid        = status === 'AUTHORISED' || status === 'CAPTURED' || answer.orderStatus === 'PAID';
-  const amount      = transaction?.amount || answer.orderDetails?.orderTotalAmount;
-  const currency    = transaction?.currency || answer.orderDetails?.orderCurrency;
-  const orderId     = answer.orderDetails?.orderId;
+  const txStatus    = transaction?.detailedStatus;
+  const orderStatus = answer.orderStatus;
 
-  return res.status(200).json({ paid, status, amount, currency, orderId, email: answer.customer?.email });
+  // Only accept confirmed successful statuses
+  const VALID_TX_STATUSES    = ['AUTHORISED', 'CAPTURED'];
+  const VALID_ORDER_STATUSES = ['PAID'];
+
+  const paid = VALID_TX_STATUSES.includes(txStatus) || VALID_ORDER_STATUSES.includes(orderStatus);
+
+  const amount   = transaction?.amount   || answer.orderDetails?.orderTotalAmount;
+  const currency = transaction?.currency || answer.orderDetails?.orderCurrency;
+  const orderId  = answer.orderDetails?.orderId;
+
+  // Validate orderId format to prevent injection
+  if (orderId && !/^[A-Za-z0-9\-_]+$/.test(orderId)) {
+    return res.status(400).json({ error: 'orderId inválido' });
+  }
+
+  return res.status(200).json({
+    paid, status: txStatus || orderStatus,
+    amount, currency, orderId,
+    email: answer.customer?.email
+  });
 }
