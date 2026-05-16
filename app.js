@@ -151,7 +151,7 @@ async function oddsApiFetch(sport, force=false) {
     oddsFormat: 'decimal',
     force:      force ? '1' : '0',
   });
-  const res = await fetch('/.netlify/functions/proxy?' + params.toString(), {
+  const res = await fetch('/api/proxy?' + params.toString(), {
     signal: AbortSignal.timeout(20000)
   });
   return res;
@@ -161,7 +161,7 @@ async function oddsApiFetch(sport, force=false) {
 async function fetchEventMarkets(sport, eventId, markets) {
   const params = new URLSearchParams({ sport, eventId, markets, regions: 'eu,uk,us' });
   try {
-    const res = await fetch('/.netlify/functions/proxy?' + params.toString(), {
+    const res = await fetch('/api/proxy?' + params.toString(), {
       signal: AbortSignal.timeout(15000)
     });
     if (!res.ok) return null;
@@ -176,10 +176,14 @@ async function loadMarkets(force=false) {
   document.getElementById('events-list').innerHTML =
     '<div class="spinner-wrap"><div class="spin"></div><div>Cargando eventos…</div></div>';
   try {
-    const res = await oddsApiFetch(S.sport, force);
+    // Fetch API events and manual events in parallel
+    const [res, manualData] = await Promise.all([
+      oddsApiFetch(S.sport, force),
+      _SB.from('manual_events').select('*').in('status', ['upcoming','live']).order('commence_time', { ascending: true })
+    ]);
     if (!res.ok) { const e = await res.json().catch(()=>({})); throw new Error(e.message||'Error '+res.status); }
     const data = await res.json();
-    const rem   = res.headers.get('x-requests-remaining');
+    const rem    = res.headers.get('x-requests-remaining');
     const cached = res.headers.get('x-cache');
     const ttl    = res.headers.get('x-cache-ttl');
     if (cached === 'HIT') {
@@ -187,10 +191,22 @@ async function loadMarkets(force=false) {
     } else if (rem) {
       showToast(`✅ ${data.length} eventos · ${rem} requests restantes`);
     }
-    S.markets = data.map(m => {
+    // Process API events
+    const apiMarkets = data.map(m => {
       try { return processMarket(m); }
       catch(e) { console.warn('processMarket error:', e, m); return null; }
     }).filter(Boolean);
+
+    // Process manual events into same shape
+    const manualMarkets = (manualData.data || []).map(e => processManualEvent(e));
+
+    // Merge: manual events first if featured, then by commence_time
+    S.markets = [...manualMarkets, ...apiMarkets].sort((a, b) => {
+      if (a._featured && !b._featured) return -1;
+      if (!a._featured && b._featured) return 1;
+      return new Date(a.commence_time) - new Date(b.commence_time);
+    });
+
     updateSidebarCounts();
     applyFilters();
     updateAPIPill(true);
@@ -206,6 +222,37 @@ async function loadMarkets(force=false) {
 /* ════════════════════════════════════════════════════
    DATA PROCESSING — DECIMAL ODDS
 ════════════════════════════════════════════════════ */
+
+/* Convert a manual_events DB row into the same shape as processMarket() output */
+function processManualEvent(e) {
+  const imp1 = e.odd_1 ? +(1/e.odd_1*100).toFixed(1) : null;
+  const impX = e.odd_x ? +(1/e.odd_x*100).toFixed(1) : null;
+  const imp2 = e.odd_2 ? +(1/e.odd_2*100).toFixed(1) : null;
+  const margin = [imp1,impX,imp2].filter(Boolean).reduce((a,b)=>a+b,0);
+  return {
+    id: e.id, sport_key: e.sport_key, sport_title: e.sport_title,
+    home_team: e.home_team, away_team: e.away_team,
+    commence_time: e.commence_time,
+    bookmakers: [], _manual: true, _featured: e.featured, _status: e.status,
+    best1: e.odd_1||null, bestX: e.odd_x||null, best2: e.odd_2||null,
+    imp1, impX, imp2,
+    margin: margin > 0 ? +margin.toFixed(1) : null,
+    bks: [], omap: {}, allMkts: {},
+    homeOdds: e.odd_1 ? [{bk:'Manual',price:e.odd_1}] : [],
+    awayOdds: e.odd_2 ? [{bk:'Manual',price:e.odd_2}] : [],
+    drawOdds:  e.odd_x ? [{bk:'Manual',price:e.odd_x}] : [],
+    totals: e.total_line ? { line:e.total_line, over:e.total_over||null, under:e.total_under||null, raw:{} } : null,
+    btts: (e.btts_yes||e.btts_no) ? { yes:e.btts_yes, no:e.btts_no } : null,
+    spreads: (e.spread_home||e.spread_away) ? {
+      home: { price:e.spread_home, point:e.spread_home_pt },
+      away: { price:e.spread_away, point:e.spread_away_pt }, raw:{}
+    } : null,
+    spark: genSpark(imp1||50, 24),
+    vol: Math.round(Math.random()*500000+50000),
+    sportCat: (e.sport_key||'').split('_')[0],
+  };
+}
+
 function processMarket(m) {
   if (!m || !m.home_team || !m.away_team) return null;
   const bks = m.bookmakers || [];
@@ -2093,7 +2140,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const email = sbSession.user.email;
     const profile = await loadProfile(email);
     const name = profile?.name || email.split('@')[0];
-    SESSION = { id: sbSession.user.id, email, name };
+    SESSION = { id: sbSession.user.id, email, name, role: profile?.role || 'user' };
     onLoginSuccess(false);
   } else {
     // Fallback: check localStorage session — only restore if Supabase has a live token
@@ -2264,7 +2311,7 @@ async function doLogin() {
   const profile = await loadProfile(email);
   const name = profile?.name || authData.user?.user_metadata?.name || email.split('@')[0];
 
-  SESSION = { id: authData.user?.id, email, name };
+  SESSION = { id: authData.user?.id, email, name, role: profile?.role || 'user' };
   if (remember) DB.set('session', SESSION);
 
   if (btn) { btn.disabled = false; btn.textContent = 'Entrar →'; }
@@ -2557,7 +2604,7 @@ async function creditBalance(amt, method, orderId) {
 async function izipayRequestToken(amt) {
   const email = SESSION?.email || 'cliente@predictx.com';
   const orderId = 'PX-' + Date.now();
-  const resp = await fetch('/.netlify/functions/izipay-token', {
+  const resp = await fetch('/api/izipay-token', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ amount: amt, currency: 'PEN', email, orderId }),
@@ -2567,66 +2614,89 @@ async function izipayRequestToken(amt) {
   return data; // { formToken, mode, shopId, publicKey }
 }
 
-/* ─── Init Izipay widget when card step opens ─── */
+/* ─── Init Izipay widget cuando se abre el paso de tarjeta ─── */
 async function initIzipayForm() {
-  const amt = parseFloat(document.getElementById('pay-amount').value) || 0;
+  const amt   = parseFloat(document.getElementById('pay-amount').value) || 0;
   const izAmt = document.getElementById('iz-amt-show');
   const izErr = document.getElementById('iz-error');
   if (izAmt) izAmt.textContent = 'S/ ' + amt.toFixed(2);
   if (izErr) { izErr.classList.remove('show'); izErr.textContent = ''; }
 
+  // Limpiar formulario anterior si existe
+  const container = document.getElementById('iz-form-container');
+  if (container) container.innerHTML =
+    '<div class="kr-pan"></div><div class="kr-expiry"></div>' +
+    '<div class="kr-security-code"></div>' +
+    '<button class="kr-payment-button">Pagar con tarjeta →</button>';
+
   try {
-    const { formToken, mode, publicKey } = await izipayRequestToken(amt);
-    // Update env badge
+    const { formToken, publicKey, mode } = await izipayRequestToken(amt);
+
+    // Actualizar badge de entorno
     const badge = document.getElementById('iz-env-badge');
     const hint  = document.getElementById('iz-test-hint');
     if (badge) {
-      badge.className = 'izipay-env-badge' + (mode==='prod'?' prod':'');
-      badge.textContent = mode === 'prod' ? '✅ Modo Producción' : '🧪 Modo TEST — usa tarjeta de prueba';
+      badge.className = 'izipay-env-badge' + (mode === 'prod' ? ' prod' : '');
+      badge.textContent = mode === 'prod'
+        ? '✅ Modo Producción'
+        : '🧪 Modo TEST — usa tarjeta de prueba';
     }
     if (hint) hint.style.display = mode === 'prod' ? 'none' : 'block';
 
-    // Set form token in Izipay SDK
+    // Cargar SDK de Izipay con la clave pública correcta
     KRGlue.loadLibrary('https://static.micuentaweb.pe', publicKey)
-      .then(({ KR }) => KR.setFormConfig({ formToken, 'kr-language': 'es-PE' }))
+      .then(({ KR }) => KR.setFormConfig({
+        formToken,
+        'kr-language': 'es-PE',
+      }))
       .then(({ KR }) => KR.addForm('#iz-form-container'))
-      .then(({ KR }) => KR.showForm())
+      .then(({ KR }) => KR.showForm(KR.result))
       .then(({ KR }) => {
-        // Listen for successful payment
-        KR.onSubmit(async (result) => {
-          // Verify server-side
-          const vResp = await fetch('/.netlify/functions/izipay-verify', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              kr_answer: result.clientAnswer,
-              kr_hash:   result.hash,
-              kr_hash_algorithm: result.hashAlgorithm,
-            }),
-          });
-          const vData = await vResp.json();
-          if (vData.paid) {
-            const paidAmt = (vData.amount || amt * 100) / 100;
-            await creditBalance(paidAmt, 'IZIPAY', vData.orderId);
-          } else {
-            const izErr2 = document.getElementById('iz-error');
-            if (izErr2) { izErr2.textContent = '❌ Pago no verificado: ' + (vData.error || vData.status); izErr2.classList.add('show'); }
+        // Pago completado — verificar server-side
+        KR.onSubmit(async (paymentData) => {
+          try {
+            const vResp = await fetch('/api/izipay-verify', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                kr_answer:        paymentData.clientAnswer,
+                kr_hash:          paymentData.hash,
+                kr_hash_algorithm: paymentData.hashAlgorithm || 'sha256',
+              }),
+            });
+            const vData = await vResp.json();
+            if (vData.paid) {
+              // Monto en céntimos → soles
+              const paidAmt = (vData.amount || amt * 100) / 100;
+              await creditBalance(paidAmt, 'Tarjeta Visa/Mastercard (Izipay)', vData.orderId);
+            } else {
+              const el = document.getElementById('iz-error');
+              if (el) { el.textContent = '❌ Pago no verificado: ' + (vData.error || vData.status || 'Error desconocido'); el.classList.add('show'); }
+            }
+          } catch(err) {
+            const el = document.getElementById('iz-error');
+            if (el) { el.textContent = '❌ Error al verificar el pago: ' + err.message; el.classList.add('show'); }
           }
-          return false; // prevent default redirect
+          return false; // Evitar redirección automática
         });
+
         KR.onError(err => {
-          const izErr3 = document.getElementById('iz-error');
-          if (izErr3) { izErr3.textContent = '❌ ' + (err.errorMessage || 'Error en el formulario'); izErr3.classList.add('show'); }
+          const el = document.getElementById('iz-error');
+          if (el) {
+            el.textContent = '❌ ' + (err.errorMessage || 'Error en el formulario de pago');
+            el.classList.add('show');
+          }
         });
       })
       .catch(err => {
-        const izErr4 = document.getElementById('iz-error');
-        if (izErr4) { izErr4.textContent = '❌ No se pudo cargar el formulario de pago.'; izErr4.classList.add('show'); }
-        console.error('Izipay init error:', err);
+        const el = document.getElementById('iz-error');
+        if (el) { el.textContent = '❌ No se pudo cargar el formulario de pago. Inténtalo de nuevo.'; el.classList.add('show'); }
+        console.error('Izipay SDK error:', err);
       });
+
   } catch(err) {
-    const izErr5 = document.getElementById('iz-error');
-    if (izErr5) { izErr5.textContent = '❌ ' + err.message; izErr5.classList.add('show'); }
+    const el = document.getElementById('iz-error');
+    if (el) { el.textContent = '❌ ' + err.message; el.classList.add('show'); }
   }
 }
 
@@ -2938,6 +3008,7 @@ function showOwnerPage(page, sidebarBtn, tabBtn) {
   if (page === 'users')     renderOwnerUsers();
   if (page === 'bets')      renderOwnerBets('all');
   if (page === 'tx')        renderOwnerTx('all');
+  if (page === 'events')    renderOwnerEvents();
   if (page === 'config')    renderOwnerConfig();
 }
 
@@ -3143,9 +3214,12 @@ async function promoteUser() {
   if (!email) return showToast('⚠️ Escribe un email');
   const { error } = await _SB.from('profiles').update({ role:'owner' }).eq('email', email);
   if (error) { showToast('❌ Error: ' + error.message); return; }
+  // Update SESSION in real-time if it's the current user
+  if (SESSION?.email === email) { SESSION.role = 'owner'; DB.set('session', SESSION); }
   showToast('✅ ' + email + ' ahora es Owner');
   await ownerFetchAll();
 }
+
 async function demoteUser() {
   const email = document.getElementById('cfg-promote-email')?.value.trim().toLowerCase();
   if (!email) return showToast('⚠️ Escribe un email');
@@ -3397,6 +3471,314 @@ function filterOwnerTx(filter) {
 /* ════════════════════════════════════════════════
    OWNER — CONFIGURACIÓN
 ════════════════════════════════════════════════ */
+/* ════════════════════════════════════════════════
+   MANUAL EVENTS — Gestión de partidos manuales
+════════════════════════════════════════════════ */
+
+let _manualEvents   = [];
+let _editingEventId = null;
+let _evFilter       = 'all';
+
+/* Carga eventos manuales desde Supabase */
+async function loadManualEvents() {
+  const { data, error } = await _SB.from('manual_events').select('*').order('commence_time', { ascending: true });
+  _manualEvents = data || [];
+  return _manualEvents;
+}
+
+/* Renderiza la lista de partidos en el panel owner */
+async function renderOwnerEvents() {
+  const list = document.getElementById('own-events-list');
+  if (!list) return;
+  list.innerHTML = '<div class="adm-empty">Cargando...</div>';
+  await loadManualEvents();
+  filterManualEvents(_evFilter);
+}
+
+function filterManualEvents(filter, btn) {
+  _evFilter = filter;
+  if (btn) {
+    document.querySelectorAll('.ev-filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  }
+  const list = document.getElementById('own-events-list');
+  if (!list) return;
+
+  let evs = _manualEvents;
+  if (filter === 'upcoming')  evs = evs.filter(e => e.status === 'upcoming');
+  if (filter === 'live')      evs = evs.filter(e => e.status === 'live');
+  if (filter === 'finished')  evs = evs.filter(e => e.status === 'finished');
+  if (filter === 'featured')  evs = evs.filter(e => e.featured);
+
+  if (!evs.length) { list.innerHTML = '<div class="adm-empty">No hay partidos para este filtro</div>'; return; }
+
+  list.innerHTML = evs.map(e => `
+    <div class="ev-row" id="evrow-${e.id}">
+      <div class="ev-row-main">
+        <div class="ev-row-sport">${sportIco(e.sport_key)} ${esc(e.league)}</div>
+        <div class="ev-row-match">${esc(e.home_team)} <span style="color:var(--text3)">vs</span> ${esc(e.away_team)}</div>
+        <div class="ev-row-meta">
+          ${e.featured ? '<span class="ev-tag featured">⭐ Destacado</span>' : ''}
+          <span class="ev-tag ${e.status}">${e.status === 'upcoming' ? '📅 Próximo' : e.status === 'live' ? '🔴 En Vivo' : '✅ Finalizado'}</span>
+          <span class="ev-tag">📅 ${fDate(e.commence_time)}</span>
+          <span class="ev-tag odds">1: ${fOdd(e.odd_1)} · X: ${fOdd(e.odd_x)} · 2: ${fOdd(e.odd_2)}</span>
+        </div>
+      </div>
+      <div class="ev-row-actions">
+        ${e.status !== 'finished' ? `
+          <button class="tbl-action" onclick="toggleEventLive('${e.id}','${e.status}')">
+            ${e.status === 'live' ? '⏹ Pausar' : '▶ En Vivo'}
+          </button>` : ''}
+        ${e.status === 'live' ? `
+          <button class="tbl-action success" onclick="openResolveEventModal('${e.id}')">🏁 Resolver</button>` : ''}
+        <button class="tbl-action" onclick="openEditEventModal('${e.id}')">✏️ Editar</button>
+        <button class="tbl-action danger" onclick="deleteManualEvent('${e.id}')">🗑 Borrar</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+/* Abre modal para crear partido nuevo */
+function openCreateEventModal() {
+  _editingEventId = null;
+  document.getElementById('event-modal-title').textContent = 'Nuevo Partido';
+  clearEventForm();
+  // Set default datetime to tomorrow
+  const tomorrow = new Date(Date.now() + 86400000);
+  tomorrow.setMinutes(0, 0, 0);
+  document.getElementById('ev-datetime').value = tomorrow.toISOString().slice(0,16);
+  document.getElementById('event-modal-overlay').style.display = 'flex';
+}
+
+/* Abre modal para editar partido existente */
+function openEditEventModal(id) {
+  const e = _manualEvents.find(x => x.id === id);
+  if (!e) return;
+  _editingEventId = id;
+  document.getElementById('event-modal-title').textContent = 'Editar Partido';
+
+  document.getElementById('ev-sport').value     = e.sport_key || 'soccer_epl';
+  document.getElementById('ev-league').value    = e.league || '';
+  document.getElementById('ev-home').value      = e.home_team || '';
+  document.getElementById('ev-away').value      = e.away_team || '';
+  document.getElementById('ev-datetime').value  = e.commence_time ? new Date(e.commence_time).toISOString().slice(0,16) : '';
+  document.getElementById('ev-featured').checked = !!e.featured;
+  document.getElementById('ev-live').checked     = e.status === 'live';
+  document.getElementById('ev-odd1').value       = e.odd_1 || '';
+  document.getElementById('ev-oddx').value       = e.odd_x || '';
+  document.getElementById('ev-odd2').value       = e.odd_2 || '';
+  document.getElementById('ev-total-line').value  = e.total_line || '';
+  document.getElementById('ev-total-over').value  = e.total_over || '';
+  document.getElementById('ev-total-under').value = e.total_under || '';
+  document.getElementById('ev-btts-yes').value    = e.btts_yes || '';
+  document.getElementById('ev-btts-no').value     = e.btts_no  || '';
+  document.getElementById('ev-spread-home-pt').value = e.spread_home_pt || '';
+  document.getElementById('ev-spread-home').value    = e.spread_home    || '';
+  document.getElementById('ev-spread-away-pt').value = e.spread_away_pt || '';
+  document.getElementById('ev-spread-away').value    = e.spread_away    || '';
+
+  onEvSportChange();
+  document.getElementById('event-modal-overlay').style.display = 'flex';
+}
+
+function closeEventModal() {
+  document.getElementById('event-modal-overlay').style.display = 'none';
+  _editingEventId = null;
+}
+
+function clearEventForm() {
+  ['ev-league','ev-home','ev-away','ev-odd1','ev-oddx','ev-odd2',
+   'ev-total-line','ev-total-over','ev-total-under',
+   'ev-btts-yes','ev-btts-no','ev-spread-home-pt','ev-spread-home',
+   'ev-spread-away-pt','ev-spread-away'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  document.getElementById('ev-featured').checked = false;
+  document.getElementById('ev-live').checked = false;
+  document.getElementById('ev-sport').value = 'soccer_epl';
+  onEvSportChange();
+}
+
+/* Muestra/oculta campos según deporte */
+function onEvSportChange() {
+  const sport = document.getElementById('ev-sport')?.value || '';
+  const cat = sport.split('_')[0];
+  // Empate solo en fútbol y hockey
+  const hasDrawEl = document.getElementById('ev-oddx-wrap');
+  if (hasDrawEl) hasDrawEl.style.display = (cat === 'soccer' || cat === 'icehockey') ? '' : 'none';
+  // BTTS solo en fútbol
+  const soccerMkts = document.getElementById('ev-soccer-markets');
+  if (soccerMkts) soccerMkts.style.display = cat === 'soccer' ? '' : 'none';
+}
+
+/* Guarda o actualiza un partido manual */
+async function saveManualEvent() {
+  const sport    = document.getElementById('ev-sport').value;
+  const league   = document.getElementById('ev-league').value.trim();
+  const home     = document.getElementById('ev-home').value.trim();
+  const away     = document.getElementById('ev-away').value.trim();
+  const dt       = document.getElementById('ev-datetime').value;
+  const featured = document.getElementById('ev-featured').checked;
+  const isLiveChk = document.getElementById('ev-live').checked;
+
+  if (!league || !home || !away || !dt) { showToast('❌ Completa todos los campos obligatorios'); return; }
+
+  const sportTitles = {
+    soccer_epl: 'Fútbol', basketball_nba: 'Baloncesto',
+    americanfootball_nfl: 'Fútbol Americano', baseball_mlb: 'Béisbol',
+    icehockey_nhl: 'Hockey', mma_mixed_martial_arts: 'MMA'
+  };
+
+  const payload = {
+    sport_key:      sport,
+    sport_title:    sportTitles[sport] || 'Deporte',
+    league,
+    home_team:      home,
+    away_team:      away,
+    commence_time:  new Date(dt).toISOString(),
+    featured,
+    status:         isLiveChk ? 'live' : (new Date(dt) <= new Date() ? 'live' : 'upcoming'),
+    odd_1:          parseFloat(document.getElementById('ev-odd1').value) || null,
+    odd_x:          parseFloat(document.getElementById('ev-oddx').value) || null,
+    odd_2:          parseFloat(document.getElementById('ev-odd2').value) || null,
+    total_line:     parseFloat(document.getElementById('ev-total-line').value) || null,
+    total_over:     parseFloat(document.getElementById('ev-total-over').value) || null,
+    total_under:    parseFloat(document.getElementById('ev-total-under').value) || null,
+    btts_yes:       parseFloat(document.getElementById('ev-btts-yes').value) || null,
+    btts_no:        parseFloat(document.getElementById('ev-btts-no').value) || null,
+    spread_home_pt: parseFloat(document.getElementById('ev-spread-home-pt').value) || null,
+    spread_home:    parseFloat(document.getElementById('ev-spread-home').value) || null,
+    spread_away_pt: parseFloat(document.getElementById('ev-spread-away-pt').value) || null,
+    spread_away:    parseFloat(document.getElementById('ev-spread-away').value) || null,
+    created_by:     SESSION?.email || '',
+    updated_at:     new Date().toISOString(),
+  };
+
+  let error;
+  if (_editingEventId) {
+    ({ error } = await _SB.from('manual_events').update(payload).eq('id', _editingEventId));
+  } else {
+    ({ error } = await _SB.from('manual_events').insert(payload));
+  }
+
+  if (error) { showToast('❌ Error: ' + error.message); return; }
+  showToast(_editingEventId ? '✅ Partido actualizado' : '✅ Partido creado');
+  closeEventModal();
+  await renderOwnerEvents();
+  // Refresh main markets list to include new event
+  await loadMarkets(false);
+}
+
+/* Alternar estado En Vivo / Próximo */
+async function toggleEventLive(id, currentStatus) {
+  const newStatus = currentStatus === 'live' ? 'upcoming' : 'live';
+  const { error } = await _SB.from('manual_events').update({ status: newStatus, updated_at: new Date().toISOString() }).eq('id', id);
+  if (error) { showToast('❌ ' + error.message); return; }
+  showToast(newStatus === 'live' ? '🔴 Partido marcado como En Vivo' : '⏹ Partido pausado');
+  await renderOwnerEvents();
+  await loadMarkets(false);
+}
+
+/* Resolver partido manual */
+function openResolveEventModal(id) {
+  const e = _manualEvents.find(x => x.id === id);
+  if (!e) return;
+  const matchLabel = `${e.home_team} vs ${e.away_team}`;
+
+  const existing = document.getElementById('resolve-event-modal');
+  if (existing) existing.remove();
+
+  const html = `
+  <div id="resolve-event-modal" style="
+    position:fixed;inset:0;z-index:800;
+    background:rgba(0,0,0,.75);
+    display:flex;align-items:center;justify-content:center;padding:16px">
+    <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:16px;width:100%;max-width:400px;padding:24px">
+      <div style="font-size:16px;font-weight:700;margin-bottom:6px">Resolver Partido</div>
+      <div style="font-size:13px;color:var(--text2);margin-bottom:20px">${esc(matchLabel)}</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:20px">
+        <button class="adm-btn" style="background:var(--green)" onclick="resolveManualEvent('${id}','1')">
+          🏆 ${esc(e.home_team.split(' ').pop())}
+        </button>
+        <button class="adm-btn" style="background:var(--text3)" onclick="resolveManualEvent('${id}','X')">
+          🤝 Empate
+        </button>
+        <button class="adm-btn" style="background:var(--red)" onclick="resolveManualEvent('${id}','2')">
+          🏆 ${esc(e.away_team.split(' ').pop())}
+        </button>
+      </div>
+      <button onclick="document.getElementById('resolve-event-modal').remove()"
+        style="width:100%;padding:9px;border-radius:8px;background:var(--bg3);border:1px solid var(--border);color:var(--text2);cursor:pointer">
+        Cancelar
+      </button>
+    </div>
+  </div>`;
+  document.body.insertAdjacentHTML('beforeend', html);
+}
+
+async function resolveManualEvent(id, result) {
+  const e = _manualEvents.find(x => x.id === id);
+  if (!e) return;
+
+  // Mark event as finished
+  const { error } = await _SB.from('manual_events')
+    .update({ status: 'finished', result, updated_at: new Date().toISOString() })
+    .eq('id', id);
+  if (error) { showToast('❌ ' + error.message); return; }
+
+  // Resolve all open bets for this event
+  const matchKey = `${e.home_team} vs ${e.away_team}`;
+  const { data: openBets } = await _SB.from('bets')
+    .select('*')
+    .eq('status', 'open')
+    .ilike('match_name', `%${e.home_team}%`);
+
+  let resolved = 0;
+  for (const bet of (openBets || [])) {
+    const won = bet.pick === result ||
+      (result === '1' && bet.pick === e.home_team) ||
+      (result === '2' && bet.pick === e.away_team) ||
+      (result === 'X' && (bet.pick === 'Empate' || bet.pick === 'X'));
+
+    const newStatus = won ? 'win' : 'loss';
+    const ret = won ? +(bet.odd * bet.stake).toFixed(2) : 0;
+
+    await _SB.from('bets').update({ status: newStatus, ret }).eq('id', bet.id);
+
+    if (won && ret > 0) {
+      const { data: prof } = await _SB.from('profiles').select('balance').eq('email', bet.user_email).single();
+      if (prof) {
+        const newBal = +(prof.balance + ret).toFixed(2);
+        await _SB.from('profiles').update({ balance: newBal }).eq('email', bet.user_email);
+        await _SB.from('transactions').insert({
+          user_email: bet.user_email,
+          description: `Premio: ${bet.pick} (${matchKey})`,
+          type: 'win',
+          amount: ret,
+          balance: newBal,
+          created_at: new Date().toISOString(),
+        });
+      }
+    }
+    resolved++;
+  }
+
+  document.getElementById('resolve-event-modal')?.remove();
+  showToast(`✅ Partido resuelto · ${resolved} apuesta${resolved!==1?'s':''} procesada${resolved!==1?'s':''}`);
+  await renderOwnerEvents();
+  await loadMarkets(false);
+}
+
+async function deleteManualEvent(id) {
+  if (!confirm('¿Seguro que quieres borrar este partido?')) return;
+  const { error } = await _SB.from('manual_events').delete().eq('id', id);
+  if (error) { showToast('❌ ' + error.message); return; }
+  showToast('🗑 Partido eliminado');
+  await renderOwnerEvents();
+  await loadMarkets(false);
+}
+
 function renderOwnerConfig() {
   const cfg = DB.get('site_config') || {};
   const setv = (id, v) => { const e=document.getElementById(id); if(e && v!==undefined) e.value=v; };

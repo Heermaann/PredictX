@@ -595,6 +595,7 @@
           <div class="owner-nav-item" id="own-nav-users" onclick="showOwnerPage('users',this)"><span class="an-ico">👥</span>Usuarios<span class="owner-nav-badge" id="own-users-badge">—</span></div>
           <div class="owner-nav-item" id="own-nav-bets" onclick="showOwnerPage('bets',this)"><span class="an-ico">🎟</span>Apuestas<span class="owner-nav-badge" id="own-bets-badge" style="background:var(--yellow)">—</span></div>
           <div class="owner-nav-item" id="own-nav-tx" onclick="showOwnerPage('tx',this)"><span class="an-ico">💳</span>Transacciones</div>
+          <div class="owner-nav-item" id="own-nav-events" onclick="showOwnerPage('events',this)"><span class="an-ico">⚽</span>Partidos</div>
           <div class="owner-nav-sep"></div>
           <div class="owner-nav-item" id="own-nav-config" onclick="showOwnerPage('config',this)"><span class="an-ico">⚙️</span>Configuración</div>
           <div class="owner-nav-sep"></div>
@@ -732,6 +733,166 @@
                   <thead><tr><th>Fecha</th><th>Usuario</th><th>Descripción</th><th>Tipo</th><th>Importe</th></tr></thead>
                   <tbody id="own-tx-body"><tr><td colspan="5" style="text-align:center;color:var(--text2);padding:36px">⏳ Cargando...</td></tr></tbody>
                 </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- ── PARTIDOS ── -->
+          <div class="owner-page" id="own-events">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding-top:20px;margin-bottom:18px">
+              <div>
+                <div class="owner-section-title">Gestión de Partidos</div>
+                <div style="font-size:12px;color:var(--text2)">Crea partidos manuales que se mezclan con los de la API</div>
+              </div>
+              <button class="adm-btn" onclick="openCreateEventModal()">+ Nuevo partido</button>
+            </div>
+
+            <!-- Filtros -->
+            <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
+              <button class="ev-filter-btn active" onclick="filterManualEvents('all',this)">Todos</button>
+              <button class="ev-filter-btn" onclick="filterManualEvents('upcoming',this)">Próximos</button>
+              <button class="ev-filter-btn" onclick="filterManualEvents('live',this)">En Vivo</button>
+              <button class="ev-filter-btn" onclick="filterManualEvents('finished',this)">Finalizados</button>
+              <button class="ev-filter-btn" onclick="filterManualEvents('featured',this)">⭐ Destacados</button>
+            </div>
+
+            <div id="own-events-list"><div class="adm-empty">Cargando partidos...</div></div>
+          </div>
+
+          <!-- ── MODAL CREAR/EDITAR PARTIDO ── -->
+          <div class="owner-modal-overlay" id="event-modal-overlay" style="display:none" onclick="if(event.target===this)closeEventModal()">
+            <div class="owner-modal" id="event-modal">
+              <div class="owner-modal-head">
+                <span id="event-modal-title">Nuevo Partido</span>
+                <button onclick="closeEventModal()" class="owner-modal-close">✕</button>
+              </div>
+              <div class="owner-modal-body">
+                <!-- Deporte y Liga -->
+                <div class="ev-form-row">
+                  <div class="ev-form-group">
+                    <label class="ev-label">Deporte</label>
+                    <select id="ev-sport" class="ev-input" onchange="onEvSportChange()">
+                      <option value="soccer_epl">⚽ Fútbol</option>
+                      <option value="basketball_nba">🏀 Baloncesto</option>
+                      <option value="americanfootball_nfl">🏈 Fútbol Americano</option>
+                      <option value="baseball_mlb">⚾ Béisbol</option>
+                      <option value="icehockey_nhl">🏒 Hockey</option>
+                      <option value="mma_mixed_martial_arts">🥊 MMA</option>
+                    </select>
+                  </div>
+                  <div class="ev-form-group">
+                    <label class="ev-label">Liga</label>
+                    <input type="text" id="ev-league" class="ev-input" placeholder="Ej: Premier League">
+                  </div>
+                </div>
+
+                <!-- Equipos -->
+                <div class="ev-form-row">
+                  <div class="ev-form-group">
+                    <label class="ev-label">Equipo Local</label>
+                    <input type="text" id="ev-home" class="ev-input" placeholder="Nombre del equipo local">
+                  </div>
+                  <div class="ev-form-group">
+                    <label class="ev-label">Equipo Visitante</label>
+                    <input type="text" id="ev-away" class="ev-input" placeholder="Nombre del equipo visitante">
+                  </div>
+                </div>
+
+                <!-- Fecha y hora -->
+                <div class="ev-form-row">
+                  <div class="ev-form-group">
+                    <label class="ev-label">Fecha y Hora</label>
+                    <input type="datetime-local" id="ev-datetime" class="ev-input">
+                  </div>
+                  <div class="ev-form-group" style="display:flex;align-items:flex-end;gap:12px">
+                    <label class="ev-toggle-wrap">
+                      <input type="checkbox" id="ev-featured">
+                      <span class="ev-toggle-lbl">⭐ Destacado</span>
+                    </label>
+                    <label class="ev-toggle-wrap">
+                      <input type="checkbox" id="ev-live">
+                      <span class="ev-toggle-lbl">🔴 En Vivo</span>
+                    </label>
+                  </div>
+                </div>
+
+                <!-- Cuotas 1X2 -->
+                <div class="ev-form-section">Cuotas 1X2</div>
+                <div class="ev-form-row ev-form-row-3">
+                  <div class="ev-form-group">
+                    <label class="ev-label">1 — Local</label>
+                    <input type="number" id="ev-odd1" class="ev-input" placeholder="2.10" step="0.01" min="1.01">
+                  </div>
+                  <div class="ev-form-group" id="ev-oddx-wrap">
+                    <label class="ev-label">X — Empate</label>
+                    <input type="number" id="ev-oddx" class="ev-input" placeholder="3.40" step="0.01" min="1.01">
+                  </div>
+                  <div class="ev-form-group">
+                    <label class="ev-label">2 — Visitante</label>
+                    <input type="number" id="ev-odd2" class="ev-input" placeholder="3.50" step="0.01" min="1.01">
+                  </div>
+                </div>
+
+                <!-- Totales -->
+                <div class="ev-form-section">Total de Puntos/Goles</div>
+                <div class="ev-form-row ev-form-row-3">
+                  <div class="ev-form-group">
+                    <label class="ev-label">Línea</label>
+                    <input type="number" id="ev-total-line" class="ev-input" placeholder="2.5" step="0.5" min="0">
+                  </div>
+                  <div class="ev-form-group">
+                    <label class="ev-label">Over</label>
+                    <input type="number" id="ev-total-over" class="ev-input" placeholder="1.85" step="0.01" min="1.01">
+                  </div>
+                  <div class="ev-form-group">
+                    <label class="ev-label">Under</label>
+                    <input type="number" id="ev-total-under" class="ev-input" placeholder="1.95" step="0.01" min="1.01">
+                  </div>
+                </div>
+
+                <!-- Mercados extra por deporte -->
+                <div id="ev-extra-markets">
+                  <!-- Fútbol: BTTS + Spreads -->
+                  <div id="ev-soccer-markets">
+                    <div class="ev-form-section">Ambos Equipos Marcan</div>
+                    <div class="ev-form-row">
+                      <div class="ev-form-group">
+                        <label class="ev-label">Sí</label>
+                        <input type="number" id="ev-btts-yes" class="ev-input" placeholder="1.75" step="0.01" min="1.01">
+                      </div>
+                      <div class="ev-form-group">
+                        <label class="ev-label">No</label>
+                        <input type="number" id="ev-btts-no" class="ev-input" placeholder="2.00" step="0.01" min="1.01">
+                      </div>
+                    </div>
+                  </div>
+                  <!-- Otros: Spreads -->
+                  <div id="ev-spread-markets">
+                    <div class="ev-form-section">Hándicap / Spread</div>
+                    <div class="ev-form-row">
+                      <div class="ev-form-group">
+                        <label class="ev-label">Local (línea)</label>
+                        <input type="number" id="ev-spread-home-pt" class="ev-input" placeholder="-1.5" step="0.5">
+                      </div>
+                      <div class="ev-form-group">
+                        <label class="ev-label">Local (cuota)</label>
+                        <input type="number" id="ev-spread-home" class="ev-input" placeholder="1.90" step="0.01" min="1.01">
+                      </div>
+                      <div class="ev-form-group">
+                        <label class="ev-label">Visitante (línea)</label>
+                        <input type="number" id="ev-spread-away-pt" class="ev-input" placeholder="+1.5" step="0.5">
+                      </div>
+                      <div class="ev-form-group">
+                        <label class="ev-label">Visitante (cuota)</label>
+                        <input type="number" id="ev-spread-away" class="ev-input" placeholder="1.90" step="0.01" min="1.01">
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="owner-modal-foot">
+                <button onclick="closeEventModal()" style="padding:9px 18px;border-radius:8px;background:var(--bg3);border:1px solid var(--border);color:var(--text2);cursor:pointer">Cancelar</button>
+                <button class="adm-btn" onclick="saveManualEvent()">Guardar partido</button>
               </div>
             </div>
           </div>
