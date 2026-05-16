@@ -2649,27 +2649,16 @@ async function initIzipayForm() {
     }
     if (hint) hint.style.display = mode === 'prod' ? 'none' : 'block';
 
+    // SDK already loaded in <head> — use KRGlue.loadLibrary to update public key and formToken
+    if (typeof KRGlue === 'undefined') {
+      const el = document.getElementById('iz-error');
+      if (el) { el.textContent = '❌ El SDK de Izipay no pudo cargar. Recarga la página.'; el.classList.add('show'); }
+      return;
+    }
+
     // Hide "Confirmar depósito" — Izipay provides its own pay button
     const confirmBtn = document.getElementById('pay-confirm-btn');
     if (confirmBtn) confirmBtn.style.display = 'none';
-
-    // Load Izipay SDK dynamically with the real public key (script tag, not fetch)
-    await new Promise((resolve, reject) => {
-      // If already loaded, just resolve
-      if (typeof KRGlue !== 'undefined') {
-        console.log('[Izipay] KRGlue already loaded');
-        resolve();
-        return;
-      }
-      console.log('[Izipay] Loading SDK with publicKey:', publicKey);
-      const script = document.createElement('script');
-      script.src = 'https://static.micuentaweb.pe/static/js/krypton-client/V4.0/stable/kr-payment-form.min.js';
-      script.setAttribute('kr-public-key', publicKey);
-      script.setAttribute('kr-language', 'es-PE');
-      script.onload  = () => { console.log('[Izipay] SDK loaded, KRGlue:', typeof KRGlue); resolve(); };
-      script.onerror = (e) => { console.error('[Izipay] SDK load error:', e); reject(new Error('No se pudo cargar el SDK de Izipay. Verifica tu conexión.')); };
-      document.head.appendChild(script);
-    });
 
     KRGlue.loadLibrary('https://static.micuentaweb.pe', publicKey)
       .then(({ KR }) => KR.setFormConfig({ formToken, 'kr-language': 'es-PE' }))
