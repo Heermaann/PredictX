@@ -2575,6 +2575,7 @@ function payStep2() {
   });
   // If card selected, init Izipay widget
   if (_currentPayMethod === 'card') {
+    console.log('[Izipay] payStep2: calling initIzipayForm, method=', _currentPayMethod);
     setTimeout(() => initIzipayForm(), 100);
   }
 }
@@ -2637,12 +2638,6 @@ async function initIzipayForm() {
     '<div class="kr-security-code"></div>' +
     '<button class="kr-payment-button">Pagar con tarjeta →</button>';
 
-  // Check KRGlue loaded
-  if (typeof KRGlue === 'undefined') {
-    if (izErr) { izErr.textContent = '❌ El SDK de Izipay no pudo cargar. Recarga la página e intenta de nuevo.'; izErr.classList.add('show'); }
-    return;
-  }
-
   try {
     const { formToken, publicKey, mode } = await izipayRequestToken(amt);
 
@@ -2654,9 +2649,27 @@ async function initIzipayForm() {
     }
     if (hint) hint.style.display = mode === 'prod' ? 'none' : 'block';
 
-    // Hide "Confirmar depósito" button — Izipay has its own pay button
+    // Hide "Confirmar depósito" — Izipay provides its own pay button
     const confirmBtn = document.getElementById('pay-confirm-btn');
     if (confirmBtn) confirmBtn.style.display = 'none';
+
+    // Load Izipay SDK dynamically with the real public key (script tag, not fetch)
+    await new Promise((resolve, reject) => {
+      // If already loaded, just resolve
+      if (typeof KRGlue !== 'undefined') {
+        console.log('[Izipay] KRGlue already loaded');
+        resolve();
+        return;
+      }
+      console.log('[Izipay] Loading SDK with publicKey:', publicKey);
+      const script = document.createElement('script');
+      script.src = 'https://static.micuentaweb.pe/static/js/krypton-client/V4.0/stable/kr-payment-form.min.js';
+      script.setAttribute('kr-public-key', publicKey);
+      script.setAttribute('kr-language', 'es-PE');
+      script.onload  = () => { console.log('[Izipay] SDK loaded, KRGlue:', typeof KRGlue); resolve(); };
+      script.onerror = (e) => { console.error('[Izipay] SDK load error:', e); reject(new Error('No se pudo cargar el SDK de Izipay. Verifica tu conexión.')); };
+      document.head.appendChild(script);
+    });
 
     KRGlue.loadLibrary('https://static.micuentaweb.pe', publicKey)
       .then(({ KR }) => KR.setFormConfig({ formToken, 'kr-language': 'es-PE' }))
@@ -2695,7 +2708,7 @@ async function initIzipayForm() {
       })
       .catch(err => {
         const el = document.getElementById('iz-error');
-        if (el) { el.textContent = '❌ No se pudo cargar el formulario de pago. Inténtalo de nuevo.'; el.classList.add('show'); }
+        if (el) { el.textContent = '❌ No se pudo inicializar el formulario. Inténtalo de nuevo.'; el.classList.add('show'); }
         console.error('Izipay SDK error:', err);
       });
 
