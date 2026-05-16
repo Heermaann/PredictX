@@ -2631,9 +2631,9 @@ async function initIzipayForm() {
   if (izAmt) izAmt.textContent = 'S/ ' + amt.toFixed(2);
   if (izErr) { izErr.classList.remove('show'); izErr.textContent = ''; }
 
-  // Reset container — let Izipay render its own form
-  const container = document.getElementById('iz-form-container');
-  if (container) container.innerHTML = '';
+  // Reset container — SDK will re-render the smart form
+  const wrapper = document.getElementById('iz-form-wrapper');
+  if (wrapper) wrapper.innerHTML = '<div class="kr-smart-form"></div>';
 
   try {
     const { formToken, publicKey, mode } = await izipayRequestToken(amt);
