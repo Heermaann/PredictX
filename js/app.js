@@ -2589,24 +2589,75 @@ async function creditBalance(amt, method, orderId) {
   if (!SESSION) { showToast('❌ Debes iniciar sesión'); return; }
   if (!amt || isNaN(amt) || amt <= 0 || amt > 50000) { showToast('❌ Monto inválido'); return; }
   amt = Math.round(amt * 100) / 100;
-  const d   = adminData();
-  const txs = txHistory();
-  d.balance   = (d.balance   || 0) + amt;
-  d.deposited = (d.deposited || 0) + amt;
-  await saveAdminData(d);
-  const tx = { id: orderId||('TX'+Date.now()), date:todayStr(), desc:'Depósito vía '+method.toUpperCase(), type:'dep', amount:amt, balance:d.balance };
-  txs.push(tx);
-  saveTx(txs);
-  // Also save to Supabase
-  try { await saveTx(tx); } catch(e) {}
+
+  // ── Anti-replay: check if this orderId was already processed ──
+  if (orderId) {
+    const { data: existing } = await _SB
+      .from('payment_orders')
+      .select('order_id')
+      .eq('order_id', orderId)
+      .maybeSingle();
+    if (existing) {
+      showToast('⚠️ Este pago ya fue procesado anteriormente');
+      console.warn('Replay attack blocked for orderId:', orderId);
+      return;
+    }
+    // Register order BEFORE crediting (atomic guard)
+    const { error: insertErr } = await _SB.from('payment_orders').insert({
+      order_id:   orderId,
+      user_email: SESSION.email,
+      amount:     amt,
+      method,
+    });
+    if (insertErr) {
+      // Duplicate key error = already processed
+      showToast('⚠️ Este pago ya fue procesado anteriormente');
+      return;
+    }
+  }
+
+  // ── Credit balance in Supabase (source of truth) ──
+  const { data: prof, error: profErr } = await _SB
+    .from('profiles')
+    .select('balance, deposited')
+    .eq('email', SESSION.email)
+    .single();
+  if (profErr || !prof) { showToast('❌ Error al obtener saldo'); return; }
+
+  const newBalance   = Math.round((+(prof.balance   || 0) + amt) * 100) / 100;
+  const newDeposited = Math.round((+(prof.deposited || 0) + amt) * 100) / 100;
+
+  const { error: updateErr } = await _SB.from('profiles').update({
+    balance:   newBalance,
+    deposited: newDeposited,
+  }).eq('email', SESSION.email);
+  if (updateErr) { showToast('❌ Error al acreditar saldo: ' + updateErr.message); return; }
+
+  // Record transaction
+  await _SB.from('transactions').insert({
+    user_email:  SESSION.email,
+    description: 'Depósito vía ' + method,
+    type:        'deposit',
+    amount:      amt,
+    balance:     newBalance,
+    created_at:  new Date().toISOString(),
+  });
+
+  // Update local cache
+  if (_sbProfile) { _sbProfile.balance = newBalance; _sbProfile.deposited = newDeposited; }
+  const localD = adminData();
+  localD.balance = newBalance; localD.deposited = newDeposited;
+  DB.set('admin', localD);
+
+  // Update UI
   document.getElementById('nav-bonus-badge')?.classList.remove('show');
-  document.getElementById('pay-step2').style.display='none';
-  document.getElementById('pay-step3').style.display='block';
+  document.getElementById('pay-step2').style.display = 'none';
+  document.getElementById('pay-step3').style.display = 'block';
   document.getElementById('pay-bonus-txt').textContent = '✅ Saldo acreditado';
   document.getElementById('pay-success-msg').textContent =
-    `Depósito de S/${amt.toFixed(2)} procesado. Tu saldo es S/${d.balance.toFixed(2)}.`;
-  setText('sc-balance', 'S/'+d.balance.toFixed(2));
-  setText('tx-balance', 'S/'+d.balance.toFixed(2));
+    `Depósito de S/${amt.toFixed(2)} procesado. Tu saldo es S/${newBalance.toFixed(2)}.`;
+  setText('sc-balance', 'S/' + newBalance.toFixed(2));
+  setText('tx-balance', 'S/' + newBalance.toFixed(2));
 }
 
 /* ─── Izipay token request ─── */
