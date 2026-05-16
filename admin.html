@@ -489,38 +489,29 @@ function badgeHtml(status){
 
 // ── Auth guard ──
 async function initAdmin(){
-  // Try getSession first
-  let { data:{ session } } = await _SB.auth.getSession();
-
-  // If no session, wait briefly for Supabase to restore from localStorage
-  if (!session) {
-    session = await new Promise((resolve) => {
-      const timeout = setTimeout(() => resolve(null), 3000);
-      const { data: { subscription } } = _SB.auth.onAuthStateChange((event, s) => {
-        if (s) {
-          clearTimeout(timeout);
-          subscription.unsubscribe();
-          resolve(s);
-        }
-      });
-    });
+  const { data:{ session } } = await _SB.auth.getSession();
+  if(!session){ 
+    document.getElementById('adm-gate-loading').style.display='none';
+    document.getElementById('adm-login-form').style.display='block';
+    document.getElementById('adm-gate-err').textContent='Inicia sesión para acceder al panel.';
+    return; 
   }
+  await admEnterWithSession(session);
+}
 
-  if(!session){ showGateError('Debes iniciar sesión en el sitio principal primero.'); return; }
-
+async function admEnterWithSession(session){
   const { data: prof } = await _SB.from('profiles').select('role,name,email').eq('email', session.user.email).single();
   if(!prof || (prof.role !== 'owner' && session.user.email !== OWNER_EMAIL)){
-    showGateError('No tienes permisos de administrador.');
+    document.getElementById('adm-gate-loading').style.display='none';
+    document.getElementById('adm-gate-err').textContent='No tienes permisos de administrador.';
     setTimeout(()=>window.location.href='/', 2000);
     return;
   }
-
   SESSION = { email: session.user.email, name: prof.name || session.user.email.split('@')[0] };
   document.getElementById('adm-user-name').textContent   = SESSION.name;
   document.getElementById('adm-user-avatar').textContent = SESSION.name[0].toUpperCase();
-  document.getElementById('adm-gate').style.display   = 'none';
+  document.getElementById('adm-gate').style.display    = 'none';
   document.getElementById('admin-layout').style.display = 'flex';
-
   await fetchAll();
   renderDashboard();
   loadAdmConfig();
@@ -541,11 +532,10 @@ async function admLogin(){
   errEl.textContent = '';
   const { data, error } = await _SB.auth.signInWithPassword({ email, password: pass });
   if (error) { errEl.textContent = '❌ ' + error.message; return; }
-  // Re-run initAdmin with the new session
   document.getElementById('adm-login-form').style.display = 'none';
   document.getElementById('adm-gate-loading').style.display = 'block';
   document.getElementById('adm-gate-loading').textContent = 'Verificando permisos...';
-  await initAdmin();
+  await admEnterWithSession(data.session);
 }
 
 // ── Data fetch ──
