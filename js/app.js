@@ -2166,6 +2166,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   loadMarkets();
   // Load site config from Supabase (for config enforcement)
   await loadSiteConfig();
+  // Check manual events auto-live on startup
+  checkManualEventsAutoLive();
   // Show maintenance banner if active and user is not owner
   const cfg = getSiteConfig();
   if (cfg.maintenance && !isOwner()) {
@@ -3795,6 +3797,24 @@ async function deleteManualEvent(id) {
   await renderOwnerEvents();
   await loadMarkets(false);
 }
+
+/* ── Auto-live: pasa partidos manuales a En Vivo cuando llega su hora ── */
+async function checkManualEventsAutoLive() {
+  try {
+    const now = new Date();
+    const { data } = await _SB.from('manual_events')
+      .select('id, commence_time')
+      .eq('status', 'upcoming');
+    if (!data || !data.length) return;
+    const toActivate = data.filter(e => new Date(e.commence_time) <= now);
+    if (!toActivate.length) return;
+    await Promise.all(toActivate.map(e =>
+      _SB.from('manual_events').update({ status: 'live', updated_at: now.toISOString() }).eq('id', e.id)
+    ));
+    await loadMarkets(false);
+  } catch(_) {}
+}
+setInterval(checkManualEventsAutoLive, 60000);
 
 function renderOwnerConfig() {
   const cfg = DB.get('site_config') || {};
