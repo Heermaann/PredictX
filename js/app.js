@@ -2649,32 +2649,33 @@ async function initIzipayForm() {
     }
     if (hint) hint.style.display = mode === 'prod' ? 'none' : 'block';
 
-    // SDK loaded in <head> but KRGlue may take a moment to initialize
-    // Wait up to 3 seconds for KRGlue to become available
+    // SDK uses KR global (not KRGlue) in this version
     let krAttempts = 0;
-    while (typeof KRGlue === 'undefined' && krAttempts < 30) {
+    while (typeof KR === 'undefined' && krAttempts < 30) {
       await new Promise(r => setTimeout(r, 100));
       krAttempts++;
     }
 
-    if (typeof KRGlue === 'undefined') {
+    if (typeof KR === 'undefined') {
       const el = document.getElementById('iz-error');
       if (el) { el.textContent = '❌ El SDK de Izipay no pudo cargar. Recarga la página.'; el.classList.add('show'); }
       return;
     }
 
-    console.log('[Izipay] KRGlue available after', krAttempts * 100, 'ms');
+    console.log('[Izipay] KR available after', krAttempts * 100, 'ms');
 
     // Hide "Confirmar depósito" — Izipay provides its own pay button
     const confirmBtn = document.getElementById('pay-confirm-btn');
     if (confirmBtn) confirmBtn.style.display = 'none';
 
-    KRGlue.loadLibrary('https://static.micuentaweb.pe', publicKey)
-      .then(({ KR }) => KR.setFormConfig({ formToken, 'kr-language': 'es-PE' }))
-      .then(({ KR }) => KR.addForm('#iz-form-container'))
-      .then(({ KR }) => KR.showForm(KR.result))
-      .then(({ KR }) => {
-        KR.onSubmit(async (paymentData) => {
+    KR.setFormConfig({
+      formToken: formToken,
+      'kr-public-key': publicKey,
+      'kr-language': 'es-PE',
+    }).then(() => KR.addForm('#iz-form-container'))
+      .then(({ KR: kr, result }) => kr.showForm(result))
+      .then(({ KR: kr }) => {
+        kr.onSubmit(async (paymentData) => {
           try {
             const vResp = await fetch('/api/izipay-verify', {
               method: 'POST',
@@ -2699,15 +2700,15 @@ async function initIzipayForm() {
           }
           return false;
         });
-        KR.onError(err => {
+        kr.onError(err => {
           const el = document.getElementById('iz-error');
           if (el) { el.textContent = '❌ ' + (err.errorMessage || 'Error en el formulario de pago'); el.classList.add('show'); }
         });
       })
       .catch(err => {
         const el = document.getElementById('iz-error');
-        if (el) { el.textContent = '❌ No se pudo inicializar el formulario. Inténtalo de nuevo.'; el.classList.add('show'); }
-        console.error('Izipay SDK error:', err);
+        if (el) { el.textContent = '❌ No se pudo inicializar el formulario: ' + err.message; el.classList.add('show'); }
+        console.error('[Izipay] KR error:', err);
       });
 
   } catch(err) {
