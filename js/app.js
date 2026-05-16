@@ -2669,10 +2669,8 @@ async function initIzipayForm() {
       formToken: formToken,
       'kr-public-key': publicKey,
       'kr-language': 'es-PE',
-    }).then(() => KR.addForm('#iz-form-container'))
-      .then(({ KR: kr, result }) => kr.showForm(result))
-      .then(({ KR: kr }) => {
-        kr.onSubmit(async (paymentData) => {
+    }).then(() => {
+        KR.onSubmit(async (paymentData) => {
           try {
             const vResp = await fetch('/api/izipay-verify', {
               method: 'POST',
@@ -2697,7 +2695,7 @@ async function initIzipayForm() {
           }
           return false;
         });
-        kr.onError(err => {
+        KR.onError(err => {
           const el = document.getElementById('iz-error');
           if (el) { el.textContent = '❌ ' + (err.errorMessage || 'Error en el formulario de pago'); el.classList.add('show'); }
         });
