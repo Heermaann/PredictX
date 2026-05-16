@@ -2631,12 +2631,9 @@ async function initIzipayForm() {
   if (izAmt) izAmt.textContent = 'S/ ' + amt.toFixed(2);
   if (izErr) { izErr.classList.remove('show'); izErr.textContent = ''; }
 
-  // Reset container
+  // Reset container — let Izipay render its own form
   const container = document.getElementById('iz-form-container');
-  if (container) container.innerHTML =
-    '<div class="kr-pan"></div><div class="kr-expiry"></div>' +
-    '<div class="kr-security-code"></div>' +
-    '<button class="kr-payment-button">Pagar con tarjeta →</button>';
+  if (container) container.innerHTML = '';
 
   try {
     const { formToken, publicKey, mode } = await izipayRequestToken(amt);
