@@ -11,7 +11,43 @@
 <script src="https://cdn.jsdelivr.net/npm/otpauth@9.3.6/dist/otpauth.umd.min.js"></script>
 <link rel="stylesheet" href="css/style.css">
 <style>
-  /* ── Admin page layout ── */
+  /* ── Force text colors for admin panel ── */
+  .ap-title, .admin-card-title, .adm-sidebar-title,
+  .sc-label, .sc-val, .cfg-label, .cfg-toggle-label,
+  .adm-nav-user-name, .ev-row-match, .ev-row-sport,
+  .owner-section-title, .adm-table th, .adm-table td,
+  .admin-card-hd, .owner-modal-head span {
+    color: var(--text1) !important;
+  }
+  .ap-sub, .adm-sidebar-sub, .cfg-toggle-sub,
+  .adm-nav-user-role, .ev-row-meta, .adm-empty,
+  .ev-tag, .adm-gate-sub {
+    color: var(--text2) !important;
+  }
+  /* Ensure dark background vars are set */
+  :root {
+    --text1: #f1f5f9;
+    --text2: #94a3b8;
+    --text3: #64748b;
+    --bg:    #0f172a;
+    --bg2:   #1e293b;
+    --bg3:   #334155;
+    --bg4:   #475569;
+    --border: rgba(148,163,184,.15);
+    --border2: rgba(148,163,184,.3);
+    --accent: #6366f1;
+    --accent-bg: rgba(99,102,241,.12);
+    --green: #10b981;
+    --green-bg: rgba(16,185,129,.1);
+    --green-bd: rgba(16,185,129,.3);
+    --red:   #ef4444;
+    --red-bg: rgba(239,68,68,.1);
+    --red-bd: rgba(239,68,68,.3);
+    --yellow: #f4b942;
+    --mono: 'JetBrains Mono', monospace;
+    --font: 'Inter', sans-serif;
+    --shadow: rgba(0,0,0,.4);
+  }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html, body { height: 100%; background: var(--bg); color: var(--text1); font-family: var(--font); }
 
