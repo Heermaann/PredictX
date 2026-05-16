@@ -177,6 +177,7 @@ async function loadMarkets(force=false) {
     '<div class="spinner-wrap"><div class="spin"></div><div>Cargando eventos…</div></div>';
   try {
     // Fetch API events and manual events in parallel
+    // Manual events: load ALL active ones regardless of current sport filter
     const [res, manualData] = await Promise.all([
       oddsApiFetch(S.sport, force),
       _SB.from('manual_events').select('*').in('status', ['upcoming','live']).order('commence_time', { ascending: true })
@@ -378,7 +379,11 @@ function sportIco(key) {
   return m[(key||'').split('_')[0]]||'🎯';
 }
 
-function isLive(m) { return new Date(m.commence_time) <= new Date(); }
+function isLive(m) {
+  // Manual events use explicit _status field
+  if (m._manual) return m._status === 'live';
+  return new Date(m.commence_time) <= new Date();
+}
 
 /* ════════════════════════════════════════════════════
    FILTERS
@@ -413,8 +418,9 @@ function applyFilters() {
   let list = [...S.markets];
 
   // Sport category (cat-bar pills like Fútbol, Baloncesto...)
+  // Manual events always show regardless of sport filter (they have their own sportCat)
   if (S.sport_cat && S.sport_cat !== 'all') {
-    list = list.filter(m => m.sportCat === S.sport_cat);
+    list = list.filter(m => m._manual || m.sportCat === S.sport_cat);
   }
 
   const now = new Date();
@@ -3551,11 +3557,12 @@ function openCreateEventModal() {
   _editingEventId = null;
   document.getElementById('event-modal-title').textContent = 'Nuevo Partido';
   clearEventForm();
-  // Set default datetime to tomorrow
   const tomorrow = new Date(Date.now() + 86400000);
   tomorrow.setMinutes(0, 0, 0);
   document.getElementById('ev-datetime').value = tomorrow.toISOString().slice(0,16);
-  document.getElementById('event-modal-overlay').style.display = 'flex';
+  const overlay = document.getElementById('event-modal-overlay');
+  overlay.style.display = 'flex';
+  overlay.style.position = 'fixed';
 }
 
 /* Abre modal para editar partido existente */
@@ -3586,7 +3593,9 @@ function openEditEventModal(id) {
   document.getElementById('ev-spread-away').value    = e.spread_away    || '';
 
   onEvSportChange();
-  document.getElementById('event-modal-overlay').style.display = 'flex';
+  const overlay = document.getElementById('event-modal-overlay');
+  overlay.style.display = 'flex';
+  overlay.style.position = 'fixed';
 }
 
 function closeEventModal() {
