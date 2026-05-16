@@ -133,6 +133,18 @@
     <div class="adm-gate-title">PredictX Admin</div>
     <div class="adm-gate-sub">Acceso exclusivo para administradores</div>
     <div id="adm-gate-loading" style="color:var(--text3);font-size:13px">Verificando sesión...</div>
+    <!-- Login form (shown if no active session) -->
+    <div id="adm-login-form" style="display:none;margin-top:16px;text-align:left">
+      <div style="margin-bottom:10px">
+        <div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:5px;text-transform:uppercase;letter-spacing:.5px">Email</div>
+        <input type="email" id="adm-login-email" style="width:100%;padding:10px 12px;border-radius:9px;border:1px solid var(--border);background:var(--bg3);color:var(--text1);font-size:14px;outline:none" placeholder="tu@email.com">
+      </div>
+      <div style="margin-bottom:16px">
+        <div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:5px;text-transform:uppercase;letter-spacing:.5px">Contraseña</div>
+        <input type="password" id="adm-login-pass" style="width:100%;padding:10px 12px;border-radius:9px;border:1px solid var(--border);background:var(--bg3);color:var(--text1);font-size:14px;outline:none" placeholder="••••••••" onkeydown="if(event.key==='Enter')admLogin()">
+      </div>
+      <button onclick="admLogin()" style="width:100%;padding:11px;border-radius:10px;background:var(--accent);color:#fff;font-size:14px;font-weight:600;border:none;cursor:pointer">Entrar →</button>
+    </div>
     <div class="adm-gate-err" id="adm-gate-err"></div>
   </div>
 </div>
@@ -517,6 +529,23 @@ async function initAdmin(){
 function showGateError(msg){
   document.getElementById('adm-gate-loading').style.display='none';
   document.getElementById('adm-gate-err').textContent = msg;
+  // Show login form so admin can authenticate directly
+  document.getElementById('adm-login-form').style.display = 'block';
+}
+
+async function admLogin(){
+  const email = document.getElementById('adm-login-email').value.trim();
+  const pass  = document.getElementById('adm-login-pass').value;
+  const errEl = document.getElementById('adm-gate-err');
+  if (!email || !pass) { errEl.textContent = 'Introduce email y contraseña'; return; }
+  errEl.textContent = '';
+  const { data, error } = await _SB.auth.signInWithPassword({ email, password: pass });
+  if (error) { errEl.textContent = '❌ ' + error.message; return; }
+  // Re-run initAdmin with the new session
+  document.getElementById('adm-login-form').style.display = 'none';
+  document.getElementById('adm-gate-loading').style.display = 'block';
+  document.getElementById('adm-gate-loading').textContent = 'Verificando permisos...';
+  await initAdmin();
 }
 
 // ── Data fetch ──
