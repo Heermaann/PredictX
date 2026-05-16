@@ -168,6 +168,12 @@
         <span class="adm-nav-ico">⚽</span> Partidos
       </button>
       <div class="adm-nav-sep"></div>
+      <button class="adm-nav-item" id="adm-nav-sports" onclick="admShowPage('sports',this)">
+        <span class="adm-nav-ico">🏅</span> Deportes
+      </button>
+      <button class="adm-nav-item" id="adm-nav-leagues" onclick="admShowPage('leagues',this)">
+        <span class="adm-nav-ico">🏆</span> Ligas
+      </button>
       <button class="adm-nav-item" id="adm-nav-config" onclick="admShowPage('config',this)">
         <span class="adm-nav-ico">⚙️</span> Configuración
       </button>
@@ -292,7 +298,28 @@
     </div>
 
     <!-- Configuración -->
-    <div class="adm-page" id="adm-config">
+    <!-- Deportes -->
+    <div class="adm-page" id="adm-sports">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+        <div><div class="ap-title">Deportes</div><div class="ap-sub">Gestiona los deportes visibles en la plataforma</div></div>
+        <button class="adm-btn" onclick="admOpenSportModal()">+ Nuevo deporte</button>
+      </div>
+      <div id="adm-sports-list"><div class="adm-empty">Cargando...</div></div>
+    </div>
+
+    <!-- Ligas -->
+    <div class="adm-page" id="adm-leagues">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+        <div><div class="ap-title">Ligas</div><div class="ap-sub">Crea y gestiona ligas personalizadas</div></div>
+        <button class="adm-btn" onclick="admOpenLeagueModal()">+ Nueva liga</button>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap" id="adm-leagues-sport-filter">
+        <button class="ev-filter-btn active" onclick="admFilterLeagues('all',this)">Todas</button>
+      </div>
+      <div id="adm-leagues-list"><div class="adm-empty">Cargando...</div></div>
+    </div>
+
+        <div class="adm-page" id="adm-config">
       <div class="ap-title" style="margin-bottom:4px">Configuración del Sitio</div>
       <div class="ap-sub" style="margin-bottom:24px">Ajustes globales de PredictX</div>
       <div class="admin-card" style="margin-bottom:16px">
@@ -488,6 +515,9 @@ async function fetchAll(){
   _cache.tx    = t.data||[];
   _cache.loaded = true;
   updateBadges();
+  // Pre-load sports for league filter
+  const { data: sData } = await _SB.from('sports').select('*').order('sort_order');
+  _sports = sData || [];
 }
 
 function updateBadges(){
@@ -511,6 +541,8 @@ function admShowPage(page, btn){
   if(page==='tx')        renderTx('all');
   if(page==='events')    renderEvents();
   if(page==='config')    loadAdmConfig();
+  if(page==='sports')    renderSports();
+  if(page==='leagues')   { renderSports().then(()=>renderLeagues()); }
 }
 
 // ── Dashboard ──
@@ -946,8 +978,286 @@ async function admDemoteUser(){
   showToast('✅ Usuario degradado a Usuario');
 }
 
+
+// ── Deportes ──
+let _sports = [];
+let _editingSportKey = null;
+
+async function renderSports() {
+  const list = document.getElementById('adm-sports-list');
+  list.innerHTML = '<div class="adm-empty">Cargando...</div>';
+  try {
+    const { data, error } = await _SB.from('sports').select('*').order('sort_order');
+    if (error) throw error;
+    _sports = data || [];
+    if (!_sports.length) { list.innerHTML = '<div class="adm-empty">No hay deportes. Crea uno con "+ Nuevo deporte"</div>'; return; }
+    list.innerHTML = _sports.map(s => `
+      <div class="ev-row" style="align-items:center">
+        <div style="font-size:28px;width:40px;text-align:center;flex-shrink:0">${esc(s.icon||'⚽')}</div>
+        <div class="ev-row-main">
+          <div class="ev-row-match">${esc(s.title)}</div>
+          <div class="ev-row-meta">
+            <span class="ev-tag">🔑 ${esc(s.key)}</span>
+            <span class="ev-tag">📊 Orden: ${s.sort_order}</span>
+            <span class="ev-tag ${s.active?'upcoming':'finished'}">${s.active?'✅ Activo':'⏸ Inactivo'}</span>
+          </div>
+        </div>
+        <div class="ev-row-actions">
+          <button class="tbl-action" onclick="admToggleSport('${esc(s.key)}',${!s.active})">${s.active?'⏸ Desactivar':'▶ Activar'}</button>
+          <button class="tbl-action" onclick="admOpenEditSport('${esc(s.key)}')">✏️ Editar</button>
+          <button class="tbl-action danger" onclick="admDeleteSport('${esc(s.key)}')">🗑 Borrar</button>
+        </div>
+      </div>`).join('');
+    // Update leagues sport filter
+    const filter = document.getElementById('adm-leagues-sport-filter');
+    if (filter) {
+      filter.innerHTML = '<button class="ev-filter-btn active" onclick="admFilterLeagues('all',this)">Todas</button>' +
+        _sports.map(s => `<button class="ev-filter-btn" onclick="admFilterLeagues('${esc(s.key)}',this)">${esc(s.icon)} ${esc(s.title)}</button>`).join('');
+    }
+  } catch(err) {
+    list.innerHTML = `<div class="adm-empty" style="color:var(--red)">❌ ${esc(err.message)}</div>`;
+  }
+}
+
+function admOpenSportModal() {
+  _editingSportKey = null;
+  document.getElementById('sport-modal-title').textContent = 'Nuevo Deporte';
+  document.getElementById('sport-key').value = '';
+  document.getElementById('sport-title').value = '';
+  document.getElementById('sport-icon').value = '⚽';
+  document.getElementById('sport-order').value = '0';
+  document.getElementById('sport-active').checked = true;
+  document.getElementById('sport-key').disabled = false;
+  const o = document.getElementById('sport-modal-overlay');
+  o.style.display='flex'; o.style.zIndex='9999';
+}
+
+function admOpenEditSport(key) {
+  const s = _sports.find(x => x.key === key);
+  if (!s) return;
+  _editingSportKey = key;
+  document.getElementById('sport-modal-title').textContent = 'Editar Deporte';
+  document.getElementById('sport-key').value = s.key;
+  document.getElementById('sport-key').disabled = true;
+  document.getElementById('sport-title').value = s.title;
+  document.getElementById('sport-icon').value = s.icon||'⚽';
+  document.getElementById('sport-order').value = s.sort_order||0;
+  document.getElementById('sport-active').checked = !!s.active;
+  const o = document.getElementById('sport-modal-overlay');
+  o.style.display='flex'; o.style.zIndex='9999';
+}
+
+function admCloseSportModal() { document.getElementById('sport-modal-overlay').style.display='none'; }
+
+async function admSaveSport() {
+  const key   = document.getElementById('sport-key').value.trim().toLowerCase().replace(/\s+/g,'_');
+  const title = document.getElementById('sport-title').value.trim();
+  const icon  = document.getElementById('sport-icon').value.trim() || '⚽';
+  const order = parseInt(document.getElementById('sport-order').value)||0;
+  const active = document.getElementById('sport-active').checked;
+  if (!key || !title) { showToast('❌ Clave y nombre son obligatorios'); return; }
+  const payload = { key, title, icon, sort_order: order, active };
+  let error;
+  if (_editingSportKey) {
+    ({ error } = await _SB.from('sports').update({ title, icon, sort_order: order, active }).eq('key', _editingSportKey));
+  } else {
+    ({ error } = await _SB.from('sports').insert(payload));
+  }
+  if (error) { showToast('❌ ' + error.message); return; }
+  showToast(_editingSportKey ? '✅ Deporte actualizado' : '✅ Deporte creado');
+  admCloseSportModal();
+  await renderSports();
+}
+
+async function admToggleSport(key, active) {
+  const { error } = await _SB.from('sports').update({ active }).eq('key', key);
+  if (error) { showToast('❌ ' + error.message); return; }
+  showToast(active ? '✅ Deporte activado' : '⏸ Deporte desactivado');
+  await renderSports();
+}
+
+async function admDeleteSport(key) {
+  if (!confirm(`¿Borrar el deporte "${key}"? Esto también borrará sus ligas.`)) return;
+  await _SB.from('leagues').delete().eq('sport_key', key);
+  const { error } = await _SB.from('sports').delete().eq('key', key);
+  if (error) { showToast('❌ ' + error.message); return; }
+  showToast('🗑 Deporte eliminado');
+  await renderSports();
+}
+
+// ── Ligas ──
+let _leagues = [];
+let _editingLeagueId = null;
+let _leagueFilter = 'all';
+
+async function renderLeagues() {
+  const list = document.getElementById('adm-leagues-list');
+  list.innerHTML = '<div class="adm-empty">Cargando...</div>';
+  try {
+    const { data, error } = await _SB.from('leagues').select('*').order('sort_order');
+    if (error) throw error;
+    _leagues = data || [];
+    admFilterLeagues(_leagueFilter);
+  } catch(err) {
+    list.innerHTML = `<div class="adm-empty" style="color:var(--red)">❌ ${esc(err.message)}</div>`;
+  }
+}
+
+function admFilterLeagues(filter, btn) {
+  _leagueFilter = filter;
+  if (btn) { document.querySelectorAll('#adm-leagues-sport-filter .ev-filter-btn').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); }
+  const list = document.getElementById('adm-leagues-list');
+  let leagues = _leagues;
+  if (filter !== 'all') leagues = leagues.filter(l => l.sport_key === filter);
+  if (!leagues.length) { list.innerHTML = '<div class="adm-empty">No hay ligas. Crea una con "+ Nueva liga"</div>'; return; }
+  const sportIcons = { soccer:'⚽', basketball:'🏀', americanfootball:'🏈', baseball:'⚾', icehockey:'🏒', mma:'🥊' };
+  list.innerHTML = leagues.map(l => `
+    <div class="ev-row" style="align-items:center">
+      <div style="font-size:24px;width:36px;text-align:center;flex-shrink:0">${esc(l.icon||'🏆')}</div>
+      <div class="ev-row-main">
+        <div class="ev-row-match">${esc(l.name)}</div>
+        <div class="ev-row-meta">
+          <span class="ev-tag">${sportIcons[l.sport_key]||'🏅'} ${esc(l.sport_key)}</span>
+          ${l.country?`<span class="ev-tag">🌍 ${esc(l.country)}</span>`:''}
+          ${l.api_key?`<span class="ev-tag">🔗 ${esc(l.api_key)}</span>`:''}
+          <span class="ev-tag ${l.active?'upcoming':'finished'}">${l.active?'✅ Activa':'⏸ Inactiva'}</span>
+        </div>
+      </div>
+      <div class="ev-row-actions">
+        <button class="tbl-action" onclick="admToggleLeague(${l.id},${!l.active})">${l.active?'⏸ Desactivar':'▶ Activar'}</button>
+        <button class="tbl-action" onclick="admOpenEditLeague(${l.id})">✏️ Editar</button>
+        <button class="tbl-action danger" onclick="admDeleteLeague(${l.id})">🗑 Borrar</button>
+      </div>
+    </div>`).join('');
+}
+
+function admOpenLeagueModal() {
+  _editingLeagueId = null;
+  document.getElementById('league-modal-title').textContent = 'Nueva Liga';
+  ['league-name','league-country','league-api-key'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
+  document.getElementById('league-icon').value = '🏆';
+  document.getElementById('league-order').value = '0';
+  document.getElementById('league-sport').value = 'soccer';
+  document.getElementById('league-active').checked = true;
+  const o = document.getElementById('league-modal-overlay');
+  o.style.display='flex'; o.style.zIndex='9999';
+}
+
+function admOpenEditLeague(id) {
+  const l = _leagues.find(x => x.id === id);
+  if (!l) return;
+  _editingLeagueId = id;
+  document.getElementById('league-modal-title').textContent = 'Editar Liga';
+  document.getElementById('league-name').value    = l.name||'';
+  document.getElementById('league-country').value = l.country||'';
+  document.getElementById('league-icon').value    = l.icon||'🏆';
+  document.getElementById('league-sport').value   = l.sport_key||'soccer';
+  document.getElementById('league-api-key').value = l.api_key||'';
+  document.getElementById('league-order').value   = l.sort_order||0;
+  document.getElementById('league-active').checked = !!l.active;
+  const o = document.getElementById('league-modal-overlay');
+  o.style.display='flex'; o.style.zIndex='9999';
+}
+
+function admCloseLeagueModal() { document.getElementById('league-modal-overlay').style.display='none'; }
+
+async function admSaveLeague() {
+  const name      = document.getElementById('league-name').value.trim();
+  const country   = document.getElementById('league-country').value.trim();
+  const icon      = document.getElementById('league-icon').value.trim()||'🏆';
+  const sport_key = document.getElementById('league-sport').value;
+  const api_key   = document.getElementById('league-api-key').value.trim()||null;
+  const sort_order = parseInt(document.getElementById('league-order').value)||0;
+  const active    = document.getElementById('league-active').checked;
+  if (!name) { showToast('❌ El nombre es obligatorio'); return; }
+  const payload = { name, country:country||null, icon, sport_key, api_key, sort_order, active };
+  let error;
+  if (_editingLeagueId) {
+    ({ error } = await _SB.from('leagues').update(payload).eq('id', _editingLeagueId));
+  } else {
+    ({ error } = await _SB.from('leagues').insert(payload));
+  }
+  if (error) { showToast('❌ ' + error.message); return; }
+  showToast(_editingLeagueId ? '✅ Liga actualizada' : '✅ Liga creada');
+  admCloseLeagueModal();
+  await renderLeagues();
+}
+
+async function admToggleLeague(id, active) {
+  const { error } = await _SB.from('leagues').update({ active }).eq('id', id);
+  if (error) { showToast('❌ ' + error.message); return; }
+  showToast(active ? '✅ Liga activada' : '⏸ Liga desactivada');
+  await renderLeagues();
+}
+
+async function admDeleteLeague(id) {
+  if (!confirm('¿Borrar esta liga?')) return;
+  const { error } = await _SB.from('leagues').delete().eq('id', id);
+  if (error) { showToast('❌ ' + error.message); return; }
+  showToast('🗑 Liga eliminada');
+  await renderLeagues();
+}
+
 // ── Init ──
 initAdmin();
 </script>
+
+<!-- Modal Deporte -->
+<div class="owner-modal-overlay" id="sport-modal-overlay" style="display:none" onclick="if(event.target===this)admCloseSportModal()">
+  <div class="owner-modal" style="max-width:420px">
+    <div class="owner-modal-head"><span id="sport-modal-title">Nuevo Deporte</span><button onclick="admCloseSportModal()" class="owner-modal-close">✕</button></div>
+    <div class="owner-modal-body">
+      <div class="ev-form-row">
+        <div class="ev-form-group"><label class="ev-label">Clave (key)</label><input type="text" id="sport-key" class="ev-input" placeholder="ej: soccer"></div>
+        <div class="ev-form-group"><label class="ev-label">Nombre</label><input type="text" id="sport-title" class="ev-input" placeholder="ej: Fútbol"></div>
+      </div>
+      <div class="ev-form-row">
+        <div class="ev-form-group"><label class="ev-label">Icono (emoji)</label><input type="text" id="sport-icon" class="ev-input" placeholder="⚽" maxlength="4"></div>
+        <div class="ev-form-group"><label class="ev-label">Orden</label><input type="number" id="sport-order" class="ev-input" value="0" min="0"></div>
+      </div>
+      <label class="ev-toggle-wrap"><input type="checkbox" id="sport-active" checked><span class="ev-toggle-lbl">✅ Activo (visible en la app)</span></label>
+    </div>
+    <div class="owner-modal-foot">
+      <button onclick="admCloseSportModal()" style="padding:9px 18px;border-radius:8px;background:var(--bg3);border:1px solid var(--border);color:var(--text2);cursor:pointer">Cancelar</button>
+      <button class="adm-btn" onclick="admSaveSport()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Liga -->
+<div class="owner-modal-overlay" id="league-modal-overlay" style="display:none" onclick="if(event.target===this)admCloseLeagueModal()">
+  <div class="owner-modal" style="max-width:480px">
+    <div class="owner-modal-head"><span id="league-modal-title">Nueva Liga</span><button onclick="admCloseLeagueModal()" class="owner-modal-close">✕</button></div>
+    <div class="owner-modal-body">
+      <div class="ev-form-row">
+        <div class="ev-form-group"><label class="ev-label">Nombre</label><input type="text" id="league-name" class="ev-input" placeholder="ej: Premier League"></div>
+        <div class="ev-form-group"><label class="ev-label">País</label><input type="text" id="league-country" class="ev-input" placeholder="ej: England"></div>
+      </div>
+      <div class="ev-form-row">
+        <div class="ev-form-group"><label class="ev-label">Deporte</label>
+          <select id="league-sport" class="ev-input">
+            <option value="soccer">⚽ Fútbol</option>
+            <option value="basketball">🏀 Baloncesto</option>
+            <option value="americanfootball">🏈 Fútbol Americano</option>
+            <option value="baseball">⚾ Béisbol</option>
+            <option value="icehockey">🏒 Hockey</option>
+            <option value="mma">🥊 MMA</option>
+          </select>
+        </div>
+        <div class="ev-form-group"><label class="ev-label">Icono (emoji)</label><input type="text" id="league-icon" class="ev-input" placeholder="🏆" maxlength="4"></div>
+      </div>
+      <div class="ev-form-row">
+        <div class="ev-form-group"><label class="ev-label">API Key (opcional)</label><input type="text" id="league-api-key" class="ev-input" placeholder="ej: soccer_epl"></div>
+        <div class="ev-form-group"><label class="ev-label">Orden</label><input type="number" id="league-order" class="ev-input" value="0" min="0"></div>
+      </div>
+      <label class="ev-toggle-wrap"><input type="checkbox" id="league-active" checked><span class="ev-toggle-lbl">✅ Activa (visible en la app)</span></label>
+    </div>
+    <div class="owner-modal-foot">
+      <button onclick="admCloseLeagueModal()" style="padding:9px 18px;border-radius:8px;background:var(--bg3);border:1px solid var(--border);color:var(--text2);cursor:pointer">Cancelar</button>
+      <button class="adm-btn" onclick="admSaveLeague()">Guardar</button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
