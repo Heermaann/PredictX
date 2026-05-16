@@ -177,6 +177,7 @@ async function loadMarkets(force=false) {
     '<div class="spinner-wrap"><div class="spin"></div><div>Cargando eventos…</div></div>';
   try {
     // Fetch API events and manual events in parallel
+    // Manual events: load ALL active ones regardless of current sport filter
     const [res, manualData] = await Promise.all([
       oddsApiFetch(S.sport, force),
       _SB.from('manual_events').select('*').in('status', ['upcoming','live']).order('commence_time', { ascending: true })
@@ -378,7 +379,11 @@ function sportIco(key) {
   return m[(key||'').split('_')[0]]||'🎯';
 }
 
-function isLive(m) { return new Date(m.commence_time) <= new Date(); }
+function isLive(m) {
+  // Manual events use explicit _status field
+  if (m._manual) return m._status === 'live';
+  return new Date(m.commence_time) <= new Date();
+}
 
 /* ════════════════════════════════════════════════════
    FILTERS
@@ -413,8 +418,9 @@ function applyFilters() {
   let list = [...S.markets];
 
   // Sport category (cat-bar pills like Fútbol, Baloncesto...)
+  // Manual events always show regardless of sport filter (they have their own sportCat)
   if (S.sport_cat && S.sport_cat !== 'all') {
-    list = list.filter(m => m.sportCat === S.sport_cat);
+    list = list.filter(m => m._manual || m.sportCat === S.sport_cat);
   }
 
   const now = new Date();
@@ -2160,6 +2166,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   loadMarkets();
   // Load site config from Supabase (for config enforcement)
   await loadSiteConfig();
+  // Check manual events auto-live on startup
+  checkManualEventsAutoLive();
   // Show maintenance banner if active and user is not owner
   const cfg = getSiteConfig();
   if (cfg.maintenance && !isOwner()) {
@@ -2622,7 +2630,7 @@ async function initIzipayForm() {
   if (izAmt) izAmt.textContent = 'S/ ' + amt.toFixed(2);
   if (izErr) { izErr.classList.remove('show'); izErr.textContent = ''; }
 
-  // Limpiar formulario anterior si existe
+  // Reset container
   const container = document.getElementById('iz-form-container');
   if (container) container.innerHTML =
     '<div class="kr-pan"></div><div class="kr-expiry"></div>' +
@@ -2632,41 +2640,48 @@ async function initIzipayForm() {
   try {
     const { formToken, publicKey, mode } = await izipayRequestToken(amt);
 
-    // Actualizar badge de entorno
     const badge = document.getElementById('iz-env-badge');
     const hint  = document.getElementById('iz-test-hint');
     if (badge) {
       badge.className = 'izipay-env-badge' + (mode === 'prod' ? ' prod' : '');
-      badge.textContent = mode === 'prod'
-        ? '✅ Modo Producción'
-        : '🧪 Modo TEST — usa tarjeta de prueba';
+      badge.textContent = mode === 'prod' ? '✅ Modo Producción' : '🧪 Modo TEST — usa tarjeta de prueba';
     }
     if (hint) hint.style.display = mode === 'prod' ? 'none' : 'block';
 
-    // Cargar SDK de Izipay con la clave pública correcta
+    // Hide "Confirmar depósito" — Izipay provides its own pay button
+    const confirmBtn = document.getElementById('pay-confirm-btn');
+    if (confirmBtn) confirmBtn.style.display = 'none';
+
+    // Load Izipay SDK dynamically with the real public key
+    await new Promise((resolve, reject) => {
+      if (typeof KRGlue !== 'undefined') { resolve(); return; }
+      const script = document.createElement('script');
+      script.src = 'https://static.micuentaweb.pe/static/js/krypton-client/V4.0/stable/kr-payment-form.min.js';
+      script.setAttribute('kr-public-key', publicKey);
+      script.setAttribute('kr-language', 'es-PE');
+      script.onload = resolve;
+      script.onerror = () => reject(new Error('No se pudo cargar el SDK de Izipay'));
+      document.head.appendChild(script);
+    });
+
     KRGlue.loadLibrary('https://static.micuentaweb.pe', publicKey)
-      .then(({ KR }) => KR.setFormConfig({
-        formToken,
-        'kr-language': 'es-PE',
-      }))
+      .then(({ KR }) => KR.setFormConfig({ formToken, 'kr-language': 'es-PE' }))
       .then(({ KR }) => KR.addForm('#iz-form-container'))
       .then(({ KR }) => KR.showForm(KR.result))
       .then(({ KR }) => {
-        // Pago completado — verificar server-side
         KR.onSubmit(async (paymentData) => {
           try {
             const vResp = await fetch('/api/izipay-verify', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
-                kr_answer:        paymentData.clientAnswer,
-                kr_hash:          paymentData.hash,
+                kr_answer:         paymentData.clientAnswer,
+                kr_hash:           paymentData.hash,
                 kr_hash_algorithm: paymentData.hashAlgorithm || 'sha256',
               }),
             });
             const vData = await vResp.json();
             if (vData.paid) {
-              // Monto en céntimos → soles
               const paidAmt = (vData.amount || amt * 100) / 100;
               await creditBalance(paidAmt, 'Tarjeta Visa/Mastercard (Izipay)', vData.orderId);
             } else {
@@ -2677,20 +2692,16 @@ async function initIzipayForm() {
             const el = document.getElementById('iz-error');
             if (el) { el.textContent = '❌ Error al verificar el pago: ' + err.message; el.classList.add('show'); }
           }
-          return false; // Evitar redirección automática
+          return false;
         });
-
         KR.onError(err => {
           const el = document.getElementById('iz-error');
-          if (el) {
-            el.textContent = '❌ ' + (err.errorMessage || 'Error en el formulario de pago');
-            el.classList.add('show');
-          }
+          if (el) { el.textContent = '❌ ' + (err.errorMessage || 'Error en el formulario de pago'); el.classList.add('show'); }
         });
       })
       .catch(err => {
         const el = document.getElementById('iz-error');
-        if (el) { el.textContent = '❌ No se pudo cargar el formulario de pago. Inténtalo de nuevo.'; el.classList.add('show'); }
+        if (el) { el.textContent = '❌ No se pudo inicializar el formulario. Inténtalo de nuevo.'; el.classList.add('show'); }
         console.error('Izipay SDK error:', err);
       });
 
@@ -2703,7 +2714,12 @@ async function initIzipayForm() {
 /* ─── payStep2 override: init Izipay if card selected ─── */
 function confirmPayment() {
   if (!SESSION) { openAuthGate(); return; }
-  // For non-card methods: simulate (Yape/Transfer are manual)
+  // Card payments go through Izipay widget — never credit manually
+  if (_currentPayMethod === 'card') {
+    showToast('⚠️ Usa el botón de pago del formulario de tarjeta');
+    return;
+  }
+  // Yape / Transfer: manual confirmation flow
   const amt = parseFloat(document.getElementById('pay-amount').value)||0;
   const btn = document.getElementById('pay-confirm-btn');
   if (btn) { btn.disabled=true; btn.textContent='Procesando…'; }
@@ -3482,6 +3498,7 @@ let _evFilter       = 'all';
 /* Carga eventos manuales desde Supabase */
 async function loadManualEvents() {
   const { data, error } = await _SB.from('manual_events').select('*').order('commence_time', { ascending: true });
+  if (error) throw new Error(error.message);
   _manualEvents = data || [];
   return _manualEvents;
 }
@@ -3491,8 +3508,12 @@ async function renderOwnerEvents() {
   const list = document.getElementById('own-events-list');
   if (!list) return;
   list.innerHTML = '<div class="adm-empty">Cargando...</div>';
-  await loadManualEvents();
-  filterManualEvents(_evFilter);
+  try {
+    await loadManualEvents();
+    filterManualEvents(_evFilter);
+  } catch(err) {
+    list.innerHTML = `<div class="adm-empty" style="color:var(--red)">❌ Error: ${esc(err.message)}</div>`;
+  }
 }
 
 function filterManualEvents(filter, btn) {
@@ -3510,7 +3531,10 @@ function filterManualEvents(filter, btn) {
   if (filter === 'finished')  evs = evs.filter(e => e.status === 'finished');
   if (filter === 'featured')  evs = evs.filter(e => e.featured);
 
-  if (!evs.length) { list.innerHTML = '<div class="adm-empty">No hay partidos para este filtro</div>'; return; }
+  if (!evs.length) { 
+    list.innerHTML = '<div class="adm-empty">No hay partidos todavía. Crea uno con "+ Nuevo partido"</div>'; 
+    return; 
+  }
 
   list.innerHTML = evs.map(e => `
     <div class="ev-row" id="evrow-${e.id}">
@@ -3543,11 +3567,12 @@ function openCreateEventModal() {
   _editingEventId = null;
   document.getElementById('event-modal-title').textContent = 'Nuevo Partido';
   clearEventForm();
-  // Set default datetime to tomorrow
   const tomorrow = new Date(Date.now() + 86400000);
   tomorrow.setMinutes(0, 0, 0);
   document.getElementById('ev-datetime').value = tomorrow.toISOString().slice(0,16);
-  document.getElementById('event-modal-overlay').style.display = 'flex';
+  const overlay = document.getElementById('event-modal-overlay');
+  overlay.style.display = 'flex';
+  overlay.style.position = 'fixed';
 }
 
 /* Abre modal para editar partido existente */
@@ -3578,7 +3603,9 @@ function openEditEventModal(id) {
   document.getElementById('ev-spread-away').value    = e.spread_away    || '';
 
   onEvSportChange();
-  document.getElementById('event-modal-overlay').style.display = 'flex';
+  const overlay = document.getElementById('event-modal-overlay');
+  overlay.style.display = 'flex';
+  overlay.style.position = 'fixed';
 }
 
 function closeEventModal() {
@@ -3778,6 +3805,24 @@ async function deleteManualEvent(id) {
   await renderOwnerEvents();
   await loadMarkets(false);
 }
+
+/* ── Auto-live: pasa partidos manuales a En Vivo cuando llega su hora ── */
+async function checkManualEventsAutoLive() {
+  try {
+    const now = new Date();
+    const { data } = await _SB.from('manual_events')
+      .select('id, commence_time')
+      .eq('status', 'upcoming');
+    if (!data || !data.length) return;
+    const toActivate = data.filter(e => new Date(e.commence_time) <= now);
+    if (!toActivate.length) return;
+    await Promise.all(toActivate.map(e =>
+      _SB.from('manual_events').update({ status: 'live', updated_at: now.toISOString() }).eq('id', e.id)
+    ));
+    await loadMarkets(false);
+  } catch(_) {}
+}
+setInterval(checkManualEventsAutoLive, 60000);
 
 function renderOwnerConfig() {
   const cfg = DB.get('site_config') || {};
