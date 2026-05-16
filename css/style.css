@@ -437,7 +437,7 @@ input,select,textarea{font-family:var(--font)}
 ════════════════════════════════════════════════ */
 .modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:500;align-items:center;justify-content:center;padding:16px}
 .modal-bg.show{display:flex}
-.modal{background:var(--bg2);border:1px solid var(--border2);border-radius:14px;padding:28px;width:440px;max-width:100%;box-shadow:0 24px 80px var(--shadow)}
+.modal{background:var(--bg2);border:1px solid var(--border2);border-radius:14px;padding:28px;width:440px;max-width:100%;box-shadow:0 24px 80px var(--shadow);overflow:visible}
 .modal-title{font-size:18px;font-weight:700;margin-bottom:5px}
 .modal-sub{font-size:13px;color:var(--text2);margin-bottom:20px;line-height:1.5}
 .modal-status{font-size:12px;padding:9px 12px;border-radius:7px;margin-bottom:14px;display:none}
@@ -2012,4 +2012,28 @@ select.ev-input { cursor: pointer; }
   .ev-form-row   { grid-template-columns: 1fr; }
   .ev-form-row-3 { grid-template-columns: 1fr 1fr; }
   .ev-row { flex-direction: column; }
+}
+
+/* ── Izipay Smart Form fixes ── */
+#iz-form-wrapper {
+  margin-top: 12px;
+  min-height: 200px;
+}
+#iz-form-wrapper .kr-smart-form,
+#iz-form-wrapper iframe,
+.kr-smart-form,
+.kr-smart-form iframe {
+  width: 100% !important;
+  min-height: 200px !important;
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+/* Fix modal overflow hiding Izipay iframe */
+#pay-modal .modal-content,
+.modal-be .modal-content {
+  overflow: visible !important;
+}
+.pay-card-wrap {
+  overflow: visible !important;
 }
