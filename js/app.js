@@ -2649,12 +2649,21 @@ async function initIzipayForm() {
     }
     if (hint) hint.style.display = mode === 'prod' ? 'none' : 'block';
 
-    // SDK already loaded in <head> — use KRGlue.loadLibrary to update public key and formToken
+    // SDK loaded in <head> but KRGlue may take a moment to initialize
+    // Wait up to 3 seconds for KRGlue to become available
+    let krAttempts = 0;
+    while (typeof KRGlue === 'undefined' && krAttempts < 30) {
+      await new Promise(r => setTimeout(r, 100));
+      krAttempts++;
+    }
+
     if (typeof KRGlue === 'undefined') {
       const el = document.getElementById('iz-error');
       if (el) { el.textContent = '❌ El SDK de Izipay no pudo cargar. Recarga la página.'; el.classList.add('show'); }
       return;
     }
+
+    console.log('[Izipay] KRGlue available after', krAttempts * 100, 'ms');
 
     // Hide "Confirmar depósito" — Izipay provides its own pay button
     const confirmBtn = document.getElementById('pay-confirm-btn');
