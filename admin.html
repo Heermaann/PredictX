@@ -1046,7 +1046,7 @@ async function renderSports() {
     // Update leagues sport filter
     const filter = document.getElementById('adm-leagues-sport-filter');
     if (filter) {
-      filter.innerHTML = '<button class="ev-filter-btn active" onclick="admFilterLeagues('all',this)">Todas</button>' +
+      filter.innerHTML = '<button class="ev-filter-btn active" onclick="admFilterLeagues(\'all\',this)">Todas</button>' +
         _sports.map(s => `<button class="ev-filter-btn" onclick="admFilterLeagues('${esc(s.key)}',this)">${esc(s.icon)} ${esc(s.title)}</button>`).join('');
     }
   } catch(err) {
