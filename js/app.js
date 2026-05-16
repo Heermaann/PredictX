@@ -170,18 +170,13 @@ async function fetchEventMarkets(sport, eventId, markets) {
 }
 
 async function loadMarkets(force=false) {
-  // Ensure view-list is visible when markets load
   const vl = document.getElementById('view-list');
   if (vl && vl.style.display === 'none') vl.style.display = 'block';
   document.getElementById('events-list').innerHTML =
     '<div class="spinner-wrap"><div class="spin"></div><div>Cargando eventos…</div></div>';
   try {
-    // Fetch API events and manual events in parallel
-    // Manual events: load ALL active ones regardless of current sport filter
-    const [res, manualData] = await Promise.all([
-      oddsApiFetch(S.sport, force),
-      _SB.from('manual_events').select('*').in('status', ['upcoming','live']).order('commence_time', { ascending: true })
-    ]);
+    // Fetch API events — primary source, must succeed
+    const res = await oddsApiFetch(S.sport, force);
     if (!res.ok) { const e = await res.json().catch(()=>({})); throw new Error(e.message||'Error '+res.status); }
     const data = await res.json();
     const rem    = res.headers.get('x-requests-remaining');
@@ -192,16 +187,26 @@ async function loadMarkets(force=false) {
     } else if (rem) {
       showToast(`✅ ${data.length} eventos · ${rem} requests restantes`);
     }
+
     // Process API events
     const apiMarkets = data.map(m => {
       try { return processMarket(m); }
       catch(e) { console.warn('processMarket error:', e, m); return null; }
     }).filter(Boolean);
 
-    // Process manual events into same shape
-    const manualMarkets = (manualData.data || []).map(e => processManualEvent(e));
+    // Fetch manual events independently — failure here doesn't block API events
+    let manualMarkets = [];
+    try {
+      const manualData = await _SB.from('manual_events')
+        .select('*')
+        .in('status', ['upcoming','live'])
+        .order('commence_time', { ascending: true });
+      manualMarkets = (manualData.data || []).map(e => processManualEvent(e));
+    } catch(e) {
+      console.warn('Manual events fetch failed (non-critical):', e.message);
+    }
 
-    // Merge: manual events first if featured, then by commence_time
+    // Merge: featured manual events first, then by time
     S.markets = [...manualMarkets, ...apiMarkets].sort((a, b) => {
       if (a._featured && !b._featured) return -1;
       if (!a._featured && b._featured) return 1;
