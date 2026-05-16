@@ -1,0 +1,953 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>PredictX — Panel Admin</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/otpauth@9.3.6/dist/otpauth.umd.min.js"></script>
+<link rel="stylesheet" href="css/style.css">
+<style>
+  /* ── Admin page layout ── */
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; background: var(--bg); color: var(--text1); font-family: var(--font); }
+
+  .admin-layout {
+    display: flex;
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  /* Sidebar */
+  .adm-sidebar {
+    width: 240px;
+    flex-shrink: 0;
+    background: var(--bg2);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    height: 100vh;
+  }
+  .adm-sidebar-head {
+    padding: 20px 16px 12px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .adm-sidebar-logo {
+    width: 34px; height: 34px;
+    background: var(--accent);
+    border-radius: 9px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; font-weight: 700; color: #fff;
+    flex-shrink: 0;
+  }
+  .adm-sidebar-title { font-size: 14px; font-weight: 700; }
+  .adm-sidebar-sub   { font-size: 11px; color: var(--text3); }
+  .adm-sidebar-nav   { padding: 10px 8px; flex: 1; }
+  .adm-nav-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 12px; border-radius: 9px;
+    font-size: 13px; font-weight: 500; color: var(--text2);
+    cursor: pointer; transition: all .15s; margin-bottom: 2px;
+    border: none; background: transparent; width: 100%; text-align: left;
+  }
+  .adm-nav-item:hover  { background: var(--bg3); color: var(--text1); }
+  .adm-nav-item.active { background: var(--accent-bg, rgba(99,102,241,.12)); color: var(--accent); }
+  .adm-nav-ico { font-size: 16px; width: 20px; text-align: center; flex-shrink: 0; }
+  .adm-nav-badge {
+    margin-left: auto;
+    background: var(--accent); color: #fff;
+    border-radius: 99px; font-size: 10px; font-weight: 700;
+    padding: 1px 7px; min-width: 20px; text-align: center;
+  }
+  .adm-nav-sep { height: 1px; background: var(--border); margin: 8px 4px; }
+  .adm-nav-user {
+    padding: 12px 16px;
+    border-top: 1px solid var(--border);
+    display: flex; align-items: center; gap: 10px;
+  }
+  .adm-nav-user-avatar {
+    width: 32px; height: 32px; border-radius: 8px;
+    background: var(--accent); color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 700; flex-shrink: 0;
+  }
+  .adm-nav-user-info { flex: 1; min-width: 0; }
+  .adm-nav-user-name { font-size: 12px; font-weight: 600; }
+  .adm-nav-user-role { font-size: 10px; color: var(--accent); }
+
+  /* Main content */
+  .adm-main {
+    flex: 1;
+    overflow-y: auto;
+    padding: 28px 32px;
+    height: 100vh;
+  }
+  .adm-page { display: none; }
+  .adm-page.active { display: block; }
+
+  /* Auth gate */
+  .adm-gate {
+    position: fixed; inset: 0;
+    background: var(--bg);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 1000;
+  }
+  .adm-gate-card {
+    background: var(--bg2); border: 1px solid var(--border);
+    border-radius: 16px; padding: 32px; width: 100%; max-width: 380px;
+    text-align: center;
+  }
+  .adm-gate-ico   { font-size: 40px; margin-bottom: 12px; }
+  .adm-gate-title { font-size: 20px; font-weight: 700; margin-bottom: 6px; }
+  .adm-gate-sub   { font-size: 13px; color: var(--text2); margin-bottom: 24px; }
+  .adm-gate-err   { font-size: 12px; color: var(--red); margin-top: 12px; min-height: 18px; }
+
+  @media (max-width: 768px) {
+    .adm-sidebar { width: 200px; }
+    .adm-main    { padding: 20px 16px; }
+  }
+  @media (max-width: 600px) {
+    .admin-layout { flex-direction: column; }
+    .adm-sidebar  { width: 100%; height: auto; border-right: none; border-bottom: 1px solid var(--border); }
+    .adm-sidebar-nav { display: flex; flex-wrap: wrap; gap: 4px; padding: 8px; }
+    .adm-nav-item { width: auto; flex-direction: column; gap: 4px; font-size: 11px; padding: 8px 10px; }
+    .adm-nav-ico  { font-size: 20px; }
+    .adm-main { height: auto; overflow-y: visible; }
+    .admin-layout { height: auto; overflow: visible; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Auth gate -->
+<div class="adm-gate" id="adm-gate">
+  <div class="adm-gate-card">
+    <div class="adm-gate-ico">⚡</div>
+    <div class="adm-gate-title">PredictX Admin</div>
+    <div class="adm-gate-sub">Acceso exclusivo para administradores</div>
+    <div id="adm-gate-loading" style="color:var(--text3);font-size:13px">Verificando sesión...</div>
+    <div class="adm-gate-err" id="adm-gate-err"></div>
+  </div>
+</div>
+
+<!-- Admin layout -->
+<div class="admin-layout" id="admin-layout" style="display:none">
+
+  <!-- Sidebar -->
+  <aside class="adm-sidebar">
+    <div class="adm-sidebar-head">
+      <div class="adm-sidebar-logo">P</div>
+      <div>
+        <div class="adm-sidebar-title">PredictX</div>
+        <div class="adm-sidebar-sub">Panel de administración</div>
+      </div>
+    </div>
+    <nav class="adm-sidebar-nav">
+      <button class="adm-nav-item active" id="adm-nav-dashboard" onclick="admShowPage('dashboard',this)">
+        <span class="adm-nav-ico">📊</span> Dashboard
+      </button>
+      <button class="adm-nav-item" id="adm-nav-users" onclick="admShowPage('users',this)">
+        <span class="adm-nav-ico">👥</span> Usuarios
+        <span class="adm-nav-badge" id="adm-badge-users" style="display:none">0</span>
+      </button>
+      <button class="adm-nav-item" id="adm-nav-bets" onclick="admShowPage('bets',this)">
+        <span class="adm-nav-ico">🎟</span> Apuestas
+        <span class="adm-nav-badge" id="adm-badge-bets" style="background:var(--yellow);display:none">0</span>
+      </button>
+      <button class="adm-nav-item" id="adm-nav-tx" onclick="admShowPage('tx',this)">
+        <span class="adm-nav-ico">💳</span> Transacciones
+      </button>
+      <button class="adm-nav-item" id="adm-nav-events" onclick="admShowPage('events',this)">
+        <span class="adm-nav-ico">⚽</span> Partidos
+      </button>
+      <div class="adm-nav-sep"></div>
+      <button class="adm-nav-item" id="adm-nav-config" onclick="admShowPage('config',this)">
+        <span class="adm-nav-ico">⚙️</span> Configuración
+      </button>
+      <div class="adm-nav-sep"></div>
+      <button class="adm-nav-item" onclick="window.location.href='/'">
+        <span class="adm-nav-ico">←</span> Volver al sitio
+      </button>
+    </nav>
+    <div class="adm-nav-user">
+      <div class="adm-nav-user-avatar" id="adm-user-avatar">?</div>
+      <div class="adm-nav-user-info">
+        <div class="adm-nav-user-name" id="adm-user-name">—</div>
+        <div class="adm-nav-user-role">⚡ Owner</div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main content -->
+  <main class="adm-main">
+
+    <!-- Dashboard -->
+    <div class="adm-page active" id="adm-dashboard">
+      <div class="ap-title" style="margin-bottom:4px">Dashboard</div>
+      <div class="ap-sub" style="margin-bottom:24px">Resumen general de PredictX</div>
+      <div class="sc-row" id="adm-kpis">
+        <div class="sc"><div class="sc-label">Usuarios</div><div class="sc-val" id="adm-kpi-users">—</div></div>
+        <div class="sc"><div class="sc-label">Apuestas activas</div><div class="sc-val" style="color:var(--yellow)" id="adm-kpi-bets-open">—</div></div>
+        <div class="sc"><div class="sc-label">Total apostado</div><div class="sc-val" id="adm-kpi-staked">—</div></div>
+        <div class="sc"><div class="sc-label">Total depósitos</div><div class="sc-val g" id="adm-kpi-deposits">—</div></div>
+        <div class="sc"><div class="sc-label">Exposición casa</div><div class="sc-val r" id="adm-kpi-exposure">—</div></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:20px">
+        <div class="admin-card">
+          <div class="admin-card-hd"><div class="admin-card-title">Últimas apuestas</div><div class="admin-card-action" onclick="admShowPage('bets',document.getElementById('adm-nav-bets'))">Ver todo →</div></div>
+          <div id="adm-recent-bets"><div class="adm-empty">Cargando...</div></div>
+        </div>
+        <div class="admin-card">
+          <div class="admin-card-hd"><div class="admin-card-title">Últimas transacciones</div><div class="admin-card-action" onclick="admShowPage('tx',document.getElementById('adm-nav-tx'))">Ver todo →</div></div>
+          <div id="adm-recent-tx"><div class="adm-empty">Cargando...</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Usuarios -->
+    <div class="adm-page" id="adm-users">
+      <div class="ap-title" style="margin-bottom:4px">Usuarios</div>
+      <div class="ap-sub" style="margin-bottom:16px">Gestión de cuentas de usuario</div>
+      <input type="text" class="cfg-input" placeholder="Buscar por nombre o email..." id="adm-users-search" oninput="admFilterUsers(this.value)" style="max-width:320px;margin-bottom:16px">
+      <div class="adm-table-wrap">
+        <table class="adm-table">
+          <thead><tr><th>Usuario</th><th>País</th><th>Saldo</th><th>Apostado</th><th>Apuestas</th><th>Rol</th><th>Acciones</th></tr></thead>
+          <tbody id="adm-users-body"><tr><td colspan="7" style="text-align:center;color:var(--text2);padding:36px">⏳ Cargando...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Apuestas -->
+    <div class="adm-page" id="adm-bets">
+      <div class="ap-title" style="margin-bottom:4px">Apuestas</div>
+      <div class="ap-sub" style="margin-bottom:16px">Historial y resolución de apuestas</div>
+      <div class="sc-row" style="margin-bottom:16px">
+        <div class="sc"><div class="sc-label">Total apostado</div><div class="sc-val" id="adm-bets-total">—</div></div>
+        <div class="sc"><div class="sc-label">Pendientes</div><div class="sc-val" style="color:var(--yellow)" id="adm-bets-open">—</div></div>
+        <div class="sc"><div class="sc-label">Exposición casa</div><div class="sc-val r" id="adm-bets-exposure">—</div></div>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+        <button class="ev-filter-btn active" onclick="admFilterBets('all',this)">Todas</button>
+        <button class="ev-filter-btn" onclick="admFilterBets('open',this)">Pendientes</button>
+        <button class="ev-filter-btn" onclick="admFilterBets('win',this)">Ganadas</button>
+        <button class="ev-filter-btn" onclick="admFilterBets('loss',this)">Perdidas</button>
+      </div>
+      <div class="adm-table-wrap">
+        <table class="adm-table">
+          <thead><tr><th>Usuario</th><th>Partido</th><th>Selección</th><th>Cuota</th><th>Apuesta</th><th>Retorno</th><th>Tipo</th><th>Estado</th><th>Acciones</th></tr></thead>
+          <tbody id="adm-bets-body"><tr><td colspan="9" style="text-align:center;color:var(--text2);padding:36px">⏳ Cargando...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Transacciones -->
+    <div class="adm-page" id="adm-tx">
+      <div class="ap-title" style="margin-bottom:4px">Transacciones</div>
+      <div class="ap-sub" style="margin-bottom:16px">Historial de depósitos, retiradas y apuestas</div>
+      <div class="sc-row" style="margin-bottom:16px">
+        <div class="sc"><div class="sc-label">Total depósitos</div><div class="sc-val g" id="adm-tx-dep">—</div></div>
+        <div class="sc"><div class="sc-label">Total retiradas</div><div class="sc-val r" id="adm-tx-wit">—</div></div>
+        <div class="sc"><div class="sc-label">Apuestas cobradas</div><div class="sc-val" id="adm-tx-bet">—</div></div>
+        <div class="sc"><div class="sc-label">Premios pagados</div><div class="sc-val" id="adm-tx-win">—</div></div>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+        <button class="ev-filter-btn active" onclick="admFilterTx('all',this)">Todas</button>
+        <button class="ev-filter-btn" onclick="admFilterTx('deposit',this)">Depósitos</button>
+        <button class="ev-filter-btn" onclick="admFilterTx('withdraw',this)">Retiradas</button>
+        <button class="ev-filter-btn" onclick="admFilterTx('bet',this)">Apuestas</button>
+        <button class="ev-filter-btn" onclick="admFilterTx('win',this)">Premios</button>
+      </div>
+      <div class="adm-table-wrap">
+        <table class="adm-table">
+          <thead><tr><th>Usuario</th><th>Fecha</th><th>Descripción</th><th>Tipo</th><th>Importe</th></tr></thead>
+          <tbody id="adm-tx-body"><tr><td colspan="5" style="text-align:center;color:var(--text2);padding:36px">⏳ Cargando...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Partidos -->
+    <div class="adm-page" id="adm-events">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+        <div>
+          <div class="ap-title">Gestión de Partidos</div>
+          <div class="ap-sub">Crea partidos manuales que se mezclan con los de la API</div>
+        </div>
+        <button class="adm-btn" onclick="admOpenCreateEvent()">+ Nuevo partido</button>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
+        <button class="ev-filter-btn active" onclick="admFilterEvents('all',this)">Todos</button>
+        <button class="ev-filter-btn" onclick="admFilterEvents('upcoming',this)">Próximos</button>
+        <button class="ev-filter-btn" onclick="admFilterEvents('live',this)">En Vivo</button>
+        <button class="ev-filter-btn" onclick="admFilterEvents('finished',this)">Finalizados</button>
+        <button class="ev-filter-btn" onclick="admFilterEvents('featured',this)">⭐ Destacados</button>
+      </div>
+      <div id="adm-events-list"><div class="adm-empty">Cargando partidos...</div></div>
+    </div>
+
+    <!-- Configuración -->
+    <div class="adm-page" id="adm-config">
+      <div class="ap-title" style="margin-bottom:4px">Configuración del Sitio</div>
+      <div class="ap-sub" style="margin-bottom:24px">Ajustes globales de PredictX</div>
+      <div class="admin-card" style="margin-bottom:16px">
+        <div class="admin-card-hd"><div class="admin-card-title">🏦 Finanzas</div></div>
+        <div class="cfg-grid">
+          <div class="cfg-group"><div class="cfg-label">Bono bienvenida (%)</div><input class="cfg-input" id="cfg-bonus-pct" type="number" value="100" min="0" max="200"></div>
+          <div class="cfg-group"><div class="cfg-label">Bono máximo (€)</div><input class="cfg-input" id="cfg-bonus-max" type="number" value="100" min="0"></div>
+          <div class="cfg-group"><div class="cfg-label">Depósito mínimo (€)</div><input class="cfg-input" id="cfg-dep-min" type="number" value="10" min="1"></div>
+          <div class="cfg-group"><div class="cfg-label">Retirada mínima (€)</div><input class="cfg-input" id="cfg-wit-min" type="number" value="20" min="1"></div>
+          <div class="cfg-group"><div class="cfg-label">Saldo inicial nuevos usuarios (€)</div><input class="cfg-input" id="cfg-initial-balance" type="number" value="0" min="0"></div>
+          <div class="cfg-group"><div class="cfg-label">Comisión de la casa (%)</div><input class="cfg-input" id="cfg-house-margin" type="number" value="5" min="0" max="50"></div>
+        </div>
+        <div style="padding:14px 18px;border-top:1px solid var(--border);display:flex;justify-content:flex-end">
+          <button class="btn-save" onclick="admSaveConfig()">Guardar configuración</button>
+        </div>
+      </div>
+      <div class="admin-card" style="margin-bottom:16px">
+        <div class="admin-card-hd"><div class="admin-card-title">🔧 Funcionalidades</div></div>
+        <div class="cfg-toggle"><div><div class="cfg-toggle-label">Registro de nuevos usuarios</div><div class="cfg-toggle-sub">Permitir que usuarios nuevos se registren</div></div><label class="toggle-switch"><input type="checkbox" id="cfg-allow-register" checked><span class="toggle-slider"></span></label></div>
+        <div class="cfg-toggle"><div><div class="cfg-toggle-label">Depósitos activos</div><div class="cfg-toggle-sub">Permitir nuevos depósitos en la plataforma</div></div><label class="toggle-switch"><input type="checkbox" id="cfg-allow-deposits" checked><span class="toggle-slider"></span></label></div>
+        <div class="cfg-toggle"><div><div class="cfg-toggle-label">Apuestas activas</div><div class="cfg-toggle-sub">Permitir realizar nuevas apuestas</div></div><label class="toggle-switch"><input type="checkbox" id="cfg-allow-bets" checked><span class="toggle-slider"></span></label></div>
+        <div class="cfg-toggle" style="border-bottom:none"><div><div class="cfg-toggle-label">Modo mantenimiento</div><div class="cfg-toggle-sub">Muestra aviso de mantenimiento a los usuarios</div></div><label class="toggle-switch"><input type="checkbox" id="cfg-maintenance"><span class="toggle-slider"></span></label></div>
+      </div>
+      <div class="admin-card">
+        <div class="admin-card-hd"><div class="admin-card-title">👤 Promover / Degradar Owner</div></div>
+        <div style="padding:16px 18px;display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">
+          <div style="flex:1;min-width:200px">
+            <div class="cfg-label" style="margin-bottom:6px">Email del usuario</div>
+            <input class="cfg-input" id="cfg-promote-email" type="email" placeholder="usuario@email.com" style="width:100%">
+          </div>
+          <button class="btn-save" onclick="admPromoteUser()">⬆ Hacer Owner</button>
+          <button class="btn-ghost" onclick="admDemoteUser()">⬇ Hacer Usuario</button>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- Modal crear/editar partido (mismo que en index.html) -->
+<div class="owner-modal-overlay" id="event-modal-overlay" style="display:none" onclick="if(event.target===this)admCloseEventModal()">
+  <div class="owner-modal" id="event-modal">
+    <div class="owner-modal-head">
+      <span id="event-modal-title">Nuevo Partido</span>
+      <button onclick="admCloseEventModal()" class="owner-modal-close">✕</button>
+    </div>
+    <div class="owner-modal-body">
+      <div class="ev-form-row">
+        <div class="ev-form-group">
+          <label class="ev-label">Deporte</label>
+          <select id="ev-sport" class="ev-input" onchange="admOnEvSportChange()">
+            <option value="soccer_epl">⚽ Fútbol</option>
+            <option value="basketball_nba">🏀 Baloncesto</option>
+            <option value="americanfootball_nfl">🏈 Fútbol Americano</option>
+            <option value="baseball_mlb">⚾ Béisbol</option>
+            <option value="icehockey_nhl">🏒 Hockey</option>
+            <option value="mma_mixed_martial_arts">🥊 MMA</option>
+          </select>
+        </div>
+        <div class="ev-form-group">
+          <label class="ev-label">Liga</label>
+          <input type="text" id="ev-league" class="ev-input" placeholder="Ej: Premier League">
+        </div>
+      </div>
+      <div class="ev-form-row">
+        <div class="ev-form-group">
+          <label class="ev-label">Equipo Local</label>
+          <input type="text" id="ev-home" class="ev-input" placeholder="Nombre del equipo local">
+        </div>
+        <div class="ev-form-group">
+          <label class="ev-label">Equipo Visitante</label>
+          <input type="text" id="ev-away" class="ev-input" placeholder="Nombre del equipo visitante">
+        </div>
+      </div>
+      <div class="ev-form-row">
+        <div class="ev-form-group">
+          <label class="ev-label">Fecha y Hora</label>
+          <input type="datetime-local" id="ev-datetime" class="ev-input">
+        </div>
+        <div class="ev-form-group" style="display:flex;align-items:flex-end;gap:12px">
+          <label class="ev-toggle-wrap"><input type="checkbox" id="ev-featured"><span class="ev-toggle-lbl">⭐ Destacado</span></label>
+          <label class="ev-toggle-wrap"><input type="checkbox" id="ev-live"><span class="ev-toggle-lbl">🔴 En Vivo</span></label>
+        </div>
+      </div>
+      <div class="ev-form-section">Cuotas 1X2</div>
+      <div class="ev-form-row ev-form-row-3">
+        <div class="ev-form-group"><label class="ev-label">1 — Local</label><input type="number" id="ev-odd1" class="ev-input" placeholder="2.10" step="0.01" min="1.01"></div>
+        <div class="ev-form-group" id="ev-oddx-wrap"><label class="ev-label">X — Empate</label><input type="number" id="ev-oddx" class="ev-input" placeholder="3.40" step="0.01" min="1.01"></div>
+        <div class="ev-form-group"><label class="ev-label">2 — Visitante</label><input type="number" id="ev-odd2" class="ev-input" placeholder="3.50" step="0.01" min="1.01"></div>
+      </div>
+      <div class="ev-form-section">Total de Puntos/Goles</div>
+      <div class="ev-form-row ev-form-row-3">
+        <div class="ev-form-group"><label class="ev-label">Línea</label><input type="number" id="ev-total-line" class="ev-input" placeholder="2.5" step="0.5" min="0"></div>
+        <div class="ev-form-group"><label class="ev-label">Over</label><input type="number" id="ev-total-over" class="ev-input" placeholder="1.85" step="0.01" min="1.01"></div>
+        <div class="ev-form-group"><label class="ev-label">Under</label><input type="number" id="ev-total-under" class="ev-input" placeholder="1.95" step="0.01" min="1.01"></div>
+      </div>
+      <div id="ev-soccer-markets">
+        <div class="ev-form-section">Ambos Equipos Marcan</div>
+        <div class="ev-form-row">
+          <div class="ev-form-group"><label class="ev-label">Sí</label><input type="number" id="ev-btts-yes" class="ev-input" placeholder="1.75" step="0.01" min="1.01"></div>
+          <div class="ev-form-group"><label class="ev-label">No</label><input type="number" id="ev-btts-no" class="ev-input" placeholder="2.00" step="0.01" min="1.01"></div>
+        </div>
+      </div>
+      <div id="ev-spread-markets">
+        <div class="ev-form-section">Hándicap / Spread</div>
+        <div class="ev-form-row">
+          <div class="ev-form-group"><label class="ev-label">Local (línea)</label><input type="number" id="ev-spread-home-pt" class="ev-input" placeholder="-1.5" step="0.5"></div>
+          <div class="ev-form-group"><label class="ev-label">Local (cuota)</label><input type="number" id="ev-spread-home" class="ev-input" placeholder="1.90" step="0.01" min="1.01"></div>
+          <div class="ev-form-group"><label class="ev-label">Visitante (línea)</label><input type="number" id="ev-spread-away-pt" class="ev-input" placeholder="+1.5" step="0.5"></div>
+          <div class="ev-form-group"><label class="ev-label">Visitante (cuota)</label><input type="number" id="ev-spread-away" class="ev-input" placeholder="1.90" step="0.01" min="1.01"></div>
+        </div>
+      </div>
+    </div>
+    <div class="owner-modal-foot">
+      <button onclick="admCloseEventModal()" style="padding:9px 18px;border-radius:8px;background:var(--bg3);border:1px solid var(--border);color:var(--text2);cursor:pointer">Cancelar</button>
+      <button class="adm-btn" onclick="admSaveEvent()">Guardar partido</button>
+    </div>
+  </div>
+</div>
+
+<div id="adm-toast" style="position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:10px 20px;font-size:13px;z-index:9999;opacity:0;transition:opacity .3s;pointer-events:none"></div>
+
+<script>
+// ── Supabase ──
+const { createClient } = supabase;
+const _SB = createClient(
+  'https://ghgkvtdhuqfpigbtzefz.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdoZ2t2dGRodXFmcGlnYnR6ZWZ6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg0MTQ4NDYsImV4cCI6MjA5Mzk5MDg0Nn0.guFwC8DFo1Wt_TB_D2fv4JifQK-r0lo2hlsuxl4umtU'
+);
+
+const OWNER_EMAIL = 'hermanncadevillajr@gmail.com';
+let SESSION = null;
+let _cache  = { users:[], bets:[], tx:[], loaded:false };
+let _manualEvents = [];
+let _editingEventId = null;
+
+// ── Helpers ──
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function fOdd(o){ return (!o||isNaN(o)) ? '—' : parseFloat(o).toFixed(2); }
+function fDate(d){ if(!d)return '—'; try{ return new Date(d).toLocaleDateString('es',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}); }catch(e){return d;} }
+function fMoney(n){ return '€'+(+n||0).toFixed(2); }
+function shortEmail(e){ if(!e)return '—'; const[u,d]=e.split('@'); return u.length>10?u.slice(0,10)+'…@'+d:e; }
+
+function showToast(msg){
+  const t=document.getElementById('adm-toast');
+  t.textContent=msg; t.style.opacity='1';
+  setTimeout(()=>t.style.opacity='0', 3000);
+}
+
+function badgeHtml(status){
+  const map={open:'open Activa',win:'win Ganada',loss:'loss Perdida',void:'void Anulada'};
+  const[cls,lbl]=(map[status]||'void Desconocido').split(' ');
+  return `<span class="bet-badge ${cls}">${lbl}</span>`;
+}
+
+// ── Auth guard ──
+async function initAdmin(){
+  const { data:{ session } } = await _SB.auth.getSession();
+  if(!session){ showGateError('Debes iniciar sesión en el sitio principal primero.'); return; }
+
+  const { data: prof } = await _SB.from('profiles').select('role,name,email').eq('email', session.user.email).single();
+  if(!prof || (prof.role !== 'owner' && session.user.email !== OWNER_EMAIL)){
+    showGateError('No tienes permisos de administrador.');
+    setTimeout(()=>window.location.href='/', 2000);
+    return;
+  }
+
+  SESSION = { email: session.user.email, name: prof.name || session.user.email.split('@')[0] };
+  document.getElementById('adm-user-name').textContent   = SESSION.name;
+  document.getElementById('adm-user-avatar').textContent = SESSION.name[0].toUpperCase();
+  document.getElementById('adm-gate').style.display   = 'none';
+  document.getElementById('admin-layout').style.display = 'flex';
+
+  await fetchAll();
+  renderDashboard();
+  loadAdmConfig();
+}
+
+function showGateError(msg){
+  document.getElementById('adm-gate-loading').style.display='none';
+  document.getElementById('adm-gate-err').textContent = msg;
+}
+
+// ── Data fetch ──
+async function fetchAll(){
+  const [u,b,t] = await Promise.all([
+    _SB.from('profiles').select('*').order('created_at',{ascending:false}),
+    _SB.from('bets').select('*').order('created_at',{ascending:false}),
+    _SB.from('transactions').select('*').order('created_at',{ascending:false}),
+  ]);
+  _cache.users = u.data||[];
+  _cache.bets  = b.data||[];
+  _cache.tx    = t.data||[];
+  _cache.loaded = true;
+  updateBadges();
+}
+
+function updateBadges(){
+  const openBets = _cache.bets.filter(b=>b.status==='open').length;
+  const ub = document.getElementById('adm-badge-users');
+  const bb = document.getElementById('adm-badge-bets');
+  ub.textContent = _cache.users.length; ub.style.display = _cache.users.length ? '' : 'none';
+  bb.textContent = openBets; bb.style.display = openBets ? '' : 'none';
+}
+
+// ── Navigation ──
+function admShowPage(page, btn){
+  document.querySelectorAll('.adm-page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.adm-nav-item').forEach(b=>b.classList.remove('active'));
+  const el = document.getElementById('adm-'+page);
+  if(el) el.classList.add('active');
+  if(btn) btn.classList.add('active');
+  if(page==='dashboard') renderDashboard();
+  if(page==='users')     renderUsers(_cache.users);
+  if(page==='bets')      renderBets('all');
+  if(page==='tx')        renderTx('all');
+  if(page==='events')    renderEvents();
+  if(page==='config')    loadAdmConfig();
+}
+
+// ── Dashboard ──
+function renderDashboard(){
+  const users   = _cache.users;
+  const bets    = _cache.bets;
+  const txs     = _cache.tx;
+  const openBets = bets.filter(b=>b.status==='open');
+  const staked  = bets.reduce((a,b)=>a+(+b.stake||0),0);
+  const deposits = txs.filter(t=>t.type==='deposit').reduce((a,t)=>a+(+t.amount||0),0);
+  const exposure = openBets.reduce((a,b)=>a+((+b.odd||1)*(+b.stake||0)-(+b.stake||0)),0);
+
+  document.getElementById('adm-kpi-users').textContent     = users.length;
+  document.getElementById('adm-kpi-bets-open').textContent = openBets.length;
+  document.getElementById('adm-kpi-staked').textContent    = fMoney(staked);
+  document.getElementById('adm-kpi-deposits').textContent  = fMoney(deposits);
+  document.getElementById('adm-kpi-exposure').textContent  = fMoney(exposure);
+
+  const recentBets = document.getElementById('adm-recent-bets');
+  recentBets.innerHTML = bets.slice(0,5).map(b=>`
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)">
+      <div><div style="font-size:12px;font-weight:600">${esc(shortEmail(b.user_email))}</div>
+      <div style="font-size:11px;color:var(--text2)">${esc(b.pick||'—')}</div></div>
+      <div style="text-align:right"><div style="font-family:var(--mono);font-size:13px">${fMoney(b.stake)}</div>${badgeHtml(b.status)}</div>
+    </div>`).join('') || '<div class="adm-empty">Sin apuestas</div>';
+
+  const recentTx = document.getElementById('adm-recent-tx');
+  recentTx.innerHTML = txs.slice(0,5).map(t=>`
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)">
+      <div><div style="font-size:12px;font-weight:600">${esc(shortEmail(t.user_email))}</div>
+      <div style="font-size:11px;color:var(--text2)">${esc(t.description||'—')}</div></div>
+      <div style="font-family:var(--mono);font-size:13px;color:${t.type==='deposit'?'var(--green)':t.type==='win'?'var(--green)':'var(--red)'}">${t.type==='deposit'||t.type==='win'?'+':'−'}${fMoney(t.amount)}</div>
+    </div>`).join('') || '<div class="adm-empty">Sin transacciones</div>';
+}
+
+// ── Usuarios ──
+function renderUsers(users){
+  const userBets = {};
+  _cache.bets.forEach(b=>{ userBets[b.user_email]=(userBets[b.user_email]||0)+1; });
+  const body = document.getElementById('adm-users-body');
+  if(!users.length){ body.innerHTML='<tr><td colspan="7" class="adm-empty">Sin usuarios</td></tr>'; return; }
+  body.innerHTML = users.map(u=>`<tr>
+    <td><div style="display:flex;align-items:center;gap:8px">
+      <div class="user-row-avatar">${(u.name||u.email||'?')[0].toUpperCase()}</div>
+      <div><div style="font-weight:600;font-size:13px">${esc(u.name||'—')}</div>
+      <div style="font-size:11px;color:var(--text2)">${esc(u.email)}</div></div></div></td>
+    <td>${esc(u.country||'—')}</td>
+    <td style="font-family:var(--mono)">${fMoney(u.balance)}</td>
+    <td style="font-family:var(--mono)">${fMoney(u.deposited)}</td>
+    <td style="text-align:center">${userBets[u.email]||0}</td>
+    <td>${u.role==='owner'?'<span class="role-badge owner">⚡ OWNER</span>':'<span class="role-badge">Usuario</span>'}</td>
+    <td><button class="tbl-action" onclick="admViewUser('${esc(u.email)}')">Ver detalle</button>
+    ${u.is_suspended?`<button class="tbl-action success" onclick="admToggleSuspend('${esc(u.email)}',false)">Reactivar</button>`
+    :u.role!=='owner'?`<button class="tbl-action danger" onclick="admToggleSuspend('${esc(u.email)}',true)">Suspender</button>`:''}
+    </td></tr>`).join('');
+}
+
+function admFilterUsers(q){
+  const filtered = q ? _cache.users.filter(u=>(u.name||'').toLowerCase().includes(q.toLowerCase())||(u.email||'').toLowerCase().includes(q.toLowerCase())) : _cache.users;
+  renderUsers(filtered);
+}
+
+async function admToggleSuspend(email, suspend){
+  const {error} = await _SB.from('profiles').update({is_suspended:suspend}).eq('email',email);
+  if(error){showToast('❌ '+error.message);return;}
+  showToast(suspend?'🚫 Usuario suspendido':'✅ Usuario reactivado');
+  await fetchAll(); renderUsers(_cache.users);
+}
+
+function admViewUser(email){
+  const u    = _cache.users.find(x=>x.email===email);
+  const bets = _cache.bets.filter(b=>b.user_email===email);
+  const txs  = _cache.tx.filter(t=>t.user_email===email);
+  if(!u) return;
+  const won=bets.filter(b=>b.status==='win').length, lost=bets.filter(b=>b.status==='loss').length, open=bets.filter(b=>b.status==='open').length;
+  const staked=bets.reduce((a,b)=>a+(+b.stake||0),0);
+  const returned=bets.filter(b=>b.status==='win').reduce((a,b)=>a+(+b.ret||0),0);
+  const netPnL=returned-staked;
+  const existing=document.getElementById('adm-user-detail-modal');
+  if(existing) existing.remove();
+  const html=`<div id="adm-user-detail-modal" style="position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;padding:16px">
+    <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:16px;width:100%;max-width:520px;max-height:85vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,.5)">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:20px 20px 0">
+        <div style="display:flex;align-items:center;gap:12px">
+          <div class="user-row-avatar" style="width:44px;height:44px;font-size:18px;border-radius:12px">${(u.name||u.email||'?')[0].toUpperCase()}</div>
+          <div><div style="font-size:16px;font-weight:700">${esc(u.name||'Sin nombre')}</div><div style="font-size:12px;color:var(--text2)">${esc(u.email)}</div></div>
+        </div>
+        <button onclick="document.getElementById('adm-user-detail-modal').remove()" style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;width:32px;height:32px;font-size:16px;color:var(--text2);cursor:pointer">✕</button>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;padding:16px 20px">
+        <div style="background:var(--bg3);border-radius:10px;padding:12px;text-align:center"><div style="font-size:11px;color:var(--text2);margin-bottom:4px">Saldo</div><div style="font-size:17px;font-weight:700;font-family:var(--mono)">${fMoney(u.balance)}</div></div>
+        <div style="background:var(--bg3);border-radius:10px;padding:12px;text-align:center"><div style="font-size:11px;color:var(--text2);margin-bottom:4px">Depositado</div><div style="font-size:17px;font-weight:700;font-family:var(--mono);color:var(--green)">${fMoney(u.deposited)}</div></div>
+        <div style="background:var(--bg3);border-radius:10px;padding:12px;text-align:center"><div style="font-size:11px;color:var(--text2);margin-bottom:4px">P&L</div><div style="font-size:17px;font-weight:700;font-family:var(--mono);color:${netPnL>=0?'var(--green)':'var(--red)'}">${netPnL>=0?'+':''}${fMoney(netPnL)}</div></div>
+      </div>
+      <div style="padding:0 20px 20px">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+          <span style="padding:4px 10px;border-radius:6px;font-size:12px;background:rgba(244,185,66,.12);color:var(--yellow);border:1px solid rgba(244,185,66,.25)">🎟 ${open} activas</span>
+          <span style="padding:4px 10px;border-radius:6px;font-size:12px;background:var(--green-bg);color:var(--green);border:1px solid var(--green-bd)">✓ ${won} ganadas</span>
+          <span style="padding:4px 10px;border-radius:6px;font-size:12px;background:var(--red-bg);color:var(--red);border:1px solid var(--red-bd)">✗ ${lost} perdidas</span>
+        </div>
+        ${bets.length?`<table class="adm-table"><thead><tr><th>Partido</th><th>Pick</th><th>Cuota</th><th>Apuesta</th><th>Estado</th></tr></thead><tbody>
+          ${bets.slice(0,8).map(b=>`<tr><td style="font-size:11px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(b.match_name||b.match||'—')}</td><td style="font-size:11px;font-weight:600">${esc(b.pick||'—')}</td><td style="font-family:var(--mono);font-size:11px">${fOdd(b.odd)}</td><td style="font-family:var(--mono);font-size:11px">${fMoney(b.stake)}</td><td>${badgeHtml(b.status)}</td></tr>`).join('')}
+        </tbody></table>`:'<div class="adm-empty">Sin apuestas</div>'}
+      </div>
+      <div style="padding:14px 20px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end">
+        <button onclick="document.getElementById('adm-user-detail-modal').remove()" style="padding:7px 16px;border-radius:8px;background:var(--bg3);border:1px solid var(--border);color:var(--text2);cursor:pointer;font-size:13px">Cerrar</button>
+      </div>
+    </div></div>`;
+  document.body.insertAdjacentHTML('beforeend',html);
+}
+
+// ── Apuestas ──
+function renderBets(filter){
+  let bets=_cache.bets;
+  if(filter!=='all') bets=bets.filter(b=>b.status===filter);
+  const total=_cache.bets.reduce((a,b)=>a+(+b.stake||0),0);
+  const open=_cache.bets.filter(b=>b.status==='open');
+  const exposure=open.reduce((a,b)=>a+((+b.odd||1)*(+b.stake||0)-(+b.stake||0)),0);
+  document.getElementById('adm-bets-total').textContent=fMoney(total);
+  document.getElementById('adm-bets-open').textContent=open.length;
+  document.getElementById('adm-bets-exposure').textContent=fMoney(exposure);
+  const body=document.getElementById('adm-bets-body');
+  if(!bets.length){body.innerHTML='<tr><td colspan="9" class="adm-empty">Sin apuestas</td></tr>';return;}
+  body.innerHTML=bets.map(b=>`<tr>
+    <td style="font-size:12px">${esc(shortEmail(b.user_email))}</td>
+    <td style="font-size:11px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(b.match_name||b.match||'—')}</td>
+    <td style="font-weight:600;font-size:12px">${esc(b.pick||'—')}</td>
+    <td style="font-family:var(--mono)">${fOdd(b.odd)}</td>
+    <td style="font-family:var(--mono)">${fMoney(b.stake)}</td>
+    <td style="font-family:var(--mono)">${b.ret?fMoney(b.ret):'—'}</td>
+    <td><span style="font-size:11px;color:var(--text2)">${b.type==='combo'?'Combinada':'Simple'}</span></td>
+    <td>${badgeHtml(b.status)}</td>
+    <td>${b.status==='open'?`<button class="tbl-action success" onclick="admResolveBet('${b.id}','${esc(b.user_email)}',${+b.stake||0},${+b.odd||1},'win')">✓ Ganada</button>
+      <button class="tbl-action danger" onclick="admResolveBet('${b.id}','${esc(b.user_email)}',${+b.stake||0},${+b.odd||1},'loss')">✗ Perdida</button>`:'—'}</td></tr>`).join('');
+}
+
+function admFilterBets(filter,btn){
+  document.querySelectorAll('#adm-bets .ev-filter-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderBets(filter);
+}
+
+async function admResolveBet(betId,userEmail,stake,odd,result){
+  const ret = result==='win' ? +(odd*stake).toFixed(2) : 0;
+  const {error:betErr} = await _SB.from('bets').update({status:result,ret}).eq('id',betId);
+  if(betErr){showToast('❌ '+betErr.message);return;}
+  if(result==='win' && ret>0){
+    const {data:prof} = await _SB.from('profiles').select('balance').eq('email',userEmail).single();
+    if(prof){
+      const newBal=+(prof.balance+ret).toFixed(2);
+      await _SB.from('profiles').update({balance:newBal}).eq('email',userEmail);
+      await _SB.from('transactions').insert({user_email:userEmail,description:'Premio apuesta',type:'win',amount:ret,balance:newBal,created_at:new Date().toISOString()});
+    }
+  }
+  showToast(result==='win'?'✅ Apuesta marcada como ganada':'✅ Apuesta marcada como perdida');
+  await fetchAll(); renderBets('all');
+}
+
+// ── Transacciones ──
+function renderTx(filter){
+  let txs=_cache.tx;
+  if(filter!=='all') txs=txs.filter(t=>t.type===filter);
+  const deps=_cache.tx.filter(t=>t.type==='deposit').reduce((a,t)=>a+(+t.amount||0),0);
+  const wits=_cache.tx.filter(t=>t.type==='withdraw').reduce((a,t)=>a+(+t.amount||0),0);
+  const bets=_cache.tx.filter(t=>t.type==='bet').reduce((a,t)=>a+(+t.amount||0),0);
+  const wins=_cache.tx.filter(t=>t.type==='win').reduce((a,t)=>a+(+t.amount||0),0);
+  document.getElementById('adm-tx-dep').textContent=fMoney(deps);
+  document.getElementById('adm-tx-wit').textContent=fMoney(wits);
+  document.getElementById('adm-tx-bet').textContent=fMoney(bets);
+  document.getElementById('adm-tx-win').textContent=fMoney(wins);
+  const body=document.getElementById('adm-tx-body');
+  if(!txs.length){body.innerHTML='<tr><td colspan="5" class="adm-empty">Sin transacciones</td></tr>';return;}
+  const typeMap={deposit:'Depósito',withdraw:'Retirada',bet:'Apuesta',win:'Premio',bonus:'Bono'};
+  const typeColor={deposit:'var(--green)',withdraw:'var(--red)',bet:'var(--red)',win:'var(--green)',bonus:'var(--accent)'};
+  body.innerHTML=txs.map(t=>`<tr>
+    <td style="font-size:12px">${esc(shortEmail(t.user_email))}</td>
+    <td style="font-size:11px;color:var(--text2)">${fDate(t.created_at||t.date)}</td>
+    <td style="font-size:12px">${esc(t.description||'—')}</td>
+    <td><span style="font-size:11px;font-weight:600;color:${typeColor[t.type]||'var(--text2)'}">${typeMap[t.type]||t.type}</span></td>
+    <td style="font-family:var(--mono);color:${typeColor[t.type]||'var(--text1)'}">${t.type==='deposit'||t.type==='win'||t.type==='bonus'?'+':'−'}${fMoney(t.amount)}</td>
+  </tr>`).join('');
+}
+
+function admFilterTx(filter,btn){
+  document.querySelectorAll('#adm-tx .ev-filter-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderTx(filter);
+}
+
+// ── Partidos ──
+let _evFilter='all';
+
+async function renderEvents(){
+  const list=document.getElementById('adm-events-list');
+  list.innerHTML='<div class="adm-empty">Cargando...</div>';
+  try{
+    const {data,error}=await _SB.from('manual_events').select('*').order('commence_time',{ascending:true});
+    if(error) throw error;
+    _manualEvents=data||[];
+    admFilterEvents(_evFilter);
+  }catch(err){
+    list.innerHTML=`<div class="adm-empty" style="color:var(--red)">❌ ${esc(err.message)}</div>`;
+  }
+}
+
+function admFilterEvents(filter,btn){
+  _evFilter=filter;
+  if(btn){ document.querySelectorAll('#adm-events .ev-filter-btn').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); }
+  const list=document.getElementById('adm-events-list');
+  let evs=_manualEvents;
+  if(filter==='upcoming') evs=evs.filter(e=>e.status==='upcoming');
+  if(filter==='live')     evs=evs.filter(e=>e.status==='live');
+  if(filter==='finished') evs=evs.filter(e=>e.status==='finished');
+  if(filter==='featured') evs=evs.filter(e=>e.featured);
+  if(!evs.length){list.innerHTML='<div class="adm-empty">No hay partidos todavía. Crea uno con "+ Nuevo partido"</div>';return;}
+  list.innerHTML=evs.map(e=>`
+    <div class="ev-row">
+      <div class="ev-row-main">
+        <div class="ev-row-sport">${esc(e.league)}</div>
+        <div class="ev-row-match">${esc(e.home_team)} <span style="color:var(--text3)">vs</span> ${esc(e.away_team)}</div>
+        <div class="ev-row-meta">
+          ${e.featured?'<span class="ev-tag featured">⭐ Destacado</span>':''}
+          <span class="ev-tag ${e.status}">${e.status==='upcoming'?'📅 Próximo':e.status==='live'?'🔴 En Vivo':'✅ Finalizado'}</span>
+          <span class="ev-tag">📅 ${fDate(e.commence_time)}</span>
+          <span class="ev-tag odds">1:${fOdd(e.odd_1)} · X:${fOdd(e.odd_x)} · 2:${fOdd(e.odd_2)}</span>
+        </div>
+      </div>
+      <div class="ev-row-actions">
+        ${e.status!=='finished'?`<button class="tbl-action" onclick="admToggleEventLive('${e.id}','${e.status}')">${e.status==='live'?'⏹ Pausar':'▶ En Vivo'}</button>`:''}
+        ${e.status==='live'?`<button class="tbl-action success" onclick="admOpenResolveEvent('${e.id}')">🏁 Resolver</button>`:''}
+        <button class="tbl-action" onclick="admOpenEditEvent('${e.id}')">✏️ Editar</button>
+        <button class="tbl-action danger" onclick="admDeleteEvent('${e.id}')">🗑 Borrar</button>
+      </div>
+    </div>`).join('');
+}
+
+async function admToggleEventLive(id,currentStatus){
+  const newStatus=currentStatus==='live'?'upcoming':'live';
+  await _SB.from('manual_events').update({status:newStatus,updated_at:new Date().toISOString()}).eq('id',id);
+  showToast(newStatus==='live'?'🔴 En Vivo':'⏹ Pausado');
+  await renderEvents();
+}
+
+async function admDeleteEvent(id){
+  if(!confirm('¿Borrar este partido?')) return;
+  await _SB.from('manual_events').delete().eq('id',id);
+  showToast('🗑 Partido eliminado');
+  await renderEvents();
+}
+
+function admOpenResolveEvent(id){
+  const e=_manualEvents.find(x=>x.id===id);
+  if(!e) return;
+  const existing=document.getElementById('adm-resolve-modal');
+  if(existing) existing.remove();
+  const html=`<div id="adm-resolve-modal" style="position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.75);display:flex;align-items:center;justify-content:center;padding:16px">
+    <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:16px;width:100%;max-width:400px;padding:24px">
+      <div style="font-size:16px;font-weight:700;margin-bottom:6px">Resolver Partido</div>
+      <div style="font-size:13px;color:var(--text2);margin-bottom:20px">${esc(e.home_team)} vs ${esc(e.away_team)}</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:20px">
+        <button class="adm-btn" style="background:var(--green)" onclick="admResolveEvent('${id}','1')">🏆 ${esc(e.home_team.split(' ').pop())}</button>
+        <button class="adm-btn" style="background:var(--text3)" onclick="admResolveEvent('${id}','X')">🤝 Empate</button>
+        <button class="adm-btn" style="background:var(--red)" onclick="admResolveEvent('${id}','2')">🏆 ${esc(e.away_team.split(' ').pop())}</button>
+      </div>
+      <button onclick="document.getElementById('adm-resolve-modal').remove()" style="width:100%;padding:9px;border-radius:8px;background:var(--bg3);border:1px solid var(--border);color:var(--text2);cursor:pointer">Cancelar</button>
+    </div></div>`;
+  document.body.insertAdjacentHTML('beforeend',html);
+}
+
+async function admResolveEvent(id,result){
+  const e=_manualEvents.find(x=>x.id===id);
+  if(!e) return;
+  await _SB.from('manual_events').update({status:'finished',result,updated_at:new Date().toISOString()}).eq('id',id);
+  const {data:openBets}=await _SB.from('bets').select('*').eq('status','open').ilike('match_name',`%${e.home_team}%`);
+  let resolved=0;
+  for(const bet of (openBets||[])){
+    const won=bet.pick===result||(result==='1'&&bet.pick===e.home_team)||(result==='2'&&bet.pick===e.away_team)||(result==='X'&&(bet.pick==='Empate'||bet.pick==='X'));
+    const newStatus=won?'win':'loss';
+    const ret=won?+(bet.odd*bet.stake).toFixed(2):0;
+    await _SB.from('bets').update({status:newStatus,ret}).eq('id',bet.id);
+    if(won&&ret>0){
+      const {data:prof}=await _SB.from('profiles').select('balance').eq('email',bet.user_email).single();
+      if(prof){
+        const newBal=+(prof.balance+ret).toFixed(2);
+        await _SB.from('profiles').update({balance:newBal}).eq('email',bet.user_email);
+        await _SB.from('transactions').insert({user_email:bet.user_email,description:`Premio: ${bet.pick}`,type:'win',amount:ret,balance:newBal,created_at:new Date().toISOString()});
+      }
+    }
+    resolved++;
+  }
+  document.getElementById('adm-resolve-modal')?.remove();
+  showToast(`✅ Resuelto · ${resolved} apuesta${resolved!==1?'s':''} procesada${resolved!==1?'s':''}`);
+  await renderEvents();
+}
+
+// ── Formulario de partido ──
+function admOnEvSportChange(){
+  const sport=document.getElementById('ev-sport')?.value||'';
+  const cat=sport.split('_')[0];
+  const xw=document.getElementById('ev-oddx-wrap');
+  if(xw) xw.style.display=(cat==='soccer'||cat==='icehockey')?'':'none';
+  const sm=document.getElementById('ev-soccer-markets');
+  if(sm) sm.style.display=cat==='soccer'?'':'none';
+}
+
+function admOpenCreateEvent(){
+  _editingEventId=null;
+  document.getElementById('event-modal-title').textContent='Nuevo Partido';
+  ['ev-league','ev-home','ev-away','ev-odd1','ev-oddx','ev-odd2','ev-total-line','ev-total-over','ev-total-under','ev-btts-yes','ev-btts-no','ev-spread-home-pt','ev-spread-home','ev-spread-away-pt','ev-spread-away'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  document.getElementById('ev-featured').checked=false;
+  document.getElementById('ev-live').checked=false;
+  document.getElementById('ev-sport').value='soccer_epl';
+  const tomorrow=new Date(Date.now()+86400000); tomorrow.setMinutes(0,0,0);
+  document.getElementById('ev-datetime').value=tomorrow.toISOString().slice(0,16);
+  admOnEvSportChange();
+  const overlay=document.getElementById('event-modal-overlay');
+  overlay.style.display='flex'; overlay.style.zIndex='9999';
+}
+
+function admOpenEditEvent(id){
+  const e=_manualEvents.find(x=>x.id===id);
+  if(!e) return;
+  _editingEventId=id;
+  document.getElementById('event-modal-title').textContent='Editar Partido';
+  document.getElementById('ev-sport').value=e.sport_key||'soccer_epl';
+  document.getElementById('ev-league').value=e.league||'';
+  document.getElementById('ev-home').value=e.home_team||'';
+  document.getElementById('ev-away').value=e.away_team||'';
+  document.getElementById('ev-datetime').value=e.commence_time?new Date(e.commence_time).toISOString().slice(0,16):'';
+  document.getElementById('ev-featured').checked=!!e.featured;
+  document.getElementById('ev-live').checked=e.status==='live';
+  document.getElementById('ev-odd1').value=e.odd_1||'';
+  document.getElementById('ev-oddx').value=e.odd_x||'';
+  document.getElementById('ev-odd2').value=e.odd_2||'';
+  document.getElementById('ev-total-line').value=e.total_line||'';
+  document.getElementById('ev-total-over').value=e.total_over||'';
+  document.getElementById('ev-total-under').value=e.total_under||'';
+  document.getElementById('ev-btts-yes').value=e.btts_yes||'';
+  document.getElementById('ev-btts-no').value=e.btts_no||'';
+  document.getElementById('ev-spread-home-pt').value=e.spread_home_pt||'';
+  document.getElementById('ev-spread-home').value=e.spread_home||'';
+  document.getElementById('ev-spread-away-pt').value=e.spread_away_pt||'';
+  document.getElementById('ev-spread-away').value=e.spread_away||'';
+  admOnEvSportChange();
+  const overlay=document.getElementById('event-modal-overlay');
+  overlay.style.display='flex'; overlay.style.zIndex='9999';
+}
+
+function admCloseEventModal(){
+  document.getElementById('event-modal-overlay').style.display='none';
+  _editingEventId=null;
+}
+
+async function admSaveEvent(){
+  const sport=document.getElementById('ev-sport').value;
+  const league=document.getElementById('ev-league').value.trim();
+  const home=document.getElementById('ev-home').value.trim();
+  const away=document.getElementById('ev-away').value.trim();
+  const dt=document.getElementById('ev-datetime').value;
+  if(!league||!home||!away||!dt){showToast('❌ Completa todos los campos obligatorios');return;}
+  const sportTitles={soccer_epl:'Fútbol',basketball_nba:'Baloncesto',americanfootball_nfl:'Fútbol Americano',baseball_mlb:'Béisbol',icehockey_nhl:'Hockey',mma_mixed_martial_arts:'MMA'};
+  const isLiveChk=document.getElementById('ev-live').checked;
+  const payload={
+    sport_key:sport, sport_title:sportTitles[sport]||'Deporte', league, home_team:home, away_team:away,
+    commence_time:new Date(dt).toISOString(),
+    featured:document.getElementById('ev-featured').checked,
+    status:isLiveChk?'live':(new Date(dt)<=new Date()?'live':'upcoming'),
+    odd_1:parseFloat(document.getElementById('ev-odd1').value)||null,
+    odd_x:parseFloat(document.getElementById('ev-oddx').value)||null,
+    odd_2:parseFloat(document.getElementById('ev-odd2').value)||null,
+    total_line:parseFloat(document.getElementById('ev-total-line').value)||null,
+    total_over:parseFloat(document.getElementById('ev-total-over').value)||null,
+    total_under:parseFloat(document.getElementById('ev-total-under').value)||null,
+    btts_yes:parseFloat(document.getElementById('ev-btts-yes').value)||null,
+    btts_no:parseFloat(document.getElementById('ev-btts-no').value)||null,
+    spread_home_pt:parseFloat(document.getElementById('ev-spread-home-pt').value)||null,
+    spread_home:parseFloat(document.getElementById('ev-spread-home').value)||null,
+    spread_away_pt:parseFloat(document.getElementById('ev-spread-away-pt').value)||null,
+    spread_away:parseFloat(document.getElementById('ev-spread-away').value)||null,
+    created_by:SESSION?.email||'',
+    updated_at:new Date().toISOString(),
+  };
+  let error;
+  if(_editingEventId){ ({error}=await _SB.from('manual_events').update(payload).eq('id',_editingEventId)); }
+  else               { ({error}=await _SB.from('manual_events').insert(payload)); }
+  if(error){showToast('❌ '+error.message);return;}
+  showToast(_editingEventId?'✅ Partido actualizado':'✅ Partido creado');
+  admCloseEventModal();
+  await renderEvents();
+}
+
+// ── Configuración ──
+async function loadAdmConfig(){
+  const {data}=await _SB.from('site_config').select('*').eq('id',1).single().catch(()=>({data:null}));
+  if(!data) return;
+  const sv=(id,v)=>{const e=document.getElementById(id);if(e&&v!=null)e.value=v;};
+  const sc=(id,v)=>{const e=document.getElementById(id);if(e)e.checked=!!v;};
+  sv('cfg-bonus-pct',data.bonus_pct); sv('cfg-bonus-max',data.bonus_max);
+  sv('cfg-dep-min',data.dep_min); sv('cfg-wit-min',data.wit_min);
+  sv('cfg-initial-balance',data.initial_balance); sv('cfg-house-margin',data.house_margin);
+  sc('cfg-allow-register',data.allow_register); sc('cfg-allow-deposits',data.allow_deposits);
+  sc('cfg-allow-bets',data.allow_bets); sc('cfg-maintenance',data.maintenance);
+}
+
+async function admSaveConfig(){
+  const gv=id=>{const e=document.getElementById(id);return e?+e.value:0;};
+  const gc=id=>{const e=document.getElementById(id);return e?e.checked:true;};
+  const {error}=await _SB.from('site_config').update({
+    bonus_pct:gv('cfg-bonus-pct'), bonus_max:gv('cfg-bonus-max'),
+    dep_min:gv('cfg-dep-min'), wit_min:gv('cfg-wit-min'),
+    initial_balance:gv('cfg-initial-balance'), house_margin:gv('cfg-house-margin'),
+    allow_register:gc('cfg-allow-register'), allow_deposits:gc('cfg-allow-deposits'),
+    allow_bets:gc('cfg-allow-bets'), maintenance:gc('cfg-maintenance'),
+    updated_at:new Date().toISOString(),
+  }).eq('id',1);
+  if(error){showToast('❌ '+error.message);return;}
+  showToast('✅ Configuración guardada');
+}
+
+async function admPromoteUser(){
+  const email=document.getElementById('cfg-promote-email').value.trim();
+  if(!email){showToast('❌ Introduce un email');return;}
+  const {error}=await _SB.from('profiles').update({role:'owner'}).eq('email',email);
+  if(error){showToast('❌ '+error.message);return;}
+  showToast('✅ Usuario promovido a Owner');
+}
+
+async function admDemoteUser(){
+  const email=document.getElementById('cfg-promote-email').value.trim();
+  if(!email){showToast('❌ Introduce un email');return;}
+  const {error}=await _SB.from('profiles').update({role:'user'}).eq('email',email);
+  if(error){showToast('❌ '+error.message);return;}
+  showToast('✅ Usuario degradado a Usuario');
+}
+
+// ── Init ──
+initAdmin();
+</script>
+</body>
+</html>
