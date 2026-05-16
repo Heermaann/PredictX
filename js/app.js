@@ -2630,51 +2630,52 @@ async function initIzipayForm() {
   if (izAmt) izAmt.textContent = 'S/ ' + amt.toFixed(2);
   if (izErr) { izErr.classList.remove('show'); izErr.textContent = ''; }
 
-  // Limpiar formulario anterior si existe
+  // Reset container
   const container = document.getElementById('iz-form-container');
   if (container) container.innerHTML =
     '<div class="kr-pan"></div><div class="kr-expiry"></div>' +
     '<div class="kr-security-code"></div>' +
     '<button class="kr-payment-button">Pagar con tarjeta →</button>';
 
+  // Check KRGlue loaded
+  if (typeof KRGlue === 'undefined') {
+    if (izErr) { izErr.textContent = '❌ El SDK de Izipay no pudo cargar. Recarga la página e intenta de nuevo.'; izErr.classList.add('show'); }
+    return;
+  }
+
   try {
     const { formToken, publicKey, mode } = await izipayRequestToken(amt);
 
-    // Actualizar badge de entorno
     const badge = document.getElementById('iz-env-badge');
     const hint  = document.getElementById('iz-test-hint');
     if (badge) {
       badge.className = 'izipay-env-badge' + (mode === 'prod' ? ' prod' : '');
-      badge.textContent = mode === 'prod'
-        ? '✅ Modo Producción'
-        : '🧪 Modo TEST — usa tarjeta de prueba';
+      badge.textContent = mode === 'prod' ? '✅ Modo Producción' : '🧪 Modo TEST — usa tarjeta de prueba';
     }
     if (hint) hint.style.display = mode === 'prod' ? 'none' : 'block';
 
-    // Cargar SDK de Izipay con la clave pública correcta
+    // Hide "Confirmar depósito" button — Izipay has its own pay button
+    const confirmBtn = document.getElementById('pay-confirm-btn');
+    if (confirmBtn) confirmBtn.style.display = 'none';
+
     KRGlue.loadLibrary('https://static.micuentaweb.pe', publicKey)
-      .then(({ KR }) => KR.setFormConfig({
-        formToken,
-        'kr-language': 'es-PE',
-      }))
+      .then(({ KR }) => KR.setFormConfig({ formToken, 'kr-language': 'es-PE' }))
       .then(({ KR }) => KR.addForm('#iz-form-container'))
       .then(({ KR }) => KR.showForm(KR.result))
       .then(({ KR }) => {
-        // Pago completado — verificar server-side
         KR.onSubmit(async (paymentData) => {
           try {
             const vResp = await fetch('/api/izipay-verify', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
-                kr_answer:        paymentData.clientAnswer,
-                kr_hash:          paymentData.hash,
+                kr_answer:         paymentData.clientAnswer,
+                kr_hash:           paymentData.hash,
                 kr_hash_algorithm: paymentData.hashAlgorithm || 'sha256',
               }),
             });
             const vData = await vResp.json();
             if (vData.paid) {
-              // Monto en céntimos → soles
               const paidAmt = (vData.amount || amt * 100) / 100;
               await creditBalance(paidAmt, 'Tarjeta Visa/Mastercard (Izipay)', vData.orderId);
             } else {
@@ -2685,15 +2686,11 @@ async function initIzipayForm() {
             const el = document.getElementById('iz-error');
             if (el) { el.textContent = '❌ Error al verificar el pago: ' + err.message; el.classList.add('show'); }
           }
-          return false; // Evitar redirección automática
+          return false;
         });
-
         KR.onError(err => {
           const el = document.getElementById('iz-error');
-          if (el) {
-            el.textContent = '❌ ' + (err.errorMessage || 'Error en el formulario de pago');
-            el.classList.add('show');
-          }
+          if (el) { el.textContent = '❌ ' + (err.errorMessage || 'Error en el formulario de pago'); el.classList.add('show'); }
         });
       })
       .catch(err => {
@@ -2711,7 +2708,12 @@ async function initIzipayForm() {
 /* ─── payStep2 override: init Izipay if card selected ─── */
 function confirmPayment() {
   if (!SESSION) { openAuthGate(); return; }
-  // For non-card methods: simulate (Yape/Transfer are manual)
+  // Card payments go through Izipay widget — never credit manually
+  if (_currentPayMethod === 'card') {
+    showToast('⚠️ Usa el botón de pago del formulario de tarjeta');
+    return;
+  }
+  // Yape / Transfer: manual confirmation flow
   const amt = parseFloat(document.getElementById('pay-amount').value)||0;
   const btn = document.getElementById('pay-confirm-btn');
   if (btn) { btn.disabled=true; btn.textContent='Procesando…'; }
