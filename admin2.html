@@ -2045,8 +2045,10 @@ async function loadNotifications(){
   if(newUsers.length > 0) notifs.push({ icon:'👥', text:`${newUsers.length} nuevo${newUsers.length!==1?'s':''} usuario${newUsers.length!==1?'s':''} hoy`, time:'Hoy', color:'var(--green)' });
 
   // Live events
-  const { data: liveEvs } = await _SB.from('manual_events').select('id').eq('status','live').catch(()=>({data:[]}));
-  if((liveEvs||[]).length > 0) notifs.push({ icon:'🔴', text:`${liveEvs.length} partido${liveEvs.length!==1?'s':''} en vivo`, time:'Ahora', color:'var(--red)' });
+  try {
+    const { data: liveEvs } = await _SB.from('manual_events').select('id').eq('status','live');
+    if((liveEvs||[]).length > 0) notifs.push({ icon:'🔴', text:`${liveEvs.length} partido${liveEvs.length!==1?'s':''} en vivo`, time:'Ahora', color:'var(--red)' });
+  } catch(_) {}
 
   if(!notifs.length){
     list.innerHTML = '<div style="padding:28px;text-align:center;color:var(--text3);font-size:13px">✅ Sin notificaciones pendientes</div>';
