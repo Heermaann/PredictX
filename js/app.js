@@ -4213,7 +4213,145 @@ function resetProfile(){ renderProfile(); }
 
 /* ── Deposit / Withdraw → use full modal ── */
 function showDepositModal()  { openPayModal('deposit');  }
-function showWithdrawModal() { openPayModal('withdraw'); }
+function showWithdrawModal() { openWithdrawModal(); }
+
+/* ════════════════════════════════════════════════
+   RETIRO DE FONDOS
+════════════════════════════════════════════════ */
+let _wdMethod = 'yape';
+
+function openWithdrawModal() {
+  if (!SESSION) { openAuthGate(); return; }
+  const cfg = getSiteConfig();
+  if (cfg.maintenance && !isOwner()) { showToast('🔧 Sitio en mantenimiento'); return; }
+
+  // Reset
+  _wdMethod = 'yape';
+  document.querySelectorAll('#withdraw-modal .pay-method').forEach(m=>m.classList.remove('selected'));
+  document.getElementById('wd-yape')?.classList.add('selected');
+  document.getElementById('wd-step1').style.display = 'block';
+  document.getElementById('wd-step2').style.display = 'none';
+  document.getElementById('wd-step3').style.display = 'none';
+  document.getElementById('wd-amount').value = '';
+  document.querySelectorAll('#withdraw-modal .quick-amt').forEach(b=>b.classList.remove('sel'));
+  document.getElementById('withdraw-status').className = 'auth-status';
+
+  // Show available balance
+  const d = adminData();
+  const balEl = document.getElementById('wd-balance-show');
+  if (balEl) balEl.textContent = 'S/' + (+d.balance||0).toFixed(2);
+
+  document.getElementById('withdraw-modal').classList.add('show');
+}
+
+function closeWithdrawModal() {
+  document.getElementById('withdraw-modal').classList.remove('show');
+  if (document.getElementById('view-admin')?.style.display === 'block') {
+    renderTx(_txFilter||'all');
+  }
+}
+
+function selectWdMethod(method, el) {
+  _wdMethod = method;
+  document.querySelectorAll('#withdraw-modal .pay-method').forEach(m=>m.classList.remove('selected'));
+  el.classList.add('selected');
+}
+
+function setWdAmt(v, btn) {
+  document.getElementById('wd-amount').value = v;
+  document.querySelectorAll('#withdraw-modal .quick-amt').forEach(b=>b.classList.remove('sel'));
+  btn.classList.add('sel');
+}
+
+function wdStep2() {
+  const amt = parseFloat(document.getElementById('wd-amount').value) || 0;
+  const d   = adminData();
+  const statusEl = document.getElementById('withdraw-status');
+
+  if (amt < 20)           { statusEl.className='auth-status error'; statusEl.textContent='❌ El monto mínimo es S/20'; return; }
+  if (amt > 5000)         { statusEl.className='auth-status error'; statusEl.textContent='❌ El monto máximo por solicitud es S/5,000'; return; }
+  if (amt > (+d.balance||0)) { statusEl.className='auth-status error'; statusEl.textContent='❌ Saldo insuficiente'; return; }
+
+  document.getElementById('wd-amt-show').textContent = 'S/' + amt.toFixed(2);
+  document.getElementById('wd-step1').style.display = 'none';
+  document.getElementById('wd-step2').style.display = 'block';
+
+  // Show correct fields
+  document.getElementById('wd-yape-fields').style.display     = _wdMethod === 'yape'     ? 'block' : 'none';
+  document.getElementById('wd-transfer-fields').style.display = _wdMethod === 'transfer'  ? 'block' : 'none';
+}
+
+async function submitWithdraw() {
+  const amt = parseFloat(document.getElementById('wd-amount').value) || 0;
+  const d   = adminData();
+  const statusEl = document.getElementById('withdraw-status');
+
+  if (amt > (+d.balance||0)) { statusEl.className='auth-status error'; statusEl.textContent='❌ Saldo insuficiente'; return; }
+
+  // Build payload
+  const payload = {
+    user_email: SESSION.email,
+    amount:     amt,
+    method:     _wdMethod,
+    status:     'pending',
+    auto:       (_wdMethod === 'yape' && amt <= 500),
+  };
+
+  if (_wdMethod === 'yape') {
+    const phone = document.getElementById('wd-yape-phone').value.trim();
+    const name  = document.getElementById('wd-yape-name').value.trim();
+    if (!phone || !name) { statusEl.className='auth-status error'; statusEl.textContent='❌ Completa los datos de Yape'; return; }
+    payload.yape_phone = phone;
+    payload.yape_name  = name;
+  } else {
+    const bank    = document.getElementById('wd-bank-name').value;
+    const account = document.getElementById('wd-bank-account').value.trim();
+    const cci     = document.getElementById('wd-bank-cci').value.trim();
+    const holder  = document.getElementById('wd-bank-holder').value.trim();
+    if (!bank || !account || !holder) { statusEl.className='auth-status error'; statusEl.textContent='❌ Completa los datos bancarios'; return; }
+    payload.bank_name    = bank;
+    payload.bank_account = account;
+    payload.bank_cci     = cci;
+    payload.bank_holder  = holder;
+  }
+
+  // Insert withdrawal request
+  const { error } = await _SB.from('withdrawal_requests').insert(payload);
+  if (error) { statusEl.className='auth-status error'; statusEl.textContent='❌ Error: ' + error.message; return; }
+
+  // Deduct balance immediately (hold funds)
+  const { data: prof } = await _SB.from('profiles').select('balance,withdrawn').eq('email', SESSION.email).single();
+  if (prof) {
+    const newBal  = Math.max(0, +(prof.balance  - amt).toFixed(2));
+    const newWith = +(( prof.withdrawn || 0) + amt).toFixed(2);
+    await _SB.from('profiles').update({ balance: newBal, withdrawn: newWith }).eq('email', SESSION.email);
+
+    // Record transaction
+    await _SB.from('transactions').insert({
+      user_email:  SESSION.email,
+      description: 'Solicitud de retiro vía ' + (_wdMethod === 'yape' ? 'Yape' : 'Transferencia'),
+      type:        'withdraw',
+      amount:      amt,
+      balance:     newBal,
+      created_at:  new Date().toISOString(),
+    });
+
+    // Update local cache
+    if (_sbProfile) { _sbProfile.balance = newBal; _sbProfile.withdrawn = newWith; }
+    const ld = adminData();
+    ld.balance = newBal; ld.withdrawn = newWith;
+    DB.set('admin', ld);
+    setText('sc-balance', 'S/' + newBal.toFixed(2));
+    setText('tx-balance', 'S/' + newBal.toFixed(2));
+    setText('tx-withdrawn', 'S/' + newWith.toFixed(2));
+  }
+
+  // Show success
+  document.getElementById('wd-step2').style.display = 'none';
+  document.getElementById('wd-step3').style.display = 'block';
+  document.getElementById('wd-success-msg').textContent =
+    `Tu solicitud de retiro de S/${amt.toFixed(2)} vía ${_wdMethod === 'yape' ? 'Yape' : 'transferencia bancaria'} ha sido recibida. El saldo ha sido retenido de tu cuenta.`;
+}
 
 /* ── Badge helper ── */
 function badgeHtml(status) {
