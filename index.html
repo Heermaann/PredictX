@@ -1270,7 +1270,7 @@
     <!-- Step 3: success -->
     <div id="pay-step3" style="display:none;text-align:center;padding:20px 0">
       <div style="font-size:56px;margin-bottom:14px">✅</div>
-      <div style="font-size:18px;font-weight:700;margin-bottom:6px">¡Depósito registrado!</div>
+      <div style="font-size:18px;font-weight:700;margin-bottom:6px" id="pay-step3-title">¡Depósito registrado!</div>
       <div style="font-size:13px;color:var(--text2);margin-bottom:20px;line-height:1.5" id="pay-success-msg">
         Tu depósito ha sido recibido y está siendo procesado. El saldo se reflejará en tu cuenta en instantes.
       </div>
@@ -1279,6 +1279,136 @@
         <div style="font-size:11px;color:var(--text2);margin-top:4px">Ya puedes realizar tus apuestas</div>
       </div>
       <button class="auth-btn" style="margin:0" onclick="closePayModal()">Ir a apostar →</button>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     MODAL DE RETIRO
+══════════════════════════════════════════ -->
+<div class="modal-bg" id="withdraw-modal">
+  <div class="modal" style="max-width:460px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">
+      <div style="font-size:17px;font-weight:700">Retirar fondos</div>
+      <div style="cursor:pointer;color:var(--text3);font-size:20px;line-height:1" onclick="closeWithdrawModal()">×</div>
+    </div>
+    <div class="auth-status" id="withdraw-status"></div>
+
+    <!-- Step 1: método y monto -->
+    <div id="wd-step1">
+      <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">Método de retiro</div>
+      <div class="pay-methods">
+        <div class="pay-method selected" id="wd-yape" onclick="selectWdMethod('yape',this)">
+          <div style="font-size:22px">📱</div>
+          <div style="font-size:12px;font-weight:600">Yape</div>
+          <div style="font-size:10px;color:var(--text2)">Automático ≤ S/500</div>
+        </div>
+        <div class="pay-method" id="wd-transfer" onclick="selectWdMethod('transfer',this)">
+          <div style="font-size:22px">🏦</div>
+          <div style="font-size:12px;font-weight:600">Transferencia</div>
+          <div style="font-size:10px;color:var(--text2)">1-2 días hábiles</div>
+        </div>
+      </div>
+
+      <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin:16px 0 8px">Importe a retirar</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+        <button class="quick-amt" onclick="setWdAmt(20,this)">S/20</button>
+        <button class="quick-amt" onclick="setWdAmt(50,this)">S/50</button>
+        <button class="quick-amt" onclick="setWdAmt(100,this)">S/100</button>
+        <button class="quick-amt" onclick="setWdAmt(200,this)">S/200</button>
+        <button class="quick-amt" onclick="setWdAmt(500,this)">S/500</button>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;background:var(--bg3);border-radius:10px;padding:10px 14px;margin-bottom:6px">
+        <span style="font-size:14px;font-weight:600;color:var(--text2)">S/</span>
+        <input type="number" id="wd-amount" placeholder="0.00" min="20" max="5000" step="0.01"
+          style="flex:1;background:transparent;border:none;outline:none;font-size:20px;font-weight:700;color:var(--text1);width:100%"
+          oninput="document.querySelectorAll('.quick-amt').forEach(b=>b.classList.remove('sel'))">
+      </div>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:20px">
+        Mínimo S/20 · Máximo S/5,000 · Saldo disponible: <strong id="wd-balance-show">S/0.00</strong>
+      </div>
+      <button class="auth-btn" style="margin:0" onclick="wdStep2()">Continuar →</button>
+    </div>
+
+    <!-- Step 2: datos del método -->
+    <div id="wd-step2" style="display:none">
+      <div style="background:var(--bg3);border-radius:12px;padding:16px;text-align:center;margin-bottom:20px">
+        <div style="font-size:13px;color:var(--text2)">Retiro solicitado</div>
+        <div style="font-size:28px;font-weight:800;margin:4px 0" id="wd-amt-show">S/0.00</div>
+      </div>
+
+      <!-- Yape fields -->
+      <div id="wd-yape-fields">
+        <div style="font-size:13px;font-weight:600;margin-bottom:12px">📱 Datos de tu Yape</div>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <div>
+            <div style="font-size:11px;color:var(--text2);margin-bottom:4px">Número de teléfono Yape</div>
+            <input type="tel" id="wd-yape-phone" placeholder="9XX XXX XXX" maxlength="9"
+              style="width:100%;padding:10px 14px;border-radius:9px;border:1.5px solid var(--border);background:var(--bg3);color:var(--text1);font-size:14px;outline:none">
+          </div>
+          <div>
+            <div style="font-size:11px;color:var(--text2);margin-bottom:4px">Nombre en Yape</div>
+            <input type="text" id="wd-yape-name" placeholder="Tu nombre completo"
+              style="width:100%;padding:10px 14px;border-radius:9px;border:1.5px solid var(--border);background:var(--bg3);color:var(--text1);font-size:14px;outline:none">
+          </div>
+        </div>
+      </div>
+
+      <!-- Transfer fields -->
+      <div id="wd-transfer-fields" style="display:none">
+        <div style="font-size:13px;font-weight:600;margin-bottom:12px">🏦 Datos bancarios</div>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <div>
+            <div style="font-size:11px;color:var(--text2);margin-bottom:4px">Banco</div>
+            <select id="wd-bank-name" style="width:100%;padding:10px 14px;border-radius:9px;border:1.5px solid var(--border);background:var(--bg3);color:var(--text1);font-size:14px;outline:none">
+              <option value="">Selecciona tu banco</option>
+              <option>BCP</option><option>Interbank</option><option>BBVA</option>
+              <option>Scotiabank</option><option>BanBif</option><option>Pichincha</option>
+              <option>Mibanco</option><option>Caja Huancayo</option><option>Otro</option>
+            </select>
+          </div>
+          <div>
+            <div style="font-size:11px;color:var(--text2);margin-bottom:4px">Número de cuenta</div>
+            <input type="text" id="wd-bank-account" placeholder="Número de cuenta"
+              style="width:100%;padding:10px 14px;border-radius:9px;border:1.5px solid var(--border);background:var(--bg3);color:var(--text1);font-size:14px;outline:none">
+          </div>
+          <div>
+            <div style="font-size:11px;color:var(--text2);margin-bottom:4px">CCI (Código de cuenta interbancario)</div>
+            <input type="text" id="wd-bank-cci" placeholder="20 dígitos"
+              style="width:100%;padding:10px 14px;border-radius:9px;border:1.5px solid var(--border);background:var(--bg3);color:var(--text1);font-size:14px;outline:none">
+          </div>
+          <div>
+            <div style="font-size:11px;color:var(--text2);margin-bottom:4px">Titular de la cuenta</div>
+            <input type="text" id="wd-bank-holder" placeholder="Nombre completo del titular"
+              style="width:100%;padding:10px 14px;border-radius:9px;border:1.5px solid var(--border);background:var(--bg3);color:var(--text1);font-size:14px;outline:none">
+          </div>
+        </div>
+      </div>
+
+      <div style="background:rgba(244,185,66,.1);border:1px solid rgba(244,185,66,.3);border-radius:10px;padding:12px 14px;margin-top:16px;font-size:12px;color:var(--text2);line-height:1.5">
+        ⚠️ El retiro será procesado en un plazo de <strong>1-2 días hábiles</strong>. Tu saldo quedará retenido hasta que se procese.
+      </div>
+
+      <div style="display:flex;gap:10px;margin-top:20px">
+        <button onclick="document.getElementById('wd-step1').style.display='block';document.getElementById('wd-step2').style.display='none'"
+          style="flex:1;padding:12px;border-radius:10px;background:var(--bg3);border:1px solid var(--border);color:var(--text2);cursor:pointer;font-size:14px">← Volver</button>
+        <button class="auth-btn" style="flex:2;margin:0" onclick="submitWithdraw()">Solicitar retiro</button>
+      </div>
+    </div>
+
+    <!-- Step 3: confirmación -->
+    <div id="wd-step3" style="display:none;text-align:center;padding:20px 0">
+      <div style="font-size:56px;margin-bottom:14px">⏳</div>
+      <div style="font-size:18px;font-weight:700;margin-bottom:6px">¡Solicitud enviada!</div>
+      <div style="font-size:13px;color:var(--text2);margin-bottom:20px;line-height:1.5" id="wd-success-msg">
+        Tu solicitud de retiro ha sido recibida y está siendo procesada.
+      </div>
+      <div style="background:rgba(244,185,66,.1);border:1px solid rgba(244,185,66,.3);border-radius:10px;padding:14px;margin-bottom:20px">
+        <div style="font-size:14px;font-weight:700;color:var(--yellow)">⏳ Pendiente de aprobación</div>
+        <div style="font-size:11px;color:var(--text2);margin-top:4px">Recibirás confirmación en 1-2 días hábiles</div>
+      </div>
+      <button class="auth-btn" style="margin:0" onclick="closeWithdrawModal()">Entendido</button>
     </div>
 
   </div>
