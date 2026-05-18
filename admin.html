@@ -198,6 +198,7 @@ html, body { height: 100%; font-family: var(--font); background: var(--bg); colo
 .btn-danger   { background: #fff; color: var(--red);   border-color: var(--red);   }
 .btn-warning  { background: var(--orange); color: #fff; border-color: var(--orange); }
 .btn-sm { padding: 5px 12px; font-size: 12px; }
+.btn-active-filter { box-shadow: inset 0 0 0 2px var(--accent); opacity: 1 !important; font-weight: 700; }
 
 /* KPI Cards */
 .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
@@ -507,8 +508,8 @@ tbody td { padding: 12px 16px; font-size: 13px; color: var(--text1); vertical-al
       </div>
       <span class="topbar-page-title" id="topbar-page-title">Dashboard</span>
       <div class="topbar-actions">
-        <div class="topbar-btn" title="Notificaciones">
-          🔔<div class="topbar-notif-dot"></div>
+        <div class="topbar-btn" title="Notificaciones" onclick="toggleNotifPanel()" id="notif-bell">
+          🔔<div class="topbar-notif-dot" id="notif-dot"></div>
         </div>
         <div class="topbar-user" onclick="window.location.href='/'">
           <div class="topbar-user-avatar" id="topbar-avatar">?</div>
@@ -1321,7 +1322,11 @@ function renderBets(filter){
   </tr>`).join('');
 }
 
-function admFilterBets(filter){ renderBets(filter); }
+function admFilterBets(filter, btn){
+  document.querySelectorAll('#adm-bets .page-hd-right .btn').forEach(b=>b.classList.remove('btn-active-filter'));
+  if(btn) btn.classList.add('btn-active-filter');
+  renderBets(filter);
+}
 
 async function admResolveBet(betId,userEmail,stake,odd,result){
   const ret=result==='win'?+(odd*stake).toFixed(2):0;
@@ -1367,7 +1372,11 @@ function renderTx(filter){
     </tr>`;}).join('');
 }
 
-function admFilterTx(filter){ renderTx(filter); }
+function admFilterTx(filter, btn){
+  document.querySelectorAll('#adm-tx .page-hd-right .btn').forEach(b=>b.classList.remove('btn-active-filter'));
+  if(btn) btn.classList.add('btn-active-filter');
+  renderTx(filter);
+}
 
 // ── Deportes (Categorías) ──
 async function renderSports(){
@@ -1749,8 +1758,8 @@ async function renderSupport(filter){
 }
 
 function admFilterSupport(filter, btn){
-  document.querySelectorAll('#adm-support .page-hd-right .btn').forEach(b=>b.style.opacity='0.6');
-  if(btn) btn.style.opacity='1';
+  document.querySelectorAll('#adm-support .page-hd-right .btn').forEach(b=>b.classList.remove('btn-active-filter'));
+  if(btn) btn.classList.add('btn-active-filter');
   renderSupport(filter);
 }
 
@@ -1872,6 +1881,71 @@ function exportCSV(type){
   showToast(`✅ ${type} exportado como CSV`,'success');
 }
 
+
+// ── Notificaciones ──
+let _notifOpen = false;
+
+function toggleNotifPanel(){
+  const panel = document.getElementById('notif-panel');
+  _notifOpen = !_notifOpen;
+  panel.style.display = _notifOpen ? 'block' : 'none';
+  if(_notifOpen) loadNotifications();
+}
+
+async function loadNotifications(){
+  const list = document.getElementById('notif-list');
+  const notifs = [];
+  
+  // Open bets count
+  const openBets = _cache.bets.filter(b=>b.status==='open');
+  if(openBets.length > 0) notifs.push({ icon:'🎟', text:`${openBets.length} apuesta${openBets.length!==1?'s':''} pendiente${openBets.length!==1?'s':''} de resolver`, time:'Ahora', color:'var(--orange)' });
+
+  // Open support tickets
+  try {
+    const { count } = await _SB.from('support_tickets').select('id',{count:'exact'}).eq('status','open');
+    if(count > 0) notifs.push({ icon:'🎫', text:`${count} ticket${count!==1?'s':''} de soporte abierto${count!==1?'s':''}`, time:'Ahora', color:'var(--red)' });
+  } catch(_){}
+
+  // New users today
+  const today = new Date().toDateString();
+  const newUsers = _cache.users.filter(u=>u.created_at && new Date(u.created_at).toDateString()===today);
+  if(newUsers.length > 0) notifs.push({ icon:'👥', text:`${newUsers.length} nuevo${newUsers.length!==1?'s':''} usuario${newUsers.length!==1?'s':''} hoy`, time:'Hoy', color:'var(--green)' });
+
+  // Live events
+  const { data: liveEvs } = await _SB.from('manual_events').select('id').eq('status','live').catch(()=>({data:[]}));
+  if((liveEvs||[]).length > 0) notifs.push({ icon:'🔴', text:`${liveEvs.length} partido${liveEvs.length!==1?'s':''} en vivo`, time:'Ahora', color:'var(--red)' });
+
+  if(!notifs.length){
+    list.innerHTML = '<div style="padding:28px;text-align:center;color:var(--text3);font-size:13px">✅ Sin notificaciones pendientes</div>';
+    document.getElementById('notif-dot').style.display='none';
+    return;
+  }
+
+  list.innerHTML = notifs.map(n=>`
+    <div style="display:flex;align-items:flex-start;gap:12px;padding:12px 20px;border-bottom:1px solid var(--border);cursor:pointer" onmouseover="this.style.background='var(--bg)'" onmouseout="this.style.background='transparent'">
+      <div style="width:36px;height:36px;border-radius:10px;background:${n.color}22;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">${n.icon}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:500;color:var(--text1)">${n.text}</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:2px">${n.time}</div>
+      </div>
+      <div style="width:8px;height:8px;border-radius:50%;background:${n.color};flex-shrink:0;margin-top:4px"></div>
+    </div>`).join('');
+  document.getElementById('notif-dot').style.display='block';
+}
+
+function markAllRead(){
+  document.getElementById('notif-list').innerHTML = '<div style="padding:28px;text-align:center;color:var(--text3);font-size:13px">✅ Sin notificaciones pendientes</div>';
+  document.getElementById('notif-dot').style.display='none';
+}
+
+// Close notif panel when clicking outside
+document.addEventListener('click', e => {
+  if(_notifOpen && !document.getElementById('notif-panel').contains(e.target) && !document.getElementById('notif-bell').contains(e.target)){
+    document.getElementById('notif-panel').style.display='none';
+    _notifOpen = false;
+  }
+});
+
 // ── Keyboard shortcut ──
 document.addEventListener('keydown', e => { if((e.ctrlKey||e.metaKey) && e.key==='k'){ e.preventDefault(); document.getElementById('topbar-search-inp')?.focus(); } });
 
@@ -1942,6 +2016,20 @@ document.addEventListener('DOMContentLoaded', () => initAdmin());
       <button class="btn btn-ghost" onclick="admCloseSupportModal()">Cancelar</button>
       <button class="btn btn-primary" onclick="admSaveTicketResponse()">Guardar respuesta</button>
     </div>
+  </div>
+</div>
+
+<!-- Notification Panel -->
+<div id="notif-panel" style="display:none;position:fixed;top:72px;right:20px;width:340px;background:#fff;border:1px solid var(--border);border-radius:14px;box-shadow:var(--shadow-lg);z-index:400;overflow:hidden">
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border)">
+    <div style="font-size:14px;font-weight:700">Notificaciones</div>
+    <button onclick="document.getElementById('notif-panel').style.display='none'" style="background:none;border:none;cursor:pointer;color:var(--text2);font-size:18px">✕</button>
+  </div>
+  <div id="notif-list" style="max-height:360px;overflow-y:auto;padding:8px 0">
+    <div style="padding:20px;text-align:center;color:var(--text3);font-size:13px">Cargando notificaciones...</div>
+  </div>
+  <div style="padding:12px 20px;border-top:1px solid var(--border);text-align:center">
+    <button onclick="markAllRead()" class="btn btn-ghost btn-sm" style="width:100%">Marcar todo como leído</button>
   </div>
 </div>
 </body>
