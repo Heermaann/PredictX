@@ -1,494 +1,1005 @@
 <!DOCTYPE html>
-<html lang="es" data-theme="dark">
+<html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>PredictX — Panel Admin</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PredictX — Admin Panel</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://cdn.jsdelivr.net/npm/otpauth@9.3.6/dist/otpauth.umd.min.js"></script>
-<link rel="stylesheet" href="css/style.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
-  /* ── Force text colors for admin panel ── */
-  .ap-title, .admin-card-title, .adm-sidebar-title,
-  .sc-label, .sc-val, .cfg-label, .cfg-toggle-label,
-  .adm-nav-user-name, .ev-row-match, .ev-row-sport,
-  .owner-section-title, .adm-table th, .adm-table td,
-  .admin-card-hd, .owner-modal-head span {
-    color: var(--text1) !important;
-  }
-  .ap-sub, .adm-sidebar-sub, .cfg-toggle-sub,
-  .adm-nav-user-role, .ev-row-meta, .adm-empty,
-  .ev-tag, .adm-gate-sub {
-    color: var(--text2) !important;
-  }
-  /* Ensure dark background vars are set */
-  :root {
-    --text1: #f1f5f9;
-    --text2: #94a3b8;
-    --text3: #64748b;
-    --bg:    #0f172a;
-    --bg2:   #1e293b;
-    --bg3:   #334155;
-    --bg4:   #475569;
-    --border: rgba(148,163,184,.15);
-    --border2: rgba(148,163,184,.3);
-    --accent: #6366f1;
-    --accent-bg: rgba(99,102,241,.12);
-    --green: #10b981;
-    --green-bg: rgba(16,185,129,.1);
-    --green-bd: rgba(16,185,129,.3);
-    --red:   #ef4444;
-    --red-bg: rgba(239,68,68,.1);
-    --red-bd: rgba(239,68,68,.3);
-    --yellow: #f4b942;
-    --mono: 'JetBrains Mono', monospace;
-    --font: 'Inter', sans-serif;
-    --shadow: rgba(0,0,0,.4);
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  html, body { height: 100%; background: var(--bg); color: var(--text1); font-family: var(--font); }
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-  .admin-layout {
-    display: flex;
-    height: 100vh;
-    overflow: hidden;
-  }
+:root {
+  --sidebar-bg:   #0B132B;
+  --sidebar-w:    260px;
+  --accent:       #5F3DFF;
+  --accent-light: rgba(95,61,255,.12);
+  --accent-text:  #5F3DFF;
+  --bg:           #F4F6F9;
+  --card:         #FFFFFF;
+  --text1:        #1a1d2e;
+  --text2:        #6c757d;
+  --text3:        #adb5bd;
+  --border:       #e9ecef;
+  --green:        #28a745;
+  --green-bg:     rgba(40,167,69,.1);
+  --red:          #dc3545;
+  --red-bg:       rgba(220,53,69,.1);
+  --orange:       #fd7e14;
+  --orange-bg:    rgba(253,126,20,.1);
+  --blue:         #007bff;
+  --blue-bg:      rgba(0,123,255,.08);
+  --shadow:       0 2px 12px rgba(0,0,0,.07);
+  --shadow-lg:    0 4px 24px rgba(0,0,0,.10);
+  --radius:       10px;
+  --font:         'Inter', sans-serif;
+  --mono:         'JetBrains Mono', monospace;
+  --nav-h:        64px;
+}
 
-  /* Sidebar */
-  .adm-sidebar {
-    width: 240px;
-    flex-shrink: 0;
-    background: var(--bg2);
-    border-right: 1px solid var(--border);
-    display: flex;
-    flex-direction: column;
-    overflow-y: auto;
-    height: 100vh;
-  }
-  .adm-sidebar-head {
-    padding: 20px 16px 12px;
-    border-bottom: 1px solid var(--border);
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-  .adm-sidebar-logo {
-    width: 34px; height: 34px;
-    background: var(--accent);
-    border-radius: 9px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 16px; font-weight: 700; color: #fff;
-    flex-shrink: 0;
-  }
-  .adm-sidebar-title { font-size: 14px; font-weight: 700; }
-  .adm-sidebar-sub   { font-size: 11px; color: var(--text3); }
-  .adm-sidebar-nav   { padding: 10px 8px; flex: 1; }
-  .adm-nav-item {
-    display: flex; align-items: center; gap: 10px;
-    padding: 10px 12px; border-radius: 9px;
-    font-size: 13px; font-weight: 500; color: var(--text2);
-    cursor: pointer; transition: all .15s; margin-bottom: 2px;
-    border: none; background: transparent; width: 100%; text-align: left;
-  }
-  .adm-nav-item:hover  { background: var(--bg3); color: var(--text1); }
-  .adm-nav-item.active { background: var(--accent-bg, rgba(99,102,241,.12)); color: var(--accent); }
-  .adm-nav-ico { font-size: 16px; width: 20px; text-align: center; flex-shrink: 0; }
-  .adm-nav-badge {
-    margin-left: auto;
-    background: var(--accent); color: #fff;
-    border-radius: 99px; font-size: 10px; font-weight: 700;
-    padding: 1px 7px; min-width: 20px; text-align: center;
-  }
-  .adm-nav-sep { height: 1px; background: var(--border); margin: 8px 4px; }
-  .adm-nav-user {
-    padding: 12px 16px;
-    border-top: 1px solid var(--border);
-    display: flex; align-items: center; gap: 10px;
-  }
-  .adm-nav-user-avatar {
-    width: 32px; height: 32px; border-radius: 8px;
-    background: var(--accent); color: #fff;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 13px; font-weight: 700; flex-shrink: 0;
-  }
-  .adm-nav-user-info { flex: 1; min-width: 0; }
-  .adm-nav-user-name { font-size: 12px; font-weight: 600; }
-  .adm-nav-user-role { font-size: 10px; color: var(--accent); }
+html, body { height: 100%; font-family: var(--font); background: var(--bg); color: var(--text1); }
 
-  /* Main content */
-  .adm-main {
-    flex: 1;
-    overflow-y: auto;
-    padding: 28px 32px;
-    height: 100vh;
-  }
-  .adm-page { display: none; }
-  .adm-page.active { display: block; }
+/* ── Layout ── */
+.adm-layout { display: flex; height: 100vh; overflow: hidden; }
 
-  /* Auth gate */
-  .adm-gate {
-    position: fixed; inset: 0;
-    background: var(--bg);
-    display: flex; align-items: center; justify-content: center;
-    z-index: 1000;
-  }
-  .adm-gate-card {
-    background: var(--bg2); border: 1px solid var(--border);
-    border-radius: 16px; padding: 32px; width: 100%; max-width: 380px;
-    text-align: center;
-  }
-  .adm-gate-ico   { font-size: 40px; margin-bottom: 12px; }
-  .adm-gate-title { font-size: 20px; font-weight: 700; margin-bottom: 6px; }
-  .adm-gate-sub   { font-size: 13px; color: var(--text2); margin-bottom: 24px; }
-  .adm-gate-err   { font-size: 12px; color: var(--red); margin-top: 12px; min-height: 18px; }
+/* ── Sidebar ── */
+.adm-sidebar {
+  width: var(--sidebar-w);
+  background: var(--sidebar-bg);
+  display: flex; flex-direction: column;
+  height: 100vh; flex-shrink: 0;
+  overflow-y: auto; overflow-x: hidden;
+  scrollbar-width: thin; scrollbar-color: rgba(255,255,255,.1) transparent;
+  transition: width .25s;
+}
+.adm-sidebar::-webkit-scrollbar { width: 4px; }
+.adm-sidebar::-webkit-scrollbar-thumb { background: rgba(255,255,255,.1); border-radius: 4px; }
 
-  @media (max-width: 768px) {
-    .adm-sidebar { width: 200px; }
-    .adm-main    { padding: 20px 16px; }
-  }
-  @media (max-width: 600px) {
-    .admin-layout { flex-direction: column; }
-    .adm-sidebar  { width: 100%; height: auto; border-right: none; border-bottom: 1px solid var(--border); }
-    .adm-sidebar-nav { display: flex; flex-wrap: wrap; gap: 4px; padding: 8px; }
-    .adm-nav-item { width: auto; flex-direction: column; gap: 4px; font-size: 11px; padding: 8px 10px; }
-    .adm-nav-ico  { font-size: 20px; }
-    .adm-main { height: auto; overflow-y: visible; }
-    .admin-layout { height: auto; overflow: visible; }
-  }
+.sidebar-brand {
+  display: flex; align-items: center; gap: 10px;
+  padding: 20px 20px 16px;
+  border-bottom: 1px solid rgba(255,255,255,.07);
+}
+.brand-logo {
+  width: 38px; height: 38px; border-radius: 10px;
+  background: var(--accent); display: flex; align-items: center;
+  justify-content: center; font-size: 18px; font-weight: 800;
+  color: #fff; flex-shrink: 0;
+}
+.brand-name { color: #fff; font-size: 17px; font-weight: 700; letter-spacing: -.3px; }
+.brand-sub  { color: rgba(255,255,255,.4); font-size: 10px; font-weight: 500; }
+
+.sidebar-nav { padding: 12px 0; flex: 1; }
+.nav-section-label {
+  font-size: 10px; font-weight: 700; letter-spacing: 1.2px;
+  color: rgba(255,255,255,.3); text-transform: uppercase;
+  padding: 12px 20px 6px;
+}
+.nav-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 20px; cursor: pointer;
+  font-size: 13.5px; font-weight: 500;
+  color: rgba(255,255,255,.55);
+  transition: all .15s; position: relative;
+  border: none; background: none; width: 100%; text-align: left;
+}
+.nav-item:hover { color: #fff; background: rgba(255,255,255,.06); }
+.nav-item.active {
+  color: #fff; font-weight: 600;
+  background: var(--accent);
+  border-radius: 8px; margin: 0 10px; width: calc(100% - 20px);
+}
+.nav-item .nav-ico { font-size: 16px; width: 20px; text-align: center; flex-shrink: 0; }
+.nav-badge {
+  margin-left: auto; background: var(--orange); color: #fff;
+  border-radius: 99px; font-size: 10px; font-weight: 700;
+  padding: 2px 7px; min-width: 20px; text-align: center;
+}
+.nav-badge.green { background: var(--green); }
+.nav-divider { height: 1px; background: rgba(255,255,255,.07); margin: 8px 16px; }
+
+.sidebar-footer {
+  padding: 14px 20px;
+  border-top: 1px solid rgba(255,255,255,.07);
+  display: flex; align-items: center; gap: 10px;
+}
+.sidebar-user-avatar {
+  width: 34px; height: 34px; border-radius: 9px;
+  background: var(--accent); color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; font-weight: 700; flex-shrink: 0;
+}
+.sidebar-user-name { color: #fff; font-size: 13px; font-weight: 600; }
+.sidebar-user-role { color: rgba(255,255,255,.4); font-size: 11px; }
+.sidebar-version { color: #28a745; font-size: 10px; font-weight: 600; margin-top: 8px; text-align: center; padding-bottom: 4px; }
+
+/* ── Main ── */
+.adm-main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+/* Top Navbar */
+.adm-topbar {
+  height: var(--nav-h);
+  background: #fff;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 16px;
+  padding: 0 28px;
+  flex-shrink: 0;
+  box-shadow: 0 1px 4px rgba(0,0,0,.05);
+}
+.topbar-search {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: 8px; padding: 8px 14px; flex: 1; max-width: 320px;
+  font-size: 13px; color: var(--text2);
+}
+.topbar-search input {
+  border: none; background: transparent; outline: none;
+  font-size: 13px; color: var(--text1); width: 100%;
+  font-family: var(--font);
+}
+.topbar-search-kbd {
+  background: var(--border); border-radius: 4px;
+  padding: 1px 6px; font-size: 10px; color: var(--text2);
+  font-family: var(--mono); flex-shrink: 0;
+}
+.topbar-actions { display: flex; align-items: center; gap: 6px; margin-left: auto; }
+.topbar-btn {
+  width: 36px; height: 36px; border-radius: 9px;
+  border: 1px solid var(--border); background: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; cursor: pointer; position: relative;
+  transition: background .15s;
+}
+.topbar-btn:hover { background: var(--bg); }
+.topbar-notif-dot {
+  position: absolute; top: 4px; right: 4px;
+  width: 8px; height: 8px; background: var(--red);
+  border-radius: 50%; border: 1.5px solid #fff;
+}
+.topbar-user {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 12px; border-radius: 9px;
+  border: 1px solid var(--border); cursor: pointer;
+  transition: background .15s;
+}
+.topbar-user:hover { background: var(--bg); }
+.topbar-user-avatar {
+  width: 30px; height: 30px; border-radius: 7px;
+  background: var(--accent); color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 700;
+}
+.topbar-user-name { font-size: 13px; font-weight: 600; color: var(--text1); }
+.topbar-page-title { font-size: 15px; font-weight: 700; color: var(--text1); }
+
+/* Content area */
+.adm-content { flex: 1; overflow-y: auto; padding: 28px; }
+
+/* Page header */
+.page-hd {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 24px; flex-wrap: wrap; gap: 12px;
+}
+.page-hd-left .page-title { font-size: 20px; font-weight: 700; color: var(--text1); }
+.page-hd-left .page-sub   { font-size: 13px; color: var(--text2); margin-top: 2px; }
+.page-hd-right { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* Buttons */
+.btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer; transition: all .15s; border: 1.5px solid transparent; font-family: var(--font); }
+.btn-primary  { background: var(--accent); color: #fff; border-color: var(--accent); }
+.btn-primary:hover  { background: #4a2ee0; }
+.btn-outline  { background: #fff; color: var(--accent); border-color: var(--accent); }
+.btn-outline:hover  { background: var(--accent-light); }
+.btn-ghost    { background: #fff; color: var(--text2); border-color: var(--border); }
+.btn-ghost:hover    { background: var(--bg); }
+.btn-success  { background: #fff; color: var(--green); border-color: var(--green); }
+.btn-danger   { background: #fff; color: var(--red);   border-color: var(--red);   }
+.btn-warning  { background: var(--orange); color: #fff; border-color: var(--orange); }
+.btn-sm { padding: 5px 12px; font-size: 12px; }
+
+/* KPI Cards */
+.kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+.kpi-card {
+  background: #fff; border-radius: var(--radius);
+  padding: 18px 20px; display: flex; align-items: center; gap: 14px;
+  box-shadow: var(--shadow); cursor: pointer; transition: box-shadow .15s;
+}
+.kpi-card:hover { box-shadow: var(--shadow-lg); }
+.kpi-ico {
+  width: 46px; height: 46px; border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px; flex-shrink: 0;
+}
+.kpi-ico.purple { background: rgba(95,61,255,.12); }
+.kpi-ico.green  { background: rgba(40,167,69,.12); }
+.kpi-ico.red    { background: rgba(220,53,69,.12); }
+.kpi-ico.orange { background: rgba(253,126,20,.12); }
+.kpi-ico.blue   { background: rgba(0,123,255,.12); }
+.kpi-body { flex: 1; min-width: 0; }
+.kpi-label { font-size: 12px; color: var(--text2); font-weight: 500; margin-bottom: 4px; }
+.kpi-value { font-size: 24px; font-weight: 800; color: var(--text1); line-height: 1; }
+.kpi-arrow { color: var(--text3); font-size: 18px; }
+
+/* Chart card */
+.chart-card {
+  background: #fff; border-radius: var(--radius);
+  box-shadow: var(--shadow); padding: 20px 24px; margin-bottom: 24px;
+}
+.chart-card-hd {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 16px;
+}
+.chart-card-title { font-size: 15px; font-weight: 700; }
+.chart-wrap { height: 200px; }
+
+/* Info banner */
+.info-banner {
+  background: var(--blue-bg); border: 1px solid rgba(0,123,255,.2);
+  border-radius: 8px; padding: 12px 16px; margin-bottom: 18px;
+  font-size: 13px; color: #0056b3; display: flex; align-items: center; gap: 8px;
+}
+
+/* Table card */
+.table-card {
+  background: #fff; border-radius: var(--radius);
+  box-shadow: var(--shadow); overflow: hidden;
+}
+.table-card-hd {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 20px; border-bottom: 1px solid var(--border);
+  gap: 12px; flex-wrap: wrap;
+}
+.table-card-title { font-size: 15px; font-weight: 700; }
+.table-search {
+  display: flex; align-items: center; gap: 8px;
+  border: 1px solid var(--border); border-radius: 7px;
+  padding: 7px 12px; font-size: 13px;
+}
+.table-search input { border: none; outline: none; font-size: 13px; font-family: var(--font); width: 180px; }
+table { width: 100%; border-collapse: collapse; }
+thead tr { background: var(--accent); }
+thead th { color: #fff; font-size: 12px; font-weight: 600; padding: 12px 16px; text-align: left; white-space: nowrap; }
+tbody tr { border-bottom: 1px solid var(--border); transition: background .1s; }
+tbody tr:last-child { border-bottom: none; }
+tbody tr:hover { background: var(--bg); }
+tbody td { padding: 12px 16px; font-size: 13px; color: var(--text1); vertical-align: middle; }
+.table-empty { text-align: center; color: var(--text3); padding: 40px; font-size: 14px; }
+
+/* Badges */
+.badge { display: inline-flex; align-items: center; padding: 3px 10px; border-radius: 99px; font-size: 11px; font-weight: 600; border: 1.5px solid; }
+.badge-green  { color: var(--green);  border-color: var(--green);  background: var(--green-bg); }
+.badge-red    { color: var(--red);    border-color: var(--red);    background: var(--red-bg); }
+.badge-orange { color: var(--orange); border-color: var(--orange); background: var(--orange-bg); }
+.badge-blue   { color: var(--blue);   border-color: var(--blue);   background: var(--blue-bg); }
+.badge-purple { color: var(--accent); border-color: var(--accent); background: var(--accent-light); }
+
+/* User avatar in table */
+.user-chip { display: flex; align-items: center; gap: 8px; }
+.user-chip-avatar {
+  width: 30px; height: 30px; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 700; color: #fff; flex-shrink: 0;
+}
+.user-chip-name { font-weight: 600; font-size: 13px; }
+.user-chip-email { font-size: 11px; color: var(--text2); }
+
+/* Action buttons in table */
+.action-group { display: flex; gap: 6px; flex-wrap: wrap; }
+
+/* Auth gate */
+.adm-gate {
+  position: fixed; inset: 0; background: var(--bg);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 1000;
+}
+.adm-gate-card {
+  background: #fff; border-radius: 16px; padding: 36px;
+  width: 100%; max-width: 400px; box-shadow: var(--shadow-lg);
+  text-align: center;
+}
+.gate-logo {
+  width: 56px; height: 56px; background: var(--accent); border-radius: 14px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 26px; font-weight: 800; color: #fff; margin: 0 auto 16px;
+}
+.gate-title { font-size: 22px; font-weight: 800; margin-bottom: 4px; }
+.gate-sub   { font-size: 13px; color: var(--text2); margin-bottom: 20px; }
+.gate-input-group { text-align: left; margin-bottom: 14px; }
+.gate-label { font-size: 11px; font-weight: 700; color: var(--text2); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 6px; display: block; }
+.gate-input {
+  width: 100%; padding: 10px 14px; border-radius: 9px;
+  border: 1.5px solid var(--border); font-size: 14px;
+  font-family: var(--font); outline: none; transition: border-color .15s;
+}
+.gate-input:focus { border-color: var(--accent); }
+.gate-btn {
+  width: 100%; padding: 12px; border-radius: 10px;
+  background: var(--accent); color: #fff; font-size: 15px;
+  font-weight: 700; border: none; cursor: pointer;
+  font-family: var(--font); transition: background .15s;
+}
+.gate-btn:hover { background: #4a2ee0; }
+.gate-err { font-size: 12px; color: var(--red); margin-top: 10px; min-height: 18px; }
+.gate-loading { font-size: 13px; color: var(--text2); }
+
+/* Modal */
+.modal-overlay {
+  position: fixed; inset: 0; z-index: 500;
+  background: rgba(0,0,0,.45);
+  display: none; align-items: center; justify-content: center; padding: 16px;
+}
+.modal-overlay.open { display: flex; }
+.modal-box {
+  background: #fff; border-radius: 14px;
+  width: 100%; max-width: 540px; max-height: 90vh; overflow-y: auto;
+  box-shadow: var(--shadow-lg);
+}
+.modal-hd {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 20px 24px; border-bottom: 1px solid var(--border);
+}
+.modal-title { font-size: 16px; font-weight: 700; }
+.modal-close {
+  width: 32px; height: 32px; border-radius: 8px;
+  border: 1px solid var(--border); background: #fff;
+  font-size: 16px; cursor: pointer; display: flex;
+  align-items: center; justify-content: center; color: var(--text2);
+}
+.modal-body { padding: 20px 24px; }
+.modal-ft {
+  padding: 16px 24px; border-top: 1px solid var(--border);
+  display: flex; justify-content: flex-end; gap: 10px;
+}
+
+/* Form elements */
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+.form-row-1 { grid-template-columns: 1fr; }
+.form-row-3 { grid-template-columns: 1fr 1fr 1fr; }
+.form-group { display: flex; flex-direction: column; gap: 5px; }
+.form-label { font-size: 11px; font-weight: 700; color: var(--text2); text-transform: uppercase; letter-spacing: .5px; }
+.form-input, .form-select {
+  padding: 9px 12px; border-radius: 8px;
+  border: 1.5px solid var(--border); font-size: 13px;
+  font-family: var(--font); outline: none; transition: border-color .15s;
+  color: var(--text1); background: #fff;
+}
+.form-input:focus, .form-select:focus { border-color: var(--accent); }
+.form-section {
+  font-size: 11px; font-weight: 700; color: var(--text2);
+  text-transform: uppercase; letter-spacing: .6px;
+  padding: 14px 0 8px; border-top: 1px solid var(--border); margin-top: 6px;
+}
+.form-check { display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer; }
+.form-check input { width: 15px; height: 15px; cursor: pointer; accent-color: var(--accent); }
+
+/* Pages */
+.adm-page { display: none; }
+.adm-page.active { display: block; }
+
+/* Toast */
+#adm-toast {
+  position: fixed; bottom: 24px; left: 50%;
+  transform: translateX(-50%);
+  background: var(--text1); color: #fff;
+  border-radius: 10px; padding: 11px 22px;
+  font-size: 13px; font-weight: 500;
+  z-index: 9999; opacity: 0; transition: opacity .3s;
+  pointer-events: none; white-space: nowrap;
+  box-shadow: var(--shadow-lg);
+}
+
+/* Recent activity */
+.activity-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 11px 0; border-bottom: 1px solid var(--border);
+}
+.activity-item:last-child { border-bottom: none; }
+.activity-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
+/* Amount with icon */
+.amount-cell { display: flex; align-items: center; gap: 5px; font-family: var(--mono); font-size: 13px; }
+.amount-icon { color: var(--blue); font-size: 14px; }
+
+/* Responsive */
+@media (max-width: 1200px) { .kpi-grid { grid-template-columns: repeat(3,1fr); } }
+@media (max-width: 900px)  { .kpi-grid { grid-template-columns: repeat(2,1fr); } }
+@media (max-width: 768px) {
+  .adm-sidebar { position: fixed; z-index: 300; transform: translateX(-100%); transition: transform .25s; }
+  .adm-sidebar.open { transform: translateX(0); }
+  .kpi-grid { grid-template-columns: 1fr 1fr; }
+  .form-row { grid-template-columns: 1fr; }
+}
+@media (max-width: 480px) { .kpi-grid { grid-template-columns: 1fr; } }
 </style>
 </head>
 <body>
 
-<!-- Auth gate -->
+<!-- ── Auth Gate ── -->
 <div class="adm-gate" id="adm-gate">
   <div class="adm-gate-card">
-    <div class="adm-gate-ico">⚡</div>
-    <div class="adm-gate-title">PredictX Admin</div>
-    <div class="adm-gate-sub">Acceso exclusivo para administradores</div>
-    <div id="adm-gate-loading" style="color:var(--text3);font-size:13px">Verificando sesión...</div>
-    <!-- Login form (shown if no active session) -->
-    <div id="adm-login-form" style="display:none;margin-top:16px;text-align:left">
-      <div style="margin-bottom:10px">
-        <div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:5px;text-transform:uppercase;letter-spacing:.5px">Email</div>
-        <input type="email" id="adm-login-email" style="width:100%;padding:10px 12px;border-radius:9px;border:1px solid var(--border);background:var(--bg3);color:var(--text1);font-size:14px;outline:none" placeholder="tu@email.com">
+    <div class="gate-logo">P</div>
+    <div class="gate-title">PredictX Admin</div>
+    <div class="gate-sub">Acceso exclusivo para administradores</div>
+    <div id="adm-gate-loading" class="gate-loading">Verificando sesión...</div>
+    <div id="adm-login-form" style="display:none;text-align:left">
+      <div class="gate-input-group">
+        <label class="gate-label">Email</label>
+        <input type="email" id="adm-login-email" class="gate-input" placeholder="admin@predictx.com">
       </div>
-      <div style="margin-bottom:16px">
-        <div style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:5px;text-transform:uppercase;letter-spacing:.5px">Contraseña</div>
-        <input type="password" id="adm-login-pass" style="width:100%;padding:10px 12px;border-radius:9px;border:1px solid var(--border);background:var(--bg3);color:var(--text1);font-size:14px;outline:none" placeholder="••••••••" onkeydown="if(event.key==='Enter')admLogin()">
+      <div class="gate-input-group">
+        <label class="gate-label">Contraseña</label>
+        <input type="password" id="adm-login-pass" class="gate-input" placeholder="••••••••" onkeydown="if(event.key==='Enter')admLogin()">
       </div>
-      <button onclick="admLogin()" style="width:100%;padding:11px;border-radius:10px;background:var(--accent);color:#fff;font-size:14px;font-weight:600;border:none;cursor:pointer">Entrar →</button>
+      <button class="gate-btn" onclick="admLogin()">Entrar al panel →</button>
     </div>
-    <div class="adm-gate-err" id="adm-gate-err"></div>
+    <div class="gate-err" id="adm-gate-err"></div>
   </div>
 </div>
 
-<!-- Admin layout -->
-<div class="admin-layout" id="admin-layout" style="display:none">
+<!-- ── Admin Layout ── -->
+<div class="adm-layout" id="admin-layout" style="display:none">
 
   <!-- Sidebar -->
-  <aside class="adm-sidebar">
-    <div class="adm-sidebar-head">
-      <div class="adm-sidebar-logo">P</div>
+  <aside class="adm-sidebar" id="adm-sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-logo">P</div>
       <div>
-        <div class="adm-sidebar-title">PredictX</div>
-        <div class="adm-sidebar-sub">Panel de administración</div>
+        <div class="brand-name">PredictX</div>
+        <div class="brand-sub">Admin Panel</div>
       </div>
     </div>
-    <nav class="adm-sidebar-nav">
-      <button class="adm-nav-item active" id="adm-nav-dashboard" onclick="admShowPage('dashboard',this)">
-        <span class="adm-nav-ico">📊</span> Dashboard
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Principal</div>
+      <button class="nav-item active" id="nav-dashboard" onclick="admShowPage('dashboard',this)">
+        <span class="nav-ico">📊</span> Dashboard
       </button>
-      <button class="adm-nav-item" id="adm-nav-users" onclick="admShowPage('users',this)">
-        <span class="adm-nav-ico">👥</span> Usuarios
-        <span class="adm-nav-badge" id="adm-badge-users" style="display:none">0</span>
+      <button class="nav-item" id="nav-users" onclick="admShowPage('users',this)">
+        <span class="nav-ico">👥</span> Apostadores
+        <span class="nav-badge" id="adm-badge-users" style="display:none">0</span>
       </button>
-      <button class="adm-nav-item" id="adm-nav-bets" onclick="admShowPage('bets',this)">
-        <span class="adm-nav-ico">🎟</span> Apuestas
-        <span class="adm-nav-badge" id="adm-badge-bets" style="background:var(--yellow);display:none">0</span>
+      <button class="nav-item" id="nav-bets" onclick="admShowPage('bets',this)">
+        <span class="nav-ico">🎟</span> Apuestas
+        <span class="nav-badge" id="adm-badge-bets" style="display:none">0</span>
       </button>
-      <button class="adm-nav-item" id="adm-nav-tx" onclick="admShowPage('tx',this)">
-        <span class="adm-nav-ico">💳</span> Transacciones
+      <button class="nav-item" id="nav-tx" onclick="admShowPage('tx',this)">
+        <span class="nav-ico">💳</span> Transacciones
       </button>
-      <button class="adm-nav-item" id="adm-nav-events" onclick="admShowPage('events',this)">
-        <span class="adm-nav-ico">⚽</span> Partidos
+      <div class="nav-divider"></div>
+      <div class="nav-section-label">Gestión</div>
+      <button class="nav-item" id="nav-sports" onclick="admShowPage('sports',this)">
+        <span class="nav-ico">🏅</span> Categorías
       </button>
-      <div class="adm-nav-sep"></div>
-      <button class="adm-nav-item" id="adm-nav-sports" onclick="admShowPage('sports',this)">
-        <span class="adm-nav-ico">🏅</span> Deportes
+      <button class="nav-item" id="nav-leagues" onclick="admShowPage('leagues',this)">
+        <span class="nav-ico">🏆</span> Ligas
       </button>
-      <button class="adm-nav-item" id="adm-nav-leagues" onclick="admShowPage('leagues',this)">
-        <span class="adm-nav-ico">🏆</span> Ligas
+      <button class="nav-item" id="nav-events" onclick="admShowPage('events',this)">
+        <span class="nav-ico">⚽</span> Partidos
       </button>
-      <button class="adm-nav-item" id="adm-nav-config" onclick="admShowPage('config',this)">
-        <span class="adm-nav-ico">⚙️</span> Configuración
+      <div class="nav-divider"></div>
+      <div class="nav-section-label">Sistema</div>
+      <button class="nav-item" id="nav-config" onclick="admShowPage('config',this)">
+        <span class="nav-ico">⚙️</span> Configuración
       </button>
-      <div class="adm-nav-sep"></div>
-      <button class="adm-nav-item" onclick="window.location.href='/'">
-        <span class="adm-nav-ico">←</span> Volver al sitio
+      <button class="nav-item" onclick="window.location.href='/'">
+        <span class="nav-ico">🏠</span> Volver al sitio
       </button>
     </nav>
-    <div class="adm-nav-user">
-      <div class="adm-nav-user-avatar" id="adm-user-avatar">?</div>
-      <div class="adm-nav-user-info">
-        <div class="adm-nav-user-name" id="adm-user-name">—</div>
-        <div class="adm-nav-user-role">⚡ Owner</div>
+    <div class="sidebar-footer">
+      <div class="sidebar-user-avatar" id="adm-user-avatar">?</div>
+      <div>
+        <div class="sidebar-user-name" id="adm-user-name">—</div>
+        <div class="sidebar-user-role">⚡ Owner</div>
       </div>
     </div>
+    <div class="sidebar-version">PREDICTX V1.0</div>
   </aside>
 
-  <!-- Main content -->
-  <main class="adm-main">
-
-    <!-- Dashboard -->
-    <div class="adm-page active" id="adm-dashboard">
-      <div class="ap-title" style="margin-bottom:4px">Dashboard</div>
-      <div class="ap-sub" style="margin-bottom:24px">Resumen general de PredictX</div>
-      <div class="sc-row" id="adm-kpis">
-        <div class="sc"><div class="sc-label">Usuarios</div><div class="sc-val" id="adm-kpi-users">—</div></div>
-        <div class="sc"><div class="sc-label">Apuestas activas</div><div class="sc-val" style="color:var(--yellow)" id="adm-kpi-bets-open">—</div></div>
-        <div class="sc"><div class="sc-label">Total apostado</div><div class="sc-val" id="adm-kpi-staked">—</div></div>
-        <div class="sc"><div class="sc-label">Total depósitos</div><div class="sc-val g" id="adm-kpi-deposits">—</div></div>
-        <div class="sc"><div class="sc-label">Exposición casa</div><div class="sc-val r" id="adm-kpi-exposure">—</div></div>
+  <!-- Main -->
+  <div class="adm-main">
+    <!-- Top navbar -->
+    <div class="adm-topbar">
+      <div class="topbar-search">
+        <span>🔍</span>
+        <input type="text" placeholder="Buscar aquí..." id="topbar-search-inp" oninput="admGlobalSearch(this.value)">
+        <span class="topbar-search-kbd">Ctrl+K</span>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:20px">
-        <div class="admin-card">
-          <div class="admin-card-hd"><div class="admin-card-title">Últimas apuestas</div><div class="admin-card-action" onclick="admShowPage('bets',document.getElementById('adm-nav-bets'))">Ver todo →</div></div>
-          <div id="adm-recent-bets"><div class="adm-empty">Cargando...</div></div>
+      <span class="topbar-page-title" id="topbar-page-title">Dashboard</span>
+      <div class="topbar-actions">
+        <div class="topbar-btn" title="Notificaciones">
+          🔔<div class="topbar-notif-dot"></div>
         </div>
-        <div class="admin-card">
-          <div class="admin-card-hd"><div class="admin-card-title">Últimas transacciones</div><div class="admin-card-action" onclick="admShowPage('tx',document.getElementById('adm-nav-tx'))">Ver todo →</div></div>
-          <div id="adm-recent-tx"><div class="adm-empty">Cargando...</div></div>
+        <div class="topbar-user" onclick="window.location.href='/'">
+          <div class="topbar-user-avatar" id="topbar-avatar">?</div>
+          <div class="topbar-user-name" id="topbar-name">Admin</div>
+          <span>▾</span>
         </div>
       </div>
     </div>
 
-    <!-- Usuarios -->
-    <div class="adm-page" id="adm-users">
-      <div class="ap-title" style="margin-bottom:4px">Usuarios</div>
-      <div class="ap-sub" style="margin-bottom:16px">Gestión de cuentas de usuario</div>
-      <input type="text" class="cfg-input" placeholder="Buscar por nombre o email..." id="adm-users-search" oninput="admFilterUsers(this.value)" style="max-width:320px;margin-bottom:16px">
-      <div class="adm-table-wrap">
-        <table class="adm-table">
-          <thead><tr><th>Usuario</th><th>País</th><th>Saldo</th><th>Apostado</th><th>Apuestas</th><th>Rol</th><th>Acciones</th></tr></thead>
-          <tbody id="adm-users-body"><tr><td colspan="7" style="text-align:center;color:var(--text2);padding:36px">⏳ Cargando...</td></tr></tbody>
-        </table>
-      </div>
-    </div>
+    <!-- Content -->
+    <div class="adm-content">
 
-    <!-- Apuestas -->
-    <div class="adm-page" id="adm-bets">
-      <div class="ap-title" style="margin-bottom:4px">Apuestas</div>
-      <div class="ap-sub" style="margin-bottom:16px">Historial y resolución de apuestas</div>
-      <div class="sc-row" style="margin-bottom:16px">
-        <div class="sc"><div class="sc-label">Total apostado</div><div class="sc-val" id="adm-bets-total">—</div></div>
-        <div class="sc"><div class="sc-label">Pendientes</div><div class="sc-val" style="color:var(--yellow)" id="adm-bets-open">—</div></div>
-        <div class="sc"><div class="sc-label">Exposición casa</div><div class="sc-val r" id="adm-bets-exposure">—</div></div>
-      </div>
-      <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
-        <button class="ev-filter-btn active" onclick="admFilterBets('all',this)">Todas</button>
-        <button class="ev-filter-btn" onclick="admFilterBets('open',this)">Pendientes</button>
-        <button class="ev-filter-btn" onclick="admFilterBets('win',this)">Ganadas</button>
-        <button class="ev-filter-btn" onclick="admFilterBets('loss',this)">Perdidas</button>
-      </div>
-      <div class="adm-table-wrap">
-        <table class="adm-table">
-          <thead><tr><th>Usuario</th><th>Partido</th><th>Selección</th><th>Cuota</th><th>Apuesta</th><th>Retorno</th><th>Tipo</th><th>Estado</th><th>Acciones</th></tr></thead>
-          <tbody id="adm-bets-body"><tr><td colspan="9" style="text-align:center;color:var(--text2);padding:36px">⏳ Cargando...</td></tr></tbody>
-        </table>
-      </div>
-    </div>
-
-    <!-- Transacciones -->
-    <div class="adm-page" id="adm-tx">
-      <div class="ap-title" style="margin-bottom:4px">Transacciones</div>
-      <div class="ap-sub" style="margin-bottom:16px">Historial de depósitos, retiradas y apuestas</div>
-      <div class="sc-row" style="margin-bottom:16px">
-        <div class="sc"><div class="sc-label">Total depósitos</div><div class="sc-val g" id="adm-tx-dep">—</div></div>
-        <div class="sc"><div class="sc-label">Total retiradas</div><div class="sc-val r" id="adm-tx-wit">—</div></div>
-        <div class="sc"><div class="sc-label">Apuestas cobradas</div><div class="sc-val" id="adm-tx-bet">—</div></div>
-        <div class="sc"><div class="sc-label">Premios pagados</div><div class="sc-val" id="adm-tx-win">—</div></div>
-      </div>
-      <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
-        <button class="ev-filter-btn active" onclick="admFilterTx('all',this)">Todas</button>
-        <button class="ev-filter-btn" onclick="admFilterTx('deposit',this)">Depósitos</button>
-        <button class="ev-filter-btn" onclick="admFilterTx('withdraw',this)">Retiradas</button>
-        <button class="ev-filter-btn" onclick="admFilterTx('bet',this)">Apuestas</button>
-        <button class="ev-filter-btn" onclick="admFilterTx('win',this)">Premios</button>
-      </div>
-      <div class="adm-table-wrap">
-        <table class="adm-table">
-          <thead><tr><th>Usuario</th><th>Fecha</th><th>Descripción</th><th>Tipo</th><th>Importe</th></tr></thead>
-          <tbody id="adm-tx-body"><tr><td colspan="5" style="text-align:center;color:var(--text2);padding:36px">⏳ Cargando...</td></tr></tbody>
-        </table>
-      </div>
-    </div>
-
-    <!-- Partidos -->
-    <div class="adm-page" id="adm-events">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
-        <div>
-          <div class="ap-title">Gestión de Partidos</div>
-          <div class="ap-sub">Crea partidos manuales que se mezclan con los de la API</div>
-        </div>
-        <button class="adm-btn" onclick="admOpenCreateEvent()">+ Nuevo partido</button>
-      </div>
-      <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
-        <button class="ev-filter-btn active" onclick="admFilterEvents('all',this)">Todos</button>
-        <button class="ev-filter-btn" onclick="admFilterEvents('upcoming',this)">Próximos</button>
-        <button class="ev-filter-btn" onclick="admFilterEvents('live',this)">En Vivo</button>
-        <button class="ev-filter-btn" onclick="admFilterEvents('finished',this)">Finalizados</button>
-        <button class="ev-filter-btn" onclick="admFilterEvents('featured',this)">⭐ Destacados</button>
-      </div>
-      <div id="adm-events-list"><div class="adm-empty">Cargando partidos...</div></div>
-    </div>
-
-    <!-- Configuración -->
-    <!-- Deportes -->
-    <div class="adm-page" id="adm-sports">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
-        <div><div class="ap-title">Deportes</div><div class="ap-sub">Gestiona los deportes visibles en la plataforma</div></div>
-        <button class="adm-btn" onclick="admOpenSportModal()">+ Nuevo deporte</button>
-      </div>
-      <div id="adm-sports-list"><div class="adm-empty">Cargando...</div></div>
-    </div>
-
-    <!-- Ligas -->
-    <div class="adm-page" id="adm-leagues">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
-        <div><div class="ap-title">Ligas</div><div class="ap-sub">Crea y gestiona ligas personalizadas</div></div>
-        <button class="adm-btn" onclick="admOpenLeagueModal()">+ Nueva liga</button>
-      </div>
-      <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap" id="adm-leagues-sport-filter">
-        <button class="ev-filter-btn active" onclick="admFilterLeagues('all',this)">Todas</button>
-      </div>
-      <div id="adm-leagues-list"><div class="adm-empty">Cargando...</div></div>
-    </div>
-
-        <div class="adm-page" id="adm-config">
-      <div class="ap-title" style="margin-bottom:4px">Configuración del Sitio</div>
-      <div class="ap-sub" style="margin-bottom:24px">Ajustes globales de PredictX</div>
-      <div class="admin-card" style="margin-bottom:16px">
-        <div class="admin-card-hd"><div class="admin-card-title">🏦 Finanzas</div></div>
-        <div class="cfg-grid">
-          <div class="cfg-group"><div class="cfg-label">Bono bienvenida (%)</div><input class="cfg-input" id="cfg-bonus-pct" type="number" value="100" min="0" max="200"></div>
-          <div class="cfg-group"><div class="cfg-label">Bono máximo (€)</div><input class="cfg-input" id="cfg-bonus-max" type="number" value="100" min="0"></div>
-          <div class="cfg-group"><div class="cfg-label">Depósito mínimo (€)</div><input class="cfg-input" id="cfg-dep-min" type="number" value="10" min="1"></div>
-          <div class="cfg-group"><div class="cfg-label">Retirada mínima (€)</div><input class="cfg-input" id="cfg-wit-min" type="number" value="20" min="1"></div>
-          <div class="cfg-group"><div class="cfg-label">Saldo inicial nuevos usuarios (€)</div><input class="cfg-input" id="cfg-initial-balance" type="number" value="0" min="0"></div>
-          <div class="cfg-group"><div class="cfg-label">Comisión de la casa (%)</div><input class="cfg-input" id="cfg-house-margin" type="number" value="5" min="0" max="50"></div>
-        </div>
-        <div style="padding:14px 18px;border-top:1px solid var(--border);display:flex;justify-content:flex-end">
-          <button class="btn-save" onclick="admSaveConfig()">Guardar configuración</button>
-        </div>
-      </div>
-      <div class="admin-card" style="margin-bottom:16px">
-        <div class="admin-card-hd"><div class="admin-card-title">🔧 Funcionalidades</div></div>
-        <div class="cfg-toggle"><div><div class="cfg-toggle-label">Registro de nuevos usuarios</div><div class="cfg-toggle-sub">Permitir que usuarios nuevos se registren</div></div><label class="toggle-switch"><input type="checkbox" id="cfg-allow-register" checked><span class="toggle-slider"></span></label></div>
-        <div class="cfg-toggle"><div><div class="cfg-toggle-label">Depósitos activos</div><div class="cfg-toggle-sub">Permitir nuevos depósitos en la plataforma</div></div><label class="toggle-switch"><input type="checkbox" id="cfg-allow-deposits" checked><span class="toggle-slider"></span></label></div>
-        <div class="cfg-toggle"><div><div class="cfg-toggle-label">Apuestas activas</div><div class="cfg-toggle-sub">Permitir realizar nuevas apuestas</div></div><label class="toggle-switch"><input type="checkbox" id="cfg-allow-bets" checked><span class="toggle-slider"></span></label></div>
-        <div class="cfg-toggle" style="border-bottom:none"><div><div class="cfg-toggle-label">Modo mantenimiento</div><div class="cfg-toggle-sub">Muestra aviso de mantenimiento a los usuarios</div></div><label class="toggle-switch"><input type="checkbox" id="cfg-maintenance"><span class="toggle-slider"></span></label></div>
-      </div>
-      <div class="admin-card">
-        <div class="admin-card-hd"><div class="admin-card-title">👤 Promover / Degradar Owner</div></div>
-        <div style="padding:16px 18px;display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">
-          <div style="flex:1;min-width:200px">
-            <div class="cfg-label" style="margin-bottom:6px">Email del usuario</div>
-            <input class="cfg-input" id="cfg-promote-email" type="email" placeholder="usuario@email.com" style="width:100%">
+      <!-- Dashboard -->
+      <div class="adm-page active" id="adm-dashboard">
+        <div class="page-hd">
+          <div class="page-hd-left">
+            <div class="page-title">Panel</div>
+            <div class="page-sub">Resumen general de PredictX</div>
           </div>
-          <button class="btn-save" onclick="admPromoteUser()">⬆ Hacer Owner</button>
-          <button class="btn-ghost" onclick="admDemoteUser()">⬇ Hacer Usuario</button>
+          <div class="page-hd-right">
+            <button class="btn btn-warning" onclick="fetchAll().then(()=>renderDashboard())">🔄 Actualizar</button>
+          </div>
+        </div>
+        <!-- KPI grid -->
+        <div class="kpi-grid">
+          <div class="kpi-card" onclick="admShowPage('users',document.getElementById('nav-users'))">
+            <div class="kpi-ico purple">👥</div>
+            <div class="kpi-body"><div class="kpi-label">Total apostadores</div><div class="kpi-value" id="k-users">—</div></div>
+            <div class="kpi-arrow">›</div>
+          </div>
+          <div class="kpi-card" onclick="admShowPage('users',document.getElementById('nav-users'))">
+            <div class="kpi-ico green">✅</div>
+            <div class="kpi-body"><div class="kpi-label">Usuarios activos</div><div class="kpi-value" id="k-active">—</div></div>
+            <div class="kpi-arrow">›</div>
+          </div>
+          <div class="kpi-card" onclick="admShowPage('bets',document.getElementById('nav-bets'))">
+            <div class="kpi-ico orange">🎟</div>
+            <div class="kpi-body"><div class="kpi-label">Apuestas pendientes</div><div class="kpi-value" id="k-bets-open">—</div></div>
+            <div class="kpi-arrow">›</div>
+          </div>
+          <div class="kpi-card" onclick="admShowPage('bets',document.getElementById('nav-bets'))">
+            <div class="kpi-ico purple">💰</div>
+            <div class="kpi-body"><div class="kpi-label">Total apostado</div><div class="kpi-value" id="k-staked">—</div></div>
+            <div class="kpi-arrow">›</div>
+          </div>
+          <div class="kpi-card" onclick="admShowPage('tx',document.getElementById('nav-tx'))">
+            <div class="kpi-ico green">📥</div>
+            <div class="kpi-body"><div class="kpi-label">Total depósitos</div><div class="kpi-value" id="k-deposits">—</div></div>
+            <div class="kpi-arrow">›</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-ico red">📤</div>
+            <div class="kpi-body"><div class="kpi-label">Total retiradas</div><div class="kpi-value" id="k-withdrawals">—</div></div>
+            <div class="kpi-arrow">›</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-ico red">⚠️</div>
+            <div class="kpi-body"><div class="kpi-label">Exposición casa</div><div class="kpi-value" id="k-exposure">—</div></div>
+            <div class="kpi-arrow">›</div>
+          </div>
+          <div class="kpi-card" onclick="admShowPage('events',document.getElementById('nav-events'))">
+            <div class="kpi-ico blue">⚽</div>
+            <div class="kpi-body"><div class="kpi-label">Partidos activos</div><div class="kpi-value" id="k-events">—</div></div>
+            <div class="kpi-arrow">›</div>
+          </div>
+        </div>
+        <!-- Chart -->
+        <div class="chart-card">
+          <div class="chart-card-hd">
+            <div class="chart-card-title">Informe de transacciones</div>
+            <div style="font-size:12px;color:var(--text2)">Últimos 30 días</div>
+          </div>
+          <div class="chart-wrap"><canvas id="dash-chart"></canvas></div>
+        </div>
+        <!-- Recent -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+          <div class="table-card">
+            <div class="table-card-hd"><div class="table-card-title">Últimas apuestas</div><button class="btn btn-ghost btn-sm" onclick="admShowPage('bets',document.getElementById('nav-bets'))">Ver todo →</button></div>
+            <div id="dash-recent-bets" style="padding:0 4px"></div>
+          </div>
+          <div class="table-card">
+            <div class="table-card-hd"><div class="table-card-title">Últimos depósitos</div><button class="btn btn-ghost btn-sm" onclick="admShowPage('tx',document.getElementById('nav-tx'))">Ver todo →</button></div>
+            <div id="dash-recent-tx" style="padding:0 4px"></div>
+          </div>
         </div>
       </div>
-    </div>
 
-  </main>
+      <!-- Usuarios -->
+      <div class="adm-page" id="adm-users">
+        <div class="page-hd">
+          <div class="page-hd-left"><div class="page-title">Apostadores</div><div class="page-sub">Gestión de cuentas de usuario</div></div>
+        </div>
+        <div class="table-card">
+          <div class="table-card-hd">
+            <div class="table-card-title">Todos los apostadores</div>
+            <div class="table-search"><span>🔍</span><input type="text" placeholder="Search..." oninput="admFilterUsers(this.value)"></div>
+          </div>
+          <div style="overflow-x:auto">
+            <table>
+              <thead><tr><th>Apostador</th><th>País</th><th>Saldo</th><th>Depositado</th><th>Apuestas</th><th>Rol</th><th>Estado</th><th>Acción</th></tr></thead>
+              <tbody id="adm-users-body"><tr><td colspan="8" class="table-empty">⏳ Cargando...</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Apuestas -->
+      <div class="adm-page" id="adm-bets">
+        <div class="page-hd">
+          <div class="page-hd-left"><div class="page-title">Apuestas</div><div class="page-sub">Historial y resolución de apuestas</div></div>
+          <div class="page-hd-right">
+            <button class="btn btn-ghost btn-sm" onclick="admFilterBets('all',this)">Todas</button>
+            <button class="btn btn-outline btn-sm" onclick="admFilterBets('open',this)">Pendientes</button>
+            <button class="btn btn-success btn-sm" onclick="admFilterBets('win',this)">Ganadas</button>
+            <button class="btn btn-danger btn-sm" onclick="admFilterBets('loss',this)">Perdidas</button>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:20px">
+          <div class="kpi-card"><div class="kpi-ico purple">💰</div><div class="kpi-body"><div class="kpi-label">Total apostado</div><div class="kpi-value" id="bets-k-total">—</div></div></div>
+          <div class="kpi-card"><div class="kpi-ico orange">⏳</div><div class="kpi-body"><div class="kpi-label">Pendientes</div><div class="kpi-value" id="bets-k-open">—</div></div></div>
+          <div class="kpi-card"><div class="kpi-ico red">⚠️</div><div class="kpi-body"><div class="kpi-label">Exposición casa</div><div class="kpi-value" id="bets-k-exposure">—</div></div></div>
+        </div>
+        <div class="table-card">
+          <div class="table-card-hd"><div class="table-card-title">Apuestas realizadas</div></div>
+          <div style="overflow-x:auto">
+            <table>
+              <thead><tr><th>Bet ID</th><th>Usuario</th><th>Partido</th><th>Selección</th><th>Cuota</th><th>Apuesta</th><th>Retorno</th><th>Tipo</th><th>Estado</th><th>Acción</th></tr></thead>
+              <tbody id="adm-bets-body"><tr><td colspan="10" class="table-empty">⏳ Cargando...</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Transacciones -->
+      <div class="adm-page" id="adm-tx">
+        <div class="page-hd">
+          <div class="page-hd-left"><div class="page-title">Transacciones</div><div class="page-sub">Historial de depósitos, retiradas y apuestas</div></div>
+          <div class="page-hd-right">
+            <button class="btn btn-ghost btn-sm" onclick="admFilterTx('all',this)">Todas</button>
+            <button class="btn btn-success btn-sm" onclick="admFilterTx('deposit',this)">Depósitos</button>
+            <button class="btn btn-danger btn-sm" onclick="admFilterTx('withdraw',this)">Retiradas</button>
+            <button class="btn btn-outline btn-sm" onclick="admFilterTx('bet',this)">Apuestas</button>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px">
+          <div class="kpi-card"><div class="kpi-ico green">📥</div><div class="kpi-body"><div class="kpi-label">Depósitos</div><div class="kpi-value" id="tx-k-dep">—</div></div></div>
+          <div class="kpi-card"><div class="kpi-ico red">📤</div><div class="kpi-body"><div class="kpi-label">Retiradas</div><div class="kpi-value" id="tx-k-wit">—</div></div></div>
+          <div class="kpi-card"><div class="kpi-ico orange">🎟</div><div class="kpi-body"><div class="kpi-label">Cobrado en apuestas</div><div class="kpi-value" id="tx-k-bet">—</div></div></div>
+          <div class="kpi-card"><div class="kpi-ico purple">🏆</div><div class="kpi-body"><div class="kpi-label">Premios pagados</div><div class="kpi-value" id="tx-k-win">—</div></div></div>
+        </div>
+        <div class="table-card">
+          <div class="table-card-hd"><div class="table-card-title">Historial de transacciones</div></div>
+          <div style="overflow-x:auto">
+            <table>
+              <thead><tr><th>ID</th><th>Usuario</th><th>Fecha</th><th>Descripción</th><th>Tipo</th><th>Importe</th><th>Saldo</th></tr></thead>
+              <tbody id="adm-tx-body"><tr><td colspan="7" class="table-empty">⏳ Cargando...</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Categorías (Deportes) -->
+      <div class="adm-page" id="adm-sports">
+        <div class="page-hd">
+          <div class="page-hd-left"><div class="page-title">Categorías</div><div class="page-sub">Gestiona los deportes visibles en la plataforma</div></div>
+          <div class="page-hd-right"><button class="btn btn-primary" onclick="admOpenSportModal()">+ Añadir categoría</button></div>
+        </div>
+        <div class="info-banner">ℹ️ Las categorías controlan qué deportes aparecen en el menú lateral. Desactivar una categoría oculta todos sus partidos.</div>
+        <div class="table-card">
+          <div class="table-card-hd"><div class="table-card-title">Todas las categorías</div></div>
+          <div style="overflow-x:auto">
+            <table>
+              <thead><tr><th>Nombre</th><th>Clave API</th><th>Icono</th><th>Ligas</th><th>Orden</th><th>Estado</th><th>Acción</th></tr></thead>
+              <tbody id="adm-sports-body"><tr><td colspan="7" class="table-empty">⏳ Cargando...</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Ligas -->
+      <div class="adm-page" id="adm-leagues">
+        <div class="page-hd">
+          <div class="page-hd-left"><div class="page-title">Ligas</div><div class="page-sub">Crea y gestiona ligas personalizadas</div></div>
+          <div class="page-hd-right">
+            <div class="table-search"><span>🔍</span><input type="text" placeholder="Search..." oninput="admSearchLeagues(this.value)"></div>
+            <button class="btn btn-ghost" onclick="renderLeagues()">🔄 Actualizar</button>
+            <button class="btn btn-primary" onclick="admOpenLeagueModal()">+ Nueva liga</button>
+          </div>
+        </div>
+        <div class="table-card">
+          <div style="overflow-x:auto">
+            <table>
+              <thead><tr><th>Nombre</th><th>Categoría</th><th>País</th><th>API Key</th><th>Orden</th><th>Estado</th><th>Acción</th></tr></thead>
+              <tbody id="adm-leagues-body"><tr><td colspan="7" class="table-empty">⏳ Cargando...</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Partidos -->
+      <div class="adm-page" id="adm-events">
+        <div class="page-hd">
+          <div class="page-hd-left"><div class="page-title">Partidos</div><div class="page-sub">Gestiona partidos manuales y de la API</div></div>
+          <div class="page-hd-right">
+            <button class="btn btn-ghost btn-sm" onclick="admEvFilter='all';renderEvents()">Todos</button>
+            <button class="btn btn-outline btn-sm" onclick="admEvFilter='upcoming';renderEvents()">Próximos</button>
+            <button class="btn btn-danger btn-sm" onclick="admEvFilter='live';renderEvents()">En Vivo</button>
+            <button class="btn btn-success btn-sm" onclick="admEvFilter='finished';renderEvents()">Finalizados</button>
+            <button class="btn btn-primary" onclick="admOpenCreateEvent()">+ Nuevo partido</button>
+          </div>
+        </div>
+        <div class="table-card">
+          <div style="overflow-x:auto">
+            <table>
+              <thead><tr><th>Liga | Partido</th><th>Categoría</th><th>Inicio</th><th>Cuotas</th><th>Estado</th><th>Acción</th></tr></thead>
+              <tbody id="adm-events-body"><tr><td colspan="6" class="table-empty">⏳ Cargando...</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Configuración -->
+      <div class="adm-page" id="adm-config">
+        <div class="page-hd">
+          <div class="page-hd-left"><div class="page-title">Configuración</div><div class="page-sub">Ajustes globales de la plataforma</div></div>
+          <div class="page-hd-right"><button class="btn btn-primary" onclick="admSaveConfig()">💾 Guardar cambios</button></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+          <!-- Finanzas -->
+          <div class="table-card" style="padding:20px">
+            <div style="font-size:15px;font-weight:700;margin-bottom:16px">🏦 Finanzas</div>
+            <div class="form-row">
+              <div class="form-group"><label class="form-label">Bono bienvenida (%)</label><input type="number" id="cfg-bonus-pct" class="form-input" value="100"></div>
+              <div class="form-group"><label class="form-label">Bono máximo (€)</label><input type="number" id="cfg-bonus-max" class="form-input" value="100"></div>
+            </div>
+            <div class="form-row">
+              <div class="form-group"><label class="form-label">Depósito mínimo (€)</label><input type="number" id="cfg-dep-min" class="form-input" value="10"></div>
+              <div class="form-group"><label class="form-label">Retirada mínima (€)</label><input type="number" id="cfg-wit-min" class="form-input" value="20"></div>
+            </div>
+            <div class="form-row form-row-1">
+              <div class="form-group"><label class="form-label">Comisión de la casa (%)</label><input type="number" id="cfg-house-margin" class="form-input" value="5"></div>
+            </div>
+          </div>
+          <!-- Funcionalidades -->
+          <div class="table-card" style="padding:20px">
+            <div style="font-size:15px;font-weight:700;margin-bottom:16px">🔧 Funcionalidades</div>
+            <div style="display:flex;flex-direction:column;gap:16px">
+              <label class="form-check"><input type="checkbox" id="cfg-allow-register" checked><div><div style="font-size:13px;font-weight:600">Registro abierto</div><div style="font-size:12px;color:var(--text2)">Permite nuevos registros</div></div></label>
+              <label class="form-check"><input type="checkbox" id="cfg-allow-deposits" checked><div><div style="font-size:13px;font-weight:600">Depósitos activos</div><div style="font-size:12px;color:var(--text2)">Permite nuevos depósitos</div></div></label>
+              <label class="form-check"><input type="checkbox" id="cfg-allow-bets" checked><div><div style="font-size:13px;font-weight:600">Apuestas activas</div><div style="font-size:12px;color:var(--text2)">Permite realizar apuestas</div></div></label>
+              <label class="form-check"><input type="checkbox" id="cfg-maintenance"><div><div style="font-size:13px;font-weight:600;color:var(--red)">Modo mantenimiento</div><div style="font-size:12px;color:var(--text2)">Muestra aviso a los usuarios</div></div></label>
+            </div>
+          </div>
+          <!-- Permisos -->
+          <div class="table-card" style="padding:20px;grid-column:1/-1">
+            <div style="font-size:15px;font-weight:700;margin-bottom:16px">👤 Gestión de roles</div>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">
+              <div class="form-group" style="flex:1;min-width:200px"><label class="form-label">Email del usuario</label><input type="email" id="cfg-promote-email" class="form-input" placeholder="usuario@email.com"></div>
+              <button class="btn btn-primary" onclick="admPromoteUser()">⬆ Hacer Owner</button>
+              <button class="btn btn-danger" onclick="admDemoteUser()">⬇ Hacer Usuario</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+
+      <!-- Equipos -->
+      <div class="adm-page" id="adm-teams">
+        <div class="page-hd">
+          <div class="page-hd-left"><div class="page-title">Equipos</div><div class="page-sub">Gestión de equipos deportivos</div></div>
+          <div class="page-hd-right">
+            <div class="table-search"><span>🔍</span><input type="text" placeholder="Search..." oninput="admSearchTeams(this.value)"></div>
+            <button class="btn btn-primary" onclick="admOpenTeamModal()">+ Añadir equipo</button>
+          </div>
+        </div>
+        <div class="table-card">
+          <div style="overflow-x:auto">
+            <table>
+              <thead><tr><th>Nombre</th><th>Nombre corto</th><th>Categoría</th><th>Liga</th><th>País</th><th>Estado</th><th>Acción</th></tr></thead>
+              <tbody id="adm-teams-body"><tr><td colspan="7" class="table-empty">⏳ Cargando...</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Declarar Resultados -->
+      <div class="adm-page" id="adm-outcomes">
+        <div class="page-hd">
+          <div class="page-hd-left"><div class="page-title">Declarar Resultados</div><div class="page-sub">Resuelve apuestas de partidos manuales en vivo</div></div>
+          <div class="page-hd-right"><button class="btn btn-ghost" onclick="renderOutcomes()">🔄 Actualizar</button></div>
+        </div>
+        <div class="info-banner">⚠️ Solo puedes resolver partidos manuales marcados como "En Vivo". Los partidos de la API se resuelven automáticamente según sus resultados reales.</div>
+        <div class="table-card">
+          <div style="overflow-x:auto">
+            <table>
+              <thead><tr><th>Liga | Partido</th><th>Categoría</th><th>Inicio</th><th>Apuestas abiertas</th><th>Estado</th><th>Declarar resultado</th></tr></thead>
+              <tbody id="adm-outcomes-body"><tr><td colspan="6" class="table-empty">⏳ Cargando...</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Soporte -->
+      <div class="adm-page" id="adm-support">
+        <div class="page-hd">
+          <div class="page-hd-left"><div class="page-title">Tickets de Soporte</div><div class="page-sub">Gestiona las solicitudes de los usuarios</div></div>
+          <div class="page-hd-right">
+            <button class="btn btn-ghost btn-sm" onclick="admFilterSupport('all',this)">Todos</button>
+            <button class="btn btn-danger btn-sm" onclick="admFilterSupport('open',this)">Abiertos</button>
+            <button class="btn btn-warning btn-sm" onclick="admFilterSupport('in_progress',this)">En proceso</button>
+            <button class="btn btn-success btn-sm" onclick="admFilterSupport('closed',this)">Cerrados</button>
+          </div>
+        </div>
+        <div class="table-card">
+          <div style="overflow-x:auto">
+            <table>
+              <thead><tr><th>ID</th><th>Usuario</th><th>Asunto</th><th>Prioridad</th><th>Estado</th><th>Fecha</th><th>Acción</th></tr></thead>
+              <tbody id="adm-support-body"><tr><td colspan="7" class="table-empty">⏳ Cargando...</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Reportes -->
+      <div class="adm-page" id="adm-reports">
+        <div class="page-hd">
+          <div class="page-hd-left"><div class="page-title">Reportes</div><div class="page-sub">Estadísticas y exportación de datos</div></div>
+          <div class="page-hd-right">
+            <input type="date" id="report-date-from" class="form-input" style="width:160px">
+            <input type="date" id="report-date-to" class="form-input" style="width:160px">
+            <button class="btn btn-primary" onclick="generateReport()">📊 Generar</button>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px">
+          <div class="table-card" style="padding:20px">
+            <div style="font-size:14px;font-weight:700;margin-bottom:16px">💰 Resumen financiero</div>
+            <div id="report-finance"><div style="color:var(--text3);font-size:13px">Selecciona un rango de fechas y genera el reporte</div></div>
+          </div>
+          <div class="table-card" style="padding:20px">
+            <div style="font-size:14px;font-weight:700;margin-bottom:16px">🎟 Resumen de apuestas</div>
+            <div id="report-bets"><div style="color:var(--text3);font-size:13px">Selecciona un rango de fechas y genera el reporte</div></div>
+          </div>
+          <div class="table-card" style="padding:20px">
+            <div style="font-size:14px;font-weight:700;margin-bottom:16px">👥 Resumen de usuarios</div>
+            <div id="report-users"><div style="color:var(--text3);font-size:13px">Selecciona un rango de fechas y genera el reporte</div></div>
+          </div>
+        </div>
+        <div class="table-card" style="padding:20px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+            <div style="font-size:14px;font-weight:700">📥 Exportar datos</div>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px">
+            <button class="btn btn-outline" onclick="exportCSV('users')">👥 Usuarios CSV</button>
+            <button class="btn btn-outline" onclick="exportCSV('bets')">🎟 Apuestas CSV</button>
+            <button class="btn btn-outline" onclick="exportCSV('transactions')">💳 Transacciones CSV</button>
+            <button class="btn btn-outline" onclick="exportCSV('events')">⚽ Partidos CSV</button>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /adm-content -->
+  </div><!-- /adm-main -->
+</div><!-- /adm-layout -->
+
+<!-- Modals -->
+<!-- Sport Modal -->
+<div class="modal-overlay" id="sport-modal-overlay" onclick="if(event.target===this)admCloseSportModal()">
+  <div class="modal-box">
+    <div class="modal-hd"><span class="modal-title" id="sport-modal-title">Nueva Categoría</span><button class="modal-close" onclick="admCloseSportModal()">✕</button></div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Clave (key)</label><input type="text" id="sport-key" class="form-input" placeholder="ej: soccer"></div>
+        <div class="form-group"><label class="form-label">Nombre</label><input type="text" id="sport-title" class="form-input" placeholder="ej: Fútbol"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Icono (emoji)</label><input type="text" id="sport-icon" class="form-input" placeholder="⚽" maxlength="4"></div>
+        <div class="form-group"><label class="form-label">Orden</label><input type="number" id="sport-order" class="form-input" value="0" min="0"></div>
+      </div>
+      <label class="form-check"><input type="checkbox" id="sport-active" checked><span style="font-size:13px">✅ Activo (visible en la app)</span></label>
+    </div>
+    <div class="modal-ft">
+      <button class="btn btn-ghost" onclick="admCloseSportModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="admSaveSport()">Guardar</button>
+    </div>
+  </div>
 </div>
 
-<!-- Modal crear/editar partido (mismo que en index.html) -->
-<div class="owner-modal-overlay" id="event-modal-overlay" style="display:none" onclick="if(event.target===this)admCloseEventModal()">
-  <div class="owner-modal" id="event-modal">
-    <div class="owner-modal-head">
-      <span id="event-modal-title">Nuevo Partido</span>
-      <button onclick="admCloseEventModal()" class="owner-modal-close">✕</button>
+<!-- League Modal -->
+<div class="modal-overlay" id="league-modal-overlay" onclick="if(event.target===this)admCloseLeagueModal()">
+  <div class="modal-box">
+    <div class="modal-hd"><span class="modal-title" id="league-modal-title">Nueva Liga</span><button class="modal-close" onclick="admCloseLeagueModal()">✕</button></div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Nombre</label><input type="text" id="league-name" class="form-input" placeholder="ej: Premier League"></div>
+        <div class="form-group"><label class="form-label">País</label><input type="text" id="league-country" class="form-input" placeholder="ej: England"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Categoría</label>
+          <select id="league-sport" class="form-select">
+            <option value="soccer">⚽ Fútbol</option>
+            <option value="basketball">🏀 Baloncesto</option>
+            <option value="americanfootball">🏈 NFL</option>
+            <option value="baseball">⚾ Béisbol</option>
+            <option value="icehockey">🏒 Hockey</option>
+            <option value="mma">🥊 MMA</option>
+          </select>
+        </div>
+        <div class="form-group"><label class="form-label">Icono</label><input type="text" id="league-icon" class="form-input" placeholder="🏆" maxlength="4"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">API Key (opcional)</label><input type="text" id="league-api-key" class="form-input" placeholder="ej: soccer_epl"></div>
+        <div class="form-group"><label class="form-label">Orden</label><input type="number" id="league-order" class="form-input" value="0" min="0"></div>
+      </div>
+      <label class="form-check"><input type="checkbox" id="league-active" checked><span style="font-size:13px">✅ Activa (visible en la app)</span></label>
     </div>
-    <div class="owner-modal-body">
-      <div class="ev-form-row">
-        <div class="ev-form-group">
-          <label class="ev-label">Deporte</label>
-          <select id="ev-sport" class="ev-input" onchange="admOnEvSportChange()">
+    <div class="modal-ft">
+      <button class="btn btn-ghost" onclick="admCloseLeagueModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="admSaveLeague()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Event Modal -->
+<div class="modal-overlay" id="event-modal-overlay" onclick="if(event.target===this)admCloseEventModal()" style="z-index:600">
+  <div class="modal-box" style="max-width:600px">
+    <div class="modal-hd"><span class="modal-title" id="event-modal-title">Nuevo Partido</span><button class="modal-close" onclick="admCloseEventModal()">✕</button></div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Categoría</label>
+          <select id="ev-sport" class="form-select" onchange="admOnEvSportChange()">
             <option value="soccer_epl">⚽ Fútbol</option>
             <option value="basketball_nba">🏀 Baloncesto</option>
-            <option value="americanfootball_nfl">🏈 Fútbol Americano</option>
+            <option value="americanfootball_nfl">🏈 NFL</option>
             <option value="baseball_mlb">⚾ Béisbol</option>
             <option value="icehockey_nhl">🏒 Hockey</option>
             <option value="mma_mixed_martial_arts">🥊 MMA</option>
           </select>
         </div>
-        <div class="ev-form-group">
-          <label class="ev-label">Liga</label>
-          <input type="text" id="ev-league" class="ev-input" placeholder="Ej: Premier League">
+        <div class="form-group"><label class="form-label">Liga</label><input type="text" id="ev-league" class="form-input" placeholder="ej: Premier League"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Equipo Local</label><input type="text" id="ev-home" class="form-input" placeholder="Nombre del equipo local"></div>
+        <div class="form-group"><label class="form-label">Equipo Visitante</label><input type="text" id="ev-away" class="form-input" placeholder="Nombre del equipo visitante"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Fecha y Hora</label><input type="datetime-local" id="ev-datetime" class="form-input"></div>
+        <div class="form-group" style="display:flex;align-items:flex-end;gap:16px">
+          <label class="form-check"><input type="checkbox" id="ev-featured"><span style="font-size:13px">⭐ Destacado</span></label>
+          <label class="form-check"><input type="checkbox" id="ev-live"><span style="font-size:13px">🔴 En Vivo</span></label>
         </div>
       </div>
-      <div class="ev-form-row">
-        <div class="ev-form-group">
-          <label class="ev-label">Equipo Local</label>
-          <input type="text" id="ev-home" class="ev-input" placeholder="Nombre del equipo local">
-        </div>
-        <div class="ev-form-group">
-          <label class="ev-label">Equipo Visitante</label>
-          <input type="text" id="ev-away" class="ev-input" placeholder="Nombre del equipo visitante">
-        </div>
+      <div class="form-section">Cuotas 1X2</div>
+      <div class="form-row form-row-3">
+        <div class="form-group"><label class="form-label">1 — Local</label><input type="number" id="ev-odd1" class="form-input" placeholder="2.10" step="0.01" min="1.01"></div>
+        <div class="form-group" id="ev-oddx-wrap"><label class="form-label">X — Empate</label><input type="number" id="ev-oddx" class="form-input" placeholder="3.40" step="0.01" min="1.01"></div>
+        <div class="form-group"><label class="form-label">2 — Visitante</label><input type="number" id="ev-odd2" class="form-input" placeholder="3.50" step="0.01" min="1.01"></div>
       </div>
-      <div class="ev-form-row">
-        <div class="ev-form-group">
-          <label class="ev-label">Fecha y Hora</label>
-          <input type="datetime-local" id="ev-datetime" class="ev-input">
-        </div>
-        <div class="ev-form-group" style="display:flex;align-items:flex-end;gap:12px">
-          <label class="ev-toggle-wrap"><input type="checkbox" id="ev-featured"><span class="ev-toggle-lbl">⭐ Destacado</span></label>
-          <label class="ev-toggle-wrap"><input type="checkbox" id="ev-live"><span class="ev-toggle-lbl">🔴 En Vivo</span></label>
-        </div>
-      </div>
-      <div class="ev-form-section">Cuotas 1X2</div>
-      <div class="ev-form-row ev-form-row-3">
-        <div class="ev-form-group"><label class="ev-label">1 — Local</label><input type="number" id="ev-odd1" class="ev-input" placeholder="2.10" step="0.01" min="1.01"></div>
-        <div class="ev-form-group" id="ev-oddx-wrap"><label class="ev-label">X — Empate</label><input type="number" id="ev-oddx" class="ev-input" placeholder="3.40" step="0.01" min="1.01"></div>
-        <div class="ev-form-group"><label class="ev-label">2 — Visitante</label><input type="number" id="ev-odd2" class="ev-input" placeholder="3.50" step="0.01" min="1.01"></div>
-      </div>
-      <div class="ev-form-section">Total de Puntos/Goles</div>
-      <div class="ev-form-row ev-form-row-3">
-        <div class="ev-form-group"><label class="ev-label">Línea</label><input type="number" id="ev-total-line" class="ev-input" placeholder="2.5" step="0.5" min="0"></div>
-        <div class="ev-form-group"><label class="ev-label">Over</label><input type="number" id="ev-total-over" class="ev-input" placeholder="1.85" step="0.01" min="1.01"></div>
-        <div class="ev-form-group"><label class="ev-label">Under</label><input type="number" id="ev-total-under" class="ev-input" placeholder="1.95" step="0.01" min="1.01"></div>
+      <div class="form-section">Totales</div>
+      <div class="form-row form-row-3">
+        <div class="form-group"><label class="form-label">Línea</label><input type="number" id="ev-total-line" class="form-input" placeholder="2.5" step="0.5"></div>
+        <div class="form-group"><label class="form-label">Over</label><input type="number" id="ev-total-over" class="form-input" placeholder="1.85" step="0.01" min="1.01"></div>
+        <div class="form-group"><label class="form-label">Under</label><input type="number" id="ev-total-under" class="form-input" placeholder="1.95" step="0.01" min="1.01"></div>
       </div>
       <div id="ev-soccer-markets">
-        <div class="ev-form-section">Ambos Equipos Marcan</div>
-        <div class="ev-form-row">
-          <div class="ev-form-group"><label class="ev-label">Sí</label><input type="number" id="ev-btts-yes" class="ev-input" placeholder="1.75" step="0.01" min="1.01"></div>
-          <div class="ev-form-group"><label class="ev-label">No</label><input type="number" id="ev-btts-no" class="ev-input" placeholder="2.00" step="0.01" min="1.01"></div>
+        <div class="form-section">Ambos Equipos Marcan</div>
+        <div class="form-row">
+          <div class="form-group"><label class="form-label">Sí</label><input type="number" id="ev-btts-yes" class="form-input" placeholder="1.75" step="0.01" min="1.01"></div>
+          <div class="form-group"><label class="form-label">No</label><input type="number" id="ev-btts-no" class="form-input" placeholder="2.00" step="0.01" min="1.01"></div>
         </div>
       </div>
-      <div id="ev-spread-markets">
-        <div class="ev-form-section">Hándicap / Spread</div>
-        <div class="ev-form-row">
-          <div class="ev-form-group"><label class="ev-label">Local (línea)</label><input type="number" id="ev-spread-home-pt" class="ev-input" placeholder="-1.5" step="0.5"></div>
-          <div class="ev-form-group"><label class="ev-label">Local (cuota)</label><input type="number" id="ev-spread-home" class="ev-input" placeholder="1.90" step="0.01" min="1.01"></div>
-          <div class="ev-form-group"><label class="ev-label">Visitante (línea)</label><input type="number" id="ev-spread-away-pt" class="ev-input" placeholder="+1.5" step="0.5"></div>
-          <div class="ev-form-group"><label class="ev-label">Visitante (cuota)</label><input type="number" id="ev-spread-away" class="ev-input" placeholder="1.90" step="0.01" min="1.01"></div>
-        </div>
+      <div class="form-section">Hándicap / Spread</div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Local (línea)</label><input type="number" id="ev-spread-home-pt" class="form-input" placeholder="-1.5" step="0.5"></div>
+        <div class="form-group"><label class="form-label">Local (cuota)</label><input type="number" id="ev-spread-home" class="form-input" placeholder="1.90" step="0.01" min="1.01"></div>
+        <div class="form-group"><label class="form-label">Visitante (línea)</label><input type="number" id="ev-spread-away-pt" class="form-input" placeholder="+1.5" step="0.5"></div>
+        <div class="form-group"><label class="form-label">Visitante (cuota)</label><input type="number" id="ev-spread-away" class="form-input" placeholder="1.90" step="0.01" min="1.01"></div>
       </div>
     </div>
-    <div class="owner-modal-foot">
-      <button onclick="admCloseEventModal()" style="padding:9px 18px;border-radius:8px;background:var(--bg3);border:1px solid var(--border);color:var(--text2);cursor:pointer">Cancelar</button>
-      <button class="adm-btn" onclick="admSaveEvent()">Guardar partido</button>
+    <div class="modal-ft">
+      <button class="btn btn-ghost" onclick="admCloseEventModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="admSaveEvent()">Guardar partido</button>
     </div>
   </div>
 </div>
 
-<div id="adm-toast" style="position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:10px 20px;font-size:13px;z-index:9999;opacity:0;transition:opacity .3s;pointer-events:none"></div>
+<!-- User detail modal -->
+<div id="adm-user-detail-modal-container"></div>
+<!-- Resolve event modal -->
+<div id="adm-resolve-modal-container"></div>
+
+<div id="adm-toast"></div>
 
 <script>
 // ── Supabase ──
@@ -501,36 +1012,44 @@ const _SB = createClient(
 const OWNER_EMAIL = 'hermanncadevillajr@gmail.com';
 let SESSION = null;
 let _cache  = { users:[], bets:[], tx:[], loaded:false };
-let _manualEvents = [];
-let _editingEventId = null;
+let _sports = [], _leagues = [], _manualEvents = [];
+let _editingSportKey = null, _editingLeagueId = null, _editingEventId = null;
+let admEvFilter = 'all';
 
 // ── Helpers ──
 function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function fOdd(o){ return (!o||isNaN(o)) ? '—' : parseFloat(o).toFixed(2); }
 function fDate(d){ if(!d)return '—'; try{ return new Date(d).toLocaleDateString('es',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}); }catch(e){return d;} }
-function fMoney(n){ return '€'+(+n||0).toFixed(2); }
-function shortEmail(e){ if(!e)return '—'; const[u,d]=e.split('@'); return u.length>10?u.slice(0,10)+'…@'+d:e; }
+function fMoney(n){ return 'S/'+Number(+n||0).toFixed(2); }
+function shortEmail(e){ if(!e)return '—'; const[u,d]=e.split('@'); return u.length>12?u.slice(0,12)+'…@'+d:e; }
+function avatarColor(s){ const colors=['#5F3DFF','#28a745','#fd7e14','#007bff','#dc3545','#6f42c1','#20c997']; let h=0; for(let c of String(s||''))h=(h*31+c.charCodeAt(0))%colors.length; return colors[h]; }
 
-function showToast(msg){
+function showToast(msg, type=''){
   const t=document.getElementById('adm-toast');
-  t.textContent=msg; t.style.opacity='1';
+  if(!t)return;
+  t.textContent=msg;
+  t.style.background = type==='error' ? '#dc3545' : type==='success' ? '#28a745' : '#1a1d2e';
+  t.style.opacity='1';
   setTimeout(()=>t.style.opacity='0', 3000);
 }
 
 function badgeHtml(status){
-  const map={open:'open Activa',win:'win Ganada',loss:'loss Perdida',void:'void Anulada'};
-  const[cls,lbl]=(map[status]||'void Desconocido').split(' ');
-  return `<span class="bet-badge ${cls}">${lbl}</span>`;
+  const map={open:['badge-orange','Activa'],win:['badge-green','Ganada'],loss:['badge-red','Perdida'],void:['badge-blue','Anulada']};
+  const[cls,lbl]=(map[status]||['badge-blue','Desconocido']);
+  return `<span class="badge ${cls}">${lbl}</span>`;
 }
 
-// ── Auth guard ──
+function openModal(id){ document.getElementById(id).classList.add('open'); }
+function closeModal(id){ document.getElementById(id).classList.remove('open'); }
+
+// ── Auth ──
 async function initAdmin(){
   const { data:{ session } } = await _SB.auth.getSession();
-  if(!session){ 
+  if(!session){
     document.getElementById('adm-gate-loading').style.display='none';
     document.getElementById('adm-login-form').style.display='block';
     document.getElementById('adm-gate-err').textContent='Inicia sesión para acceder al panel.';
-    return; 
+    return;
   }
   await admEnterWithSession(session);
 }
@@ -544,33 +1063,29 @@ async function admEnterWithSession(session){
     return;
   }
   SESSION = { email: session.user.email, name: prof.name || session.user.email.split('@')[0] };
-  document.getElementById('adm-user-name').textContent   = SESSION.name;
-  document.getElementById('adm-user-avatar').textContent = SESSION.name[0].toUpperCase();
-  document.getElementById('adm-gate').style.display    = 'none';
-  document.getElementById('admin-layout').style.display = 'flex';
+  const av = SESSION.name[0].toUpperCase();
+  document.getElementById('adm-user-avatar').textContent   = av;
+  document.getElementById('adm-user-name').textContent     = SESSION.name;
+  document.getElementById('topbar-avatar').textContent     = av;
+  document.getElementById('topbar-name').textContent       = SESSION.name;
+  document.getElementById('adm-gate').style.display        = 'none';
+  document.getElementById('admin-layout').style.display    = 'flex';
   await fetchAll();
   renderDashboard();
   loadAdmConfig();
-}
-
-function showGateError(msg){
-  document.getElementById('adm-gate-loading').style.display='none';
-  document.getElementById('adm-gate-err').textContent = msg;
-  // Show login form so admin can authenticate directly
-  document.getElementById('adm-login-form').style.display = 'block';
 }
 
 async function admLogin(){
   const email = document.getElementById('adm-login-email').value.trim();
   const pass  = document.getElementById('adm-login-pass').value;
   const errEl = document.getElementById('adm-gate-err');
-  if (!email || !pass) { errEl.textContent = 'Introduce email y contraseña'; return; }
-  errEl.textContent = '';
+  if(!email||!pass){ errEl.textContent='Introduce email y contraseña'; return; }
+  errEl.textContent='';
   const { data, error } = await _SB.auth.signInWithPassword({ email, password: pass });
-  if (error) { errEl.textContent = '❌ ' + error.message; return; }
-  document.getElementById('adm-login-form').style.display = 'none';
-  document.getElementById('adm-gate-loading').style.display = 'block';
-  document.getElementById('adm-gate-loading').textContent = 'Verificando permisos...';
+  if(error){ errEl.textContent='❌ '+error.message; return; }
+  document.getElementById('adm-login-form').style.display='none';
+  document.getElementById('adm-gate-loading').style.display='block';
+  document.getElementById('adm-gate-loading').textContent='Verificando permisos...';
   await admEnterWithSession(data.session);
 }
 
@@ -585,144 +1100,195 @@ async function fetchAll(){
   _cache.bets  = b.data||[];
   _cache.tx    = t.data||[];
   _cache.loaded = true;
-  updateBadges();
-  // Pre-load sports for league filter
   const { data: sData } = await _SB.from('sports').select('*').order('sort_order');
-  _sports = sData || [];
+  _sports = sData||[];
+  updateBadges();
+  // Load support ticket count
+  _SB.from('support_tickets').select('id',{count:'exact'}).eq('status','open').then(({count})=>{
+    const sb=document.getElementById('adm-badge-support');
+    if(sb&&count>0){sb.textContent=count;sb.style.display='';}
+  }).catch(()=>{});
 }
 
 function updateBadges(){
   const openBets = _cache.bets.filter(b=>b.status==='open').length;
-  const ub = document.getElementById('adm-badge-users');
-  const bb = document.getElementById('adm-badge-bets');
-  ub.textContent = _cache.users.length; ub.style.display = _cache.users.length ? '' : 'none';
-  bb.textContent = openBets; bb.style.display = openBets ? '' : 'none';
+  const ub=document.getElementById('adm-badge-users');
+  const bb=document.getElementById('adm-badge-bets');
+  if(ub){ ub.textContent=_cache.users.length; ub.style.display=_cache.users.length?'':'none'; }
+  if(bb){ bb.textContent=openBets; bb.style.display=openBets?'':'none'; }
 }
 
 // ── Navigation ──
 function admShowPage(page, btn){
   document.querySelectorAll('.adm-page').forEach(p=>p.classList.remove('active'));
-  document.querySelectorAll('.adm-nav-item').forEach(b=>b.classList.remove('active'));
-  const el = document.getElementById('adm-'+page);
+  document.querySelectorAll('.nav-item').forEach(b=>b.classList.remove('active'));
+  const el=document.getElementById('adm-'+page);
   if(el) el.classList.add('active');
-  if(btn) btn.classList.add('active');
+  if(btn){ btn.classList.add('active'); document.getElementById('topbar-page-title').textContent=btn.textContent.trim(); }
   if(page==='dashboard') renderDashboard();
   if(page==='users')     renderUsers(_cache.users);
   if(page==='bets')      renderBets('all');
   if(page==='tx')        renderTx('all');
+  if(page==='sports')    renderSports();
+  if(page==='leagues')   renderLeagues();
   if(page==='events')    renderEvents();
   if(page==='config')    loadAdmConfig();
-  if(page==='sports')    renderSports();
-  if(page==='leagues')   { renderSports().then(()=>renderLeagues()); }
+  if(page==='teams')     renderTeams();
+  if(page==='outcomes')  renderOutcomes();
+  if(page==='support')   renderSupport('all');
+  if(page==='reports')   initReportDates();
 }
+
+function admGlobalSearch(q){ /* placeholder */ }
 
 // ── Dashboard ──
 function renderDashboard(){
-  const users   = _cache.users;
-  const bets    = _cache.bets;
-  const txs     = _cache.tx;
-  const openBets = bets.filter(b=>b.status==='open');
-  const staked  = bets.reduce((a,b)=>a+(+b.stake||0),0);
-  const deposits = txs.filter(t=>t.type==='deposit').reduce((a,t)=>a+(+t.amount||0),0);
-  const exposure = openBets.reduce((a,b)=>a+((+b.odd||1)*(+b.stake||0)-(+b.stake||0)),0);
+  const users=_cache.users, bets=_cache.bets, txs=_cache.tx;
+  const openBets=bets.filter(b=>b.status==='open');
+  const staked=bets.reduce((a,b)=>a+(+b.stake||0),0);
+  const deposits=txs.filter(t=>t.type==='deposit').reduce((a,t)=>a+(+t.amount||0),0);
+  const withdrawals=txs.filter(t=>t.type==='withdraw').reduce((a,t)=>a+(+t.amount||0),0);
+  const exposure=openBets.reduce((a,b)=>a+((+b.odd||1)*(+b.stake||0)-(+b.stake||0)),0);
+  document.getElementById('k-users').textContent       = users.length;
+  document.getElementById('k-active').textContent      = users.filter(u=>!u.is_suspended).length;
+  document.getElementById('k-bets-open').textContent   = openBets.length;
+  document.getElementById('k-staked').textContent      = fMoney(staked);
+  document.getElementById('k-deposits').textContent    = fMoney(deposits);
+  document.getElementById('k-withdrawals').textContent = fMoney(withdrawals);
+  document.getElementById('k-exposure').textContent    = fMoney(exposure);
+  document.getElementById('k-events').textContent      = _manualEvents.filter(e=>e.status==='live').length;
 
-  document.getElementById('adm-kpi-users').textContent     = users.length;
-  document.getElementById('adm-kpi-bets-open').textContent = openBets.length;
-  document.getElementById('adm-kpi-staked').textContent    = fMoney(staked);
-  document.getElementById('adm-kpi-deposits').textContent  = fMoney(deposits);
-  document.getElementById('adm-kpi-exposure').textContent  = fMoney(exposure);
+  // Recent bets
+  const rb=document.getElementById('dash-recent-bets');
+  rb.innerHTML=bets.slice(0,6).map(b=>`
+    <div class="activity-item">
+      <div class="activity-dot" style="background:${b.status==='open'?'var(--orange)':b.status==='win'?'var(--green)':'var(--red)'}"></div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(b.pick||'—')}</div>
+        <div style="font-size:11px;color:var(--text2)">${esc(shortEmail(b.user_email))}</div>
+      </div>
+      <div class="amount-cell"><span class="amount-icon">💎</span>${fMoney(b.stake)}</div>
+      ${badgeHtml(b.status)}
+    </div>`).join('')||'<div style="padding:20px;text-align:center;color:var(--text3);font-size:13px">Sin apuestas</div>';
 
-  const recentBets = document.getElementById('adm-recent-bets');
-  recentBets.innerHTML = bets.slice(0,5).map(b=>`
-    <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)">
-      <div><div style="font-size:12px;font-weight:600">${esc(shortEmail(b.user_email))}</div>
-      <div style="font-size:11px;color:var(--text2)">${esc(b.pick||'—')}</div></div>
-      <div style="text-align:right"><div style="font-family:var(--mono);font-size:13px">${fMoney(b.stake)}</div>${badgeHtml(b.status)}</div>
-    </div>`).join('') || '<div class="adm-empty">Sin apuestas</div>';
+  // Recent tx
+  const rt=document.getElementById('dash-recent-tx');
+  const deps=txs.filter(t=>t.type==='deposit').slice(0,6);
+  rt.innerHTML=deps.map(t=>`
+    <div class="activity-item">
+      <div class="activity-dot" style="background:var(--green)"></div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:12px;font-weight:600">${esc(shortEmail(t.user_email))}</div>
+        <div style="font-size:11px;color:var(--text2)">${fDate(t.created_at||t.date)}</div>
+      </div>
+      <div class="amount-cell" style="color:var(--green)"><span class="amount-icon">💎</span>+${fMoney(t.amount)}</div>
+    </div>`).join('')||'<div style="padding:20px;text-align:center;color:var(--text3);font-size:13px">Sin depósitos</div>';
 
-  const recentTx = document.getElementById('adm-recent-tx');
-  recentTx.innerHTML = txs.slice(0,5).map(t=>`
-    <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)">
-      <div><div style="font-size:12px;font-weight:600">${esc(shortEmail(t.user_email))}</div>
-      <div style="font-size:11px;color:var(--text2)">${esc(t.description||'—')}</div></div>
-      <div style="font-family:var(--mono);font-size:13px;color:${t.type==='deposit'?'var(--green)':t.type==='win'?'var(--green)':'var(--red)'}">${t.type==='deposit'||t.type==='win'?'+':'−'}${fMoney(t.amount)}</div>
-    </div>`).join('') || '<div class="adm-empty">Sin transacciones</div>';
+  // Chart
+  renderDashChart();
+}
+
+function renderDashChart(){
+  const ctx=document.getElementById('dash-chart');
+  if(!ctx)return;
+  if(window._dashChart) window._dashChart.destroy();
+  const days=30, labels=[], depData=[], betData=[];
+  for(let i=days-1;i>=0;i--){
+    const d=new Date(); d.setDate(d.getDate()-i);
+    const label=d.toLocaleDateString('es',{day:'2-digit',month:'2-digit'});
+    labels.push(label);
+    const dayTxs=_cache.tx.filter(t=>{const td=new Date(t.created_at||t.date||0); return td.toDateString()===d.toDateString();});
+    depData.push(dayTxs.filter(t=>t.type==='deposit').reduce((a,t)=>a+(+t.amount||0),0));
+    betData.push(dayTxs.filter(t=>t.type==='bet').reduce((a,t)=>a+(+t.amount||0),0));
+  }
+  window._dashChart=new Chart(ctx,{
+    type:'line',
+    data:{
+      labels,
+      datasets:[
+        {label:'Depósitos',data:depData,borderColor:'#28a745',backgroundColor:'rgba(40,167,69,.08)',fill:true,tension:.4,pointRadius:2},
+        {label:'Apuestas', data:betData, borderColor:'#5F3DFF',backgroundColor:'rgba(95,61,255,.08)',fill:true,tension:.4,pointRadius:2},
+      ]
+    },
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:11},boxWidth:12}}},scales:{x:{grid:{display:false},ticks:{font:{size:10},maxTicksLimit:8}},y:{grid:{color:'rgba(0,0,0,.05)'},ticks:{font:{size:10},callback:v=>'S/'+v}}}}
+  });
 }
 
 // ── Usuarios ──
 function renderUsers(users){
-  const userBets = {};
+  const userBets={};
   _cache.bets.forEach(b=>{ userBets[b.user_email]=(userBets[b.user_email]||0)+1; });
-  const body = document.getElementById('adm-users-body');
-  if(!users.length){ body.innerHTML='<tr><td colspan="7" class="adm-empty">Sin usuarios</td></tr>'; return; }
-  body.innerHTML = users.map(u=>`<tr>
-    <td><div style="display:flex;align-items:center;gap:8px">
-      <div class="user-row-avatar">${(u.name||u.email||'?')[0].toUpperCase()}</div>
-      <div><div style="font-weight:600;font-size:13px">${esc(u.name||'—')}</div>
-      <div style="font-size:11px;color:var(--text2)">${esc(u.email)}</div></div></div></td>
-    <td>${esc(u.country||'—')}</td>
-    <td style="font-family:var(--mono)">${fMoney(u.balance)}</td>
-    <td style="font-family:var(--mono)">${fMoney(u.deposited)}</td>
-    <td style="text-align:center">${userBets[u.email]||0}</td>
-    <td>${u.role==='owner'?'<span class="role-badge owner">⚡ OWNER</span>':'<span class="role-badge">Usuario</span>'}</td>
-    <td><button class="tbl-action" onclick="admViewUser('${esc(u.email)}')">Ver detalle</button>
-    ${u.is_suspended?`<button class="tbl-action success" onclick="admToggleSuspend('${esc(u.email)}',false)">Reactivar</button>`
-    :u.role!=='owner'?`<button class="tbl-action danger" onclick="admToggleSuspend('${esc(u.email)}',true)">Suspender</button>`:''}
-    </td></tr>`).join('');
+  const body=document.getElementById('adm-users-body');
+  if(!users.length){ body.innerHTML=`<tr><td colspan="8" class="table-empty">Sin usuarios registrados</td></tr>`; return; }
+  body.innerHTML=users.map(u=>{
+    const color=avatarColor(u.email);
+    return `<tr>
+      <td><div class="user-chip">
+        <div class="user-chip-avatar" style="background:${color}">${(u.name||u.email||'?')[0].toUpperCase()}</div>
+        <div><div class="user-chip-name">${esc(u.name||'Sin nombre')}</div><div class="user-chip-email">@${esc(u.email.split('@')[0])}</div></div>
+      </div></td>
+      <td>${esc(u.country||'—')}</td>
+      <td><div class="amount-cell"><span class="amount-icon">💎</span>${fMoney(u.balance)}</div></td>
+      <td><div class="amount-cell" style="color:var(--green)"><span class="amount-icon">💎</span>${fMoney(u.deposited)}</div></td>
+      <td style="text-align:center"><span class="badge badge-purple">${userBets[u.email]||0}</span></td>
+      <td>${u.role==='owner'?'<span class="badge badge-purple">⚡ Owner</span>':'<span class="badge badge-blue">Usuario</span>'}</td>
+      <td>${u.is_suspended?'<span class="badge badge-red">Suspendido</span>':'<span class="badge badge-green">Activo</span>'}</td>
+      <td><div class="action-group">
+        <button class="btn btn-outline btn-sm" onclick="admViewUser('${esc(u.email)}')">👁 Detalle</button>
+        ${u.is_suspended
+          ?`<button class="btn btn-success btn-sm" onclick="admToggleSuspend('${esc(u.email)}',false)">✅ Activar</button>`
+          :u.role!=='owner'?`<button class="btn btn-danger btn-sm" onclick="admToggleSuspend('${esc(u.email)}',true)">🚫 Suspender</button>`:''}
+      </div></td>
+    </tr>`;}).join('');
 }
 
 function admFilterUsers(q){
-  const filtered = q ? _cache.users.filter(u=>(u.name||'').toLowerCase().includes(q.toLowerCase())||(u.email||'').toLowerCase().includes(q.toLowerCase())) : _cache.users;
+  const filtered=q?_cache.users.filter(u=>(u.name||'').toLowerCase().includes(q.toLowerCase())||(u.email||'').toLowerCase().includes(q.toLowerCase())):_cache.users;
   renderUsers(filtered);
 }
 
-async function admToggleSuspend(email, suspend){
-  const {error} = await _SB.from('profiles').update({is_suspended:suspend}).eq('email',email);
-  if(error){showToast('❌ '+error.message);return;}
-  showToast(suspend?'🚫 Usuario suspendido':'✅ Usuario reactivado');
+async function admToggleSuspend(email,suspend){
+  const {error}=await _SB.from('profiles').update({is_suspended:suspend}).eq('email',email);
+  if(error){showToast('❌ '+error.message,'error');return;}
+  showToast(suspend?'🚫 Usuario suspendido':'✅ Usuario reactivado','success');
   await fetchAll(); renderUsers(_cache.users);
 }
 
 function admViewUser(email){
-  const u    = _cache.users.find(x=>x.email===email);
-  const bets = _cache.bets.filter(b=>b.user_email===email);
-  const txs  = _cache.tx.filter(t=>t.user_email===email);
-  if(!u) return;
+  const u=_cache.users.find(x=>x.email===email);
+  const bets=_cache.bets.filter(b=>b.user_email===email);
+  if(!u)return;
   const won=bets.filter(b=>b.status==='win').length, lost=bets.filter(b=>b.status==='loss').length, open=bets.filter(b=>b.status==='open').length;
   const staked=bets.reduce((a,b)=>a+(+b.stake||0),0);
   const returned=bets.filter(b=>b.status==='win').reduce((a,b)=>a+(+b.ret||0),0);
   const netPnL=returned-staked;
-  const existing=document.getElementById('adm-user-detail-modal');
-  if(existing) existing.remove();
-  const html=`<div id="adm-user-detail-modal" style="position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;padding:16px">
-    <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:16px;width:100%;max-width:520px;max-height:85vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,.5)">
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:20px 20px 0">
+  const color=avatarColor(u.email);
+  const container=document.getElementById('adm-user-detail-modal-container');
+  container.innerHTML=`
+  <div style="position:fixed;inset:0;z-index:800;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;padding:16px" onclick="if(event.target===this)this.remove()">
+    <div style="background:#fff;border-radius:14px;width:100%;max-width:540px;max-height:85vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,.2)">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:20px 24px;border-bottom:1px solid #e9ecef">
         <div style="display:flex;align-items:center;gap:12px">
-          <div class="user-row-avatar" style="width:44px;height:44px;font-size:18px;border-radius:12px">${(u.name||u.email||'?')[0].toUpperCase()}</div>
-          <div><div style="font-size:16px;font-weight:700">${esc(u.name||'Sin nombre')}</div><div style="font-size:12px;color:var(--text2)">${esc(u.email)}</div></div>
+          <div style="width:46px;height:46px;border-radius:12px;background:${color};color:#fff;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700">${(u.name||'?')[0].toUpperCase()}</div>
+          <div><div style="font-size:16px;font-weight:700">${esc(u.name||'Sin nombre')}</div><div style="font-size:12px;color:#6c757d">@${esc(u.email.split('@')[0])}</div></div>
         </div>
-        <button onclick="document.getElementById('adm-user-detail-modal').remove()" style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;width:32px;height:32px;font-size:16px;color:var(--text2);cursor:pointer">✕</button>
+        <button onclick="document.getElementById('adm-user-detail-modal-container').innerHTML=''" style="width:32px;height:32px;border-radius:8px;border:1px solid #e9ecef;background:#fff;font-size:16px;cursor:pointer">✕</button>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;padding:16px 20px">
-        <div style="background:var(--bg3);border-radius:10px;padding:12px;text-align:center"><div style="font-size:11px;color:var(--text2);margin-bottom:4px">Saldo</div><div style="font-size:17px;font-weight:700;font-family:var(--mono)">${fMoney(u.balance)}</div></div>
-        <div style="background:var(--bg3);border-radius:10px;padding:12px;text-align:center"><div style="font-size:11px;color:var(--text2);margin-bottom:4px">Depositado</div><div style="font-size:17px;font-weight:700;font-family:var(--mono);color:var(--green)">${fMoney(u.deposited)}</div></div>
-        <div style="background:var(--bg3);border-radius:10px;padding:12px;text-align:center"><div style="font-size:11px;color:var(--text2);margin-bottom:4px">P&L</div><div style="font-size:17px;font-weight:700;font-family:var(--mono);color:${netPnL>=0?'var(--green)':'var(--red)'}">${netPnL>=0?'+':''}${fMoney(netPnL)}</div></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;padding:20px 24px">
+        <div style="background:#f4f6f9;border-radius:10px;padding:14px;text-align:center"><div style="font-size:11px;color:#6c757d;margin-bottom:4px">Saldo</div><div style="font-size:18px;font-weight:800">${fMoney(u.balance)}</div></div>
+        <div style="background:#f4f6f9;border-radius:10px;padding:14px;text-align:center"><div style="font-size:11px;color:#6c757d;margin-bottom:4px">Depositado</div><div style="font-size:18px;font-weight:800;color:#28a745">${fMoney(u.deposited)}</div></div>
+        <div style="background:#f4f6f9;border-radius:10px;padding:14px;text-align:center"><div style="font-size:11px;color:#6c757d;margin-bottom:4px">P&L</div><div style="font-size:18px;font-weight:800;color:${netPnL>=0?'#28a745':'#dc3545'}">${netPnL>=0?'+':''}${fMoney(netPnL)}</div></div>
       </div>
-      <div style="padding:0 20px 20px">
-        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
-          <span style="padding:4px 10px;border-radius:6px;font-size:12px;background:rgba(244,185,66,.12);color:var(--yellow);border:1px solid rgba(244,185,66,.25)">🎟 ${open} activas</span>
-          <span style="padding:4px 10px;border-radius:6px;font-size:12px;background:var(--green-bg);color:var(--green);border:1px solid var(--green-bd)">✓ ${won} ganadas</span>
-          <span style="padding:4px 10px;border-radius:6px;font-size:12px;background:var(--red-bg);color:var(--red);border:1px solid var(--red-bd)">✗ ${lost} perdidas</span>
+      <div style="padding:0 24px 20px">
+        <div style="display:flex;gap:8px;margin-bottom:14px">
+          <span class="badge badge-orange">🎟 ${open} activas</span>
+          <span class="badge badge-green">✓ ${won} ganadas</span>
+          <span class="badge badge-red">✗ ${lost} perdidas</span>
         </div>
-        ${bets.length?`<table class="adm-table"><thead><tr><th>Partido</th><th>Pick</th><th>Cuota</th><th>Apuesta</th><th>Estado</th></tr></thead><tbody>
-          ${bets.slice(0,8).map(b=>`<tr><td style="font-size:11px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(b.match_name||b.match||'—')}</td><td style="font-size:11px;font-weight:600">${esc(b.pick||'—')}</td><td style="font-family:var(--mono);font-size:11px">${fOdd(b.odd)}</td><td style="font-family:var(--mono);font-size:11px">${fMoney(b.stake)}</td><td>${badgeHtml(b.status)}</td></tr>`).join('')}
-        </tbody></table>`:'<div class="adm-empty">Sin apuestas</div>'}
+        ${bets.length?`<div style="overflow-x:auto"><table><thead><tr><th>Partido</th><th>Pick</th><th>Cuota</th><th>Apuesta</th><th>Estado</th></tr></thead><tbody>${bets.slice(0,8).map(b=>`<tr><td style="font-size:11px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(b.match_name||'—')}</td><td style="font-size:12px;font-weight:600">${esc(b.pick||'—')}</td><td style="font-size:12px">${fOdd(b.odd)}</td><td>${fMoney(b.stake)}</td><td>${badgeHtml(b.status)}</td></tr>`).join('')}</tbody></table></div>`:'<div style="text-align:center;color:#adb5bd;padding:20px;font-size:13px">Sin apuestas</div>'}
       </div>
-      <div style="padding:14px 20px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end">
-        <button onclick="document.getElementById('adm-user-detail-modal').remove()" style="padding:7px 16px;border-radius:8px;background:var(--bg3);border:1px solid var(--border);color:var(--text2);cursor:pointer;font-size:13px">Cerrar</button>
-      </div>
-    </div></div>`;
-  document.body.insertAdjacentHTML('beforeend',html);
+    </div>
+  </div>`;
 }
 
 // ── Apuestas ──
@@ -732,43 +1298,44 @@ function renderBets(filter){
   const total=_cache.bets.reduce((a,b)=>a+(+b.stake||0),0);
   const open=_cache.bets.filter(b=>b.status==='open');
   const exposure=open.reduce((a,b)=>a+((+b.odd||1)*(+b.stake||0)-(+b.stake||0)),0);
-  document.getElementById('adm-bets-total').textContent=fMoney(total);
-  document.getElementById('adm-bets-open').textContent=open.length;
-  document.getElementById('adm-bets-exposure').textContent=fMoney(exposure);
+  const el=id=>document.getElementById(id);
+  if(el('bets-k-total')) el('bets-k-total').textContent=fMoney(total);
+  if(el('bets-k-open'))  el('bets-k-open').textContent=open.length;
+  if(el('bets-k-exposure')) el('bets-k-exposure').textContent=fMoney(exposure);
   const body=document.getElementById('adm-bets-body');
-  if(!bets.length){body.innerHTML='<tr><td colspan="9" class="adm-empty">Sin apuestas</td></tr>';return;}
+  if(!bets.length){ body.innerHTML=`<tr><td colspan="10" class="table-empty">Sin apuestas</td></tr>`; return; }
   body.innerHTML=bets.map(b=>`<tr>
-    <td style="font-size:12px">${esc(shortEmail(b.user_email))}</td>
-    <td style="font-size:11px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(b.match_name||b.match||'—')}</td>
+    <td style="font-size:11px;color:var(--text2);font-family:var(--mono)">${(b.id||'').slice(-6)}</td>
+    <td style="font-size:12px;color:var(--blue)">@${esc((b.user_email||'').split('@')[0])}</td>
+    <td style="font-size:11px;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(b.match_name||b.match||'—')}</td>
     <td style="font-weight:600;font-size:12px">${esc(b.pick||'—')}</td>
-    <td style="font-family:var(--mono)">${fOdd(b.odd)}</td>
-    <td style="font-family:var(--mono)">${fMoney(b.stake)}</td>
-    <td style="font-family:var(--mono)">${b.ret?fMoney(b.ret):'—'}</td>
-    <td><span style="font-size:11px;color:var(--text2)">${b.type==='combo'?'Combinada':'Simple'}</span></td>
+    <td style="font-size:12px">${fOdd(b.odd)}</td>
+    <td><div class="amount-cell"><span class="amount-icon">💎</span>${fMoney(b.stake)}</div></td>
+    <td><div class="amount-cell">${b.ret?`<span class="amount-icon">💎</span>${fMoney(b.ret)}`:'—'}</div></td>
+    <td>${b.type==='combo'?'<span class="badge badge-purple">Combinada</span>':'<span class="badge badge-green">Simple</span>'}</td>
     <td>${badgeHtml(b.status)}</td>
-    <td>${b.status==='open'?`<button class="tbl-action success" onclick="admResolveBet('${b.id}','${esc(b.user_email)}',${+b.stake||0},${+b.odd||1},'win')">✓ Ganada</button>
-      <button class="tbl-action danger" onclick="admResolveBet('${b.id}','${esc(b.user_email)}',${+b.stake||0},${+b.odd||1},'loss')">✗ Perdida</button>`:'—'}</td></tr>`).join('');
+    <td><div class="action-group">${b.status==='open'?`
+      <button class="btn btn-success btn-sm" onclick="admResolveBet('${b.id}','${esc(b.user_email)}',${+b.stake||0},${+b.odd||1},'win')">✓ Ganada</button>
+      <button class="btn btn-danger btn-sm"  onclick="admResolveBet('${b.id}','${esc(b.user_email)}',${+b.stake||0},${+b.odd||1},'loss')">✗ Perdida</button>`
+    :'—'}</div></td>
+  </tr>`).join('');
 }
 
-function admFilterBets(filter,btn){
-  document.querySelectorAll('#adm-bets .ev-filter-btn').forEach(b=>b.classList.remove('active'));
-  btn.classList.add('active');
-  renderBets(filter);
-}
+function admFilterBets(filter){ renderBets(filter); }
 
 async function admResolveBet(betId,userEmail,stake,odd,result){
-  const ret = result==='win' ? +(odd*stake).toFixed(2) : 0;
-  const {error:betErr} = await _SB.from('bets').update({status:result,ret}).eq('id',betId);
-  if(betErr){showToast('❌ '+betErr.message);return;}
-  if(result==='win' && ret>0){
-    const {data:prof} = await _SB.from('profiles').select('balance').eq('email',userEmail).single();
+  const ret=result==='win'?+(odd*stake).toFixed(2):0;
+  const {error}=await _SB.from('bets').update({status:result,ret}).eq('id',betId);
+  if(error){showToast('❌ '+error.message,'error');return;}
+  if(result==='win'&&ret>0){
+    const {data:prof}=await _SB.from('profiles').select('balance').eq('email',userEmail).single();
     if(prof){
       const newBal=+(prof.balance+ret).toFixed(2);
       await _SB.from('profiles').update({balance:newBal}).eq('email',userEmail);
       await _SB.from('transactions').insert({user_email:userEmail,description:'Premio apuesta',type:'win',amount:ret,balance:newBal,created_at:new Date().toISOString()});
     }
   }
-  showToast(result==='win'?'✅ Apuesta marcada como ganada':'✅ Apuesta marcada como perdida');
+  showToast(result==='win'?'✅ Apuesta ganada procesada':'✅ Apuesta perdida procesada','success');
   await fetchAll(); renderBets('all');
 }
 
@@ -776,196 +1343,175 @@ async function admResolveBet(betId,userEmail,stake,odd,result){
 function renderTx(filter){
   let txs=_cache.tx;
   if(filter!=='all') txs=txs.filter(t=>t.type===filter);
-  const deps=_cache.tx.filter(t=>t.type==='deposit').reduce((a,t)=>a+(+t.amount||0),0);
-  const wits=_cache.tx.filter(t=>t.type==='withdraw').reduce((a,t)=>a+(+t.amount||0),0);
-  const bets=_cache.tx.filter(t=>t.type==='bet').reduce((a,t)=>a+(+t.amount||0),0);
-  const wins=_cache.tx.filter(t=>t.type==='win').reduce((a,t)=>a+(+t.amount||0),0);
-  document.getElementById('adm-tx-dep').textContent=fMoney(deps);
-  document.getElementById('adm-tx-wit').textContent=fMoney(wits);
-  document.getElementById('adm-tx-bet').textContent=fMoney(bets);
-  document.getElementById('adm-tx-win').textContent=fMoney(wins);
+  const calc=type=>_cache.tx.filter(t=>t.type===type).reduce((a,t)=>a+(+t.amount||0),0);
+  const el=id=>document.getElementById(id);
+  if(el('tx-k-dep')) el('tx-k-dep').textContent=fMoney(calc('deposit'));
+  if(el('tx-k-wit')) el('tx-k-wit').textContent=fMoney(calc('withdraw'));
+  if(el('tx-k-bet')) el('tx-k-bet').textContent=fMoney(calc('bet'));
+  if(el('tx-k-win')) el('tx-k-win').textContent=fMoney(calc('win'));
   const body=document.getElementById('adm-tx-body');
-  if(!txs.length){body.innerHTML='<tr><td colspan="5" class="adm-empty">Sin transacciones</td></tr>';return;}
-  const typeMap={deposit:'Depósito',withdraw:'Retirada',bet:'Apuesta',win:'Premio',bonus:'Bono'};
-  const typeColor={deposit:'var(--green)',withdraw:'var(--red)',bet:'var(--red)',win:'var(--green)',bonus:'var(--accent)'};
-  body.innerHTML=txs.map(t=>`<tr>
-    <td style="font-size:12px">${esc(shortEmail(t.user_email))}</td>
-    <td style="font-size:11px;color:var(--text2)">${fDate(t.created_at||t.date)}</td>
-    <td style="font-size:12px">${esc(t.description||'—')}</td>
-    <td><span style="font-size:11px;font-weight:600;color:${typeColor[t.type]||'var(--text2)'}">${typeMap[t.type]||t.type}</span></td>
-    <td style="font-family:var(--mono);color:${typeColor[t.type]||'var(--text1)'}">${t.type==='deposit'||t.type==='win'||t.type==='bonus'?'+':'−'}${fMoney(t.amount)}</td>
-  </tr>`).join('');
+  if(!txs.length){ body.innerHTML=`<tr><td colspan="7" class="table-empty">Sin transacciones</td></tr>`; return; }
+  const typeMap={deposit:'badge-green Depósito',withdraw:'badge-red Retirada',bet:'badge-orange Apuesta',win:'badge-green Premio',bonus:'badge-purple Bono'};
+  const typeSign={deposit:'+',withdraw:'−',bet:'−',win:'+',bonus:'+'};
+  const typeColor={deposit:'var(--green)',withdraw:'var(--red)',bet:'var(--red)',win:'var(--green)'};
+  body.innerHTML=txs.map(t=>{
+    const[cls,lbl]=(typeMap[t.type]||'badge-blue Otro').split(' ');
+    return `<tr>
+      <td style="font-size:11px;color:var(--text2);font-family:var(--mono)">${(t.id||'').slice(-6)}</td>
+      <td style="font-size:12px;color:var(--blue)">@${esc((t.user_email||'').split('@')[0])}</td>
+      <td style="font-size:11px;color:var(--text2)">${fDate(t.created_at||t.date)}</td>
+      <td style="font-size:12px">${esc(t.description||'—')}</td>
+      <td><span class="badge ${cls}">${lbl}</span></td>
+      <td><div class="amount-cell" style="color:${typeColor[t.type]||'inherit'}">${typeSign[t.type]||''}<span class="amount-icon">💎</span>${fMoney(t.amount)}</div></td>
+      <td><div class="amount-cell"><span class="amount-icon">💎</span>${fMoney(t.balance)}</div></td>
+    </tr>`;}).join('');
 }
 
-function admFilterTx(filter,btn){
-  document.querySelectorAll('#adm-tx .ev-filter-btn').forEach(b=>b.classList.remove('active'));
-  btn.classList.add('active');
-  renderTx(filter);
+function admFilterTx(filter){ renderTx(filter); }
+
+// ── Deportes (Categorías) ──
+async function renderSports(){
+  const body=document.getElementById('adm-sports-body');
+  body.innerHTML=`<tr><td colspan="7" class="table-empty">⏳ Cargando...</td></tr>`;
+  try{
+    const {data,error}=await _SB.from('sports').select('*').order('sort_order');
+    if(error)throw error;
+    _sports=data||[];
+    const {data:leagues}=await _SB.from('leagues').select('sport_key');
+    const leagueCount={};
+    (leagues||[]).forEach(l=>{ leagueCount[l.sport_key]=(leagueCount[l.sport_key]||0)+1; });
+    if(!_sports.length){ body.innerHTML=`<tr><td colspan="7" class="table-empty">Sin categorías. Crea la primera con "+ Añadir categoría"</td></tr>`; return; }
+    body.innerHTML=_sports.map(s=>`<tr>
+      <td><strong>${esc(s.title)}</strong></td>
+      <td style="font-family:var(--mono);font-size:12px;color:var(--text2)">${esc(s.key)}</td>
+      <td style="font-size:20px">${esc(s.icon||'⚽')}</td>
+      <td><span class="badge badge-blue">${leagueCount[s.key]||0} ligas</span></td>
+      <td style="text-align:center">${s.sort_order}</td>
+      <td>${s.active?'<span class="badge badge-green">Activo</span>':'<span class="badge badge-orange">Inactivo</span>'}</td>
+      <td><div class="action-group">
+        <button class="btn btn-outline btn-sm" onclick="admOpenEditSport('${esc(s.key)}')">✏️ Editar</button>
+        <button class="btn ${s.active?'btn-danger':'btn-success'} btn-sm" onclick="admToggleSport('${esc(s.key)}',${!s.active})">${s.active?'🚫 Desactivar':'✅ Activar'}</button>
+        <button class="btn btn-danger btn-sm" onclick="admDeleteSport('${esc(s.key)}')">🗑</button>
+      </div></td>
+    </tr>`).join('');
+  }catch(err){ body.innerHTML=`<tr><td colspan="7" class="table-empty" style="color:var(--red)">❌ ${esc(err.message)}</td></tr>`; }
 }
+
+function admOpenSportModal(){ _editingSportKey=null; document.getElementById('sport-modal-title').textContent='Nueva Categoría'; document.getElementById('sport-key').value=''; document.getElementById('sport-key').disabled=false; document.getElementById('sport-title').value=''; document.getElementById('sport-icon').value='⚽'; document.getElementById('sport-order').value='0'; document.getElementById('sport-active').checked=true; openModal('sport-modal-overlay'); }
+function admOpenEditSport(key){ const s=_sports.find(x=>x.key===key); if(!s)return; _editingSportKey=key; document.getElementById('sport-modal-title').textContent='Editar Categoría'; document.getElementById('sport-key').value=s.key; document.getElementById('sport-key').disabled=true; document.getElementById('sport-title').value=s.title; document.getElementById('sport-icon').value=s.icon||'⚽'; document.getElementById('sport-order').value=s.sort_order||0; document.getElementById('sport-active').checked=!!s.active; openModal('sport-modal-overlay'); }
+function admCloseSportModal(){ closeModal('sport-modal-overlay'); }
+
+async function admSaveSport(){
+  const key=document.getElementById('sport-key').value.trim().toLowerCase().replace(/\s+/g,'_');
+  const title=document.getElementById('sport-title').value.trim();
+  const icon=document.getElementById('sport-icon').value.trim()||'⚽';
+  const order=parseInt(document.getElementById('sport-order').value)||0;
+  const active=document.getElementById('sport-active').checked;
+  if(!key||!title){showToast('❌ Clave y nombre son obligatorios','error');return;}
+  let error;
+  if(_editingSportKey){ ({error}=await _SB.from('sports').update({title,icon,sort_order:order,active}).eq('key',_editingSportKey)); }
+  else { ({error}=await _SB.from('sports').insert({key,title,icon,sort_order:order,active})); }
+  if(error){showToast('❌ '+error.message,'error');return;}
+  showToast(_editingSportKey?'✅ Categoría actualizada':'✅ Categoría creada','success');
+  admCloseSportModal(); await renderSports();
+}
+
+async function admToggleSport(key,active){ await _SB.from('sports').update({active}).eq('key',key); showToast(active?'✅ Activada':'⏸ Desactivada'); await renderSports(); }
+async function admDeleteSport(key){ if(!confirm(`¿Borrar la categoría "${key}"?`))return; await _SB.from('leagues').delete().eq('sport_key',key); await _SB.from('sports').delete().eq('key',key); showToast('🗑 Categoría eliminada'); await renderSports(); }
+
+// ── Ligas ──
+let _leagueSearch='';
+async function renderLeagues(){
+  const body=document.getElementById('adm-leagues-body');
+  body.innerHTML=`<tr><td colspan="7" class="table-empty">⏳ Cargando...</td></tr>`;
+  try{
+    const {data,error}=await _SB.from('leagues').select('*').order('sort_order');
+    if(error)throw error;
+    _leagues=data||[];
+    let list=_leagues;
+    if(_leagueSearch) list=list.filter(l=>(l.name||'').toLowerCase().includes(_leagueSearch.toLowerCase()));
+    const sportIcons={soccer:'⚽',basketball:'🏀',americanfootball:'🏈',baseball:'⚾',icehockey:'🏒',mma:'🥊'};
+    if(!list.length){ body.innerHTML=`<tr><td colspan="7" class="table-empty">Sin ligas. Crea la primera con "+ Nueva liga"</td></tr>`; return; }
+    body.innerHTML=list.map(l=>`<tr>
+      <td><div style="display:flex;align-items:center;gap:8px"><span style="font-size:18px">${esc(l.icon||'🏆')}</span><strong>${esc(l.name)}</strong></div></td>
+      <td><span class="badge badge-purple">${sportIcons[l.sport_key]||'🏅'} ${esc(l.sport_key)}</span></td>
+      <td>${esc(l.country||'—')}</td>
+      <td style="font-family:var(--mono);font-size:11px;color:var(--text2)">${esc(l.api_key||'—')}</td>
+      <td style="text-align:center">${l.sort_order}</td>
+      <td>${l.active?'<span class="badge badge-green">Activa</span>':'<span class="badge badge-orange">Inactiva</span>'}</td>
+      <td><div class="action-group">
+        <button class="btn btn-outline btn-sm" onclick="admOpenEditLeague(${l.id})">✏️ Editar</button>
+        <button class="btn ${l.active?'btn-danger':'btn-success'} btn-sm" onclick="admToggleLeague(${l.id},${!l.active})">${l.active?'🚫 Desactivar':'✅ Activar'}</button>
+        <button class="btn btn-danger btn-sm" onclick="admDeleteLeague(${l.id})">🗑</button>
+      </div></td>
+    </tr>`).join('');
+  }catch(err){ body.innerHTML=`<tr><td colspan="7" class="table-empty" style="color:var(--red)">❌ ${esc(err.message)}</td></tr>`; }
+}
+
+function admSearchLeagues(q){ _leagueSearch=q; renderLeagues(); }
+function admOpenLeagueModal(){ _editingLeagueId=null; document.getElementById('league-modal-title').textContent='Nueva Liga'; ['league-name','league-country','league-api-key'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';}); document.getElementById('league-icon').value='🏆'; document.getElementById('league-order').value='0'; document.getElementById('league-sport').value='soccer'; document.getElementById('league-active').checked=true; openModal('league-modal-overlay'); }
+function admOpenEditLeague(id){ const l=_leagues.find(x=>x.id===id); if(!l)return; _editingLeagueId=id; document.getElementById('league-modal-title').textContent='Editar Liga'; document.getElementById('league-name').value=l.name||''; document.getElementById('league-country').value=l.country||''; document.getElementById('league-icon').value=l.icon||'🏆'; document.getElementById('league-sport').value=l.sport_key||'soccer'; document.getElementById('league-api-key').value=l.api_key||''; document.getElementById('league-order').value=l.sort_order||0; document.getElementById('league-active').checked=!!l.active; openModal('league-modal-overlay'); }
+function admCloseLeagueModal(){ closeModal('league-modal-overlay'); }
+
+async function admSaveLeague(){
+  const name=document.getElementById('league-name').value.trim();
+  const country=document.getElementById('league-country').value.trim();
+  const icon=document.getElementById('league-icon').value.trim()||'🏆';
+  const sport_key=document.getElementById('league-sport').value;
+  const api_key=document.getElementById('league-api-key').value.trim()||null;
+  const sort_order=parseInt(document.getElementById('league-order').value)||0;
+  const active=document.getElementById('league-active').checked;
+  if(!name){showToast('❌ El nombre es obligatorio','error');return;}
+  const payload={name,country:country||null,icon,sport_key,api_key,sort_order,active};
+  let error;
+  if(_editingLeagueId){ ({error}=await _SB.from('leagues').update(payload).eq('id',_editingLeagueId)); }
+  else { ({error}=await _SB.from('leagues').insert(payload)); }
+  if(error){showToast('❌ '+error.message,'error');return;}
+  showToast(_editingLeagueId?'✅ Liga actualizada':'✅ Liga creada','success');
+  admCloseLeagueModal(); await renderLeagues();
+}
+
+async function admToggleLeague(id,active){ await _SB.from('leagues').update({active}).eq('id',id); showToast(active?'✅ Liga activada':'⏸ Liga desactivada'); await renderLeagues(); }
+async function admDeleteLeague(id){ if(!confirm('¿Borrar esta liga?'))return; await _SB.from('leagues').delete().eq('id',id); showToast('🗑 Liga eliminada'); await renderLeagues(); }
 
 // ── Partidos ──
-let _evFilter='all';
-
 async function renderEvents(){
-  const list=document.getElementById('adm-events-list');
-  list.innerHTML='<div class="adm-empty">Cargando...</div>';
+  const body=document.getElementById('adm-events-body');
+  body.innerHTML=`<tr><td colspan="6" class="table-empty">⏳ Cargando...</td></tr>`;
   try{
     const {data,error}=await _SB.from('manual_events').select('*').order('commence_time',{ascending:true});
-    if(error) throw error;
+    if(error)throw error;
     _manualEvents=data||[];
-    admFilterEvents(_evFilter);
-  }catch(err){
-    list.innerHTML=`<div class="adm-empty" style="color:var(--red)">❌ ${esc(err.message)}</div>`;
-  }
+    let list=_manualEvents;
+    if(admEvFilter!=='all') list=list.filter(e=>e.status===admEvFilter);
+    if(!list.length){ body.innerHTML=`<tr><td colspan="6" class="table-empty">Sin partidos. Crea uno con "+ Nuevo partido"</td></tr>`; return; }
+    body.innerHTML=list.map(e=>`<tr>
+      <td>
+        <div style="font-size:11px;color:var(--text2)">${esc(e.league)}</div>
+        <div style="font-weight:600;font-size:13px">${esc(e.home_team)} vs ${esc(e.away_team)}</div>
+        ${e.featured?'<span class="badge badge-orange" style="margin-top:4px">⭐ Destacado</span>':''}
+      </td>
+      <td><span class="badge badge-purple">${esc(e.sport_key?.split('_')[0]||'—')}</span></td>
+      <td style="font-size:12px;color:var(--text2)">${fDate(e.commence_time)}</td>
+      <td style="font-size:12px;font-family:var(--mono)">1:${fOdd(e.odd_1)} X:${fOdd(e.odd_x)} 2:${fOdd(e.odd_2)}</td>
+      <td>${e.status==='live'?'<span class="badge badge-red">🔴 En Vivo</span>':e.status==='finished'?'<span class="badge badge-blue">✅ Finalizado</span>':'<span class="badge badge-green">📅 Próximo</span>'}</td>
+      <td><div class="action-group">
+        <button class="btn btn-outline btn-sm" onclick="admOpenEditEvent('${e.id}')">✏️ Editar</button>
+        ${e.status!=='finished'?`<button class="btn ${e.status==='live'?'btn-ghost':'btn-danger'} btn-sm" onclick="admToggleEventLive('${e.id}','${e.status}')">${e.status==='live'?'⏸ Pausar':'▶ En Vivo'}</button>`:''}
+        ${e.status==='live'?`<button class="btn btn-success btn-sm" onclick="admOpenResolveEvent('${e.id}')">🏁 Resolver</button>`:''}
+        <button class="btn btn-danger btn-sm" onclick="admDeleteEvent('${e.id}')">🗑</button>
+      </div></td>
+    </tr>`).join('');
+  }catch(err){ body.innerHTML=`<tr><td colspan="6" class="table-empty" style="color:var(--red)">❌ ${esc(err.message)}</td></tr>`; }
 }
 
-function admFilterEvents(filter,btn){
-  _evFilter=filter;
-  if(btn){ document.querySelectorAll('#adm-events .ev-filter-btn').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); }
-  const list=document.getElementById('adm-events-list');
-  let evs=_manualEvents;
-  if(filter==='upcoming') evs=evs.filter(e=>e.status==='upcoming');
-  if(filter==='live')     evs=evs.filter(e=>e.status==='live');
-  if(filter==='finished') evs=evs.filter(e=>e.status==='finished');
-  if(filter==='featured') evs=evs.filter(e=>e.featured);
-  if(!evs.length){list.innerHTML='<div class="adm-empty">No hay partidos todavía. Crea uno con "+ Nuevo partido"</div>';return;}
-  list.innerHTML=evs.map(e=>`
-    <div class="ev-row">
-      <div class="ev-row-main">
-        <div class="ev-row-sport">${esc(e.league)}</div>
-        <div class="ev-row-match">${esc(e.home_team)} <span style="color:var(--text3)">vs</span> ${esc(e.away_team)}</div>
-        <div class="ev-row-meta">
-          ${e.featured?'<span class="ev-tag featured">⭐ Destacado</span>':''}
-          <span class="ev-tag ${e.status}">${e.status==='upcoming'?'📅 Próximo':e.status==='live'?'🔴 En Vivo':'✅ Finalizado'}</span>
-          <span class="ev-tag">📅 ${fDate(e.commence_time)}</span>
-          <span class="ev-tag odds">1:${fOdd(e.odd_1)} · X:${fOdd(e.odd_x)} · 2:${fOdd(e.odd_2)}</span>
-        </div>
-      </div>
-      <div class="ev-row-actions">
-        ${e.status!=='finished'?`<button class="tbl-action" onclick="admToggleEventLive('${e.id}','${e.status}')">${e.status==='live'?'⏹ Pausar':'▶ En Vivo'}</button>`:''}
-        ${e.status==='live'?`<button class="tbl-action success" onclick="admOpenResolveEvent('${e.id}')">🏁 Resolver</button>`:''}
-        <button class="tbl-action" onclick="admOpenEditEvent('${e.id}')">✏️ Editar</button>
-        <button class="tbl-action danger" onclick="admDeleteEvent('${e.id}')">🗑 Borrar</button>
-      </div>
-    </div>`).join('');
-}
+function admOnEvSportChange(){ const sport=document.getElementById('ev-sport')?.value||''; const cat=sport.split('_')[0]; const xw=document.getElementById('ev-oddx-wrap'); if(xw) xw.style.display=(cat==='soccer'||cat==='icehockey')?'':'none'; const sm=document.getElementById('ev-soccer-markets'); if(sm) sm.style.display=cat==='soccer'?'':'none'; }
 
-async function admToggleEventLive(id,currentStatus){
-  const newStatus=currentStatus==='live'?'upcoming':'live';
-  await _SB.from('manual_events').update({status:newStatus,updated_at:new Date().toISOString()}).eq('id',id);
-  showToast(newStatus==='live'?'🔴 En Vivo':'⏹ Pausado');
-  await renderEvents();
-}
+function admOpenCreateEvent(){ _editingEventId=null; document.getElementById('event-modal-title').textContent='Nuevo Partido'; ['ev-league','ev-home','ev-away','ev-odd1','ev-oddx','ev-odd2','ev-total-line','ev-total-over','ev-total-under','ev-btts-yes','ev-btts-no','ev-spread-home-pt','ev-spread-home','ev-spread-away-pt','ev-spread-away'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';}); document.getElementById('ev-featured').checked=false; document.getElementById('ev-live').checked=false; document.getElementById('ev-sport').value='soccer_epl'; const tomorrow=new Date(Date.now()+86400000); tomorrow.setMinutes(0,0,0); document.getElementById('ev-datetime').value=tomorrow.toISOString().slice(0,16); admOnEvSportChange(); openModal('event-modal-overlay'); }
 
-async function admDeleteEvent(id){
-  if(!confirm('¿Borrar este partido?')) return;
-  await _SB.from('manual_events').delete().eq('id',id);
-  showToast('🗑 Partido eliminado');
-  await renderEvents();
-}
+function admOpenEditEvent(id){ const e=_manualEvents.find(x=>x.id===id); if(!e)return; _editingEventId=id; document.getElementById('event-modal-title').textContent='Editar Partido'; document.getElementById('ev-sport').value=e.sport_key||'soccer_epl'; document.getElementById('ev-league').value=e.league||''; document.getElementById('ev-home').value=e.home_team||''; document.getElementById('ev-away').value=e.away_team||''; document.getElementById('ev-datetime').value=e.commence_time?new Date(e.commence_time).toISOString().slice(0,16):''; document.getElementById('ev-featured').checked=!!e.featured; document.getElementById('ev-live').checked=e.status==='live'; ['ev-odd1','ev-oddx','ev-odd2','ev-total-line','ev-total-over','ev-total-under','ev-btts-yes','ev-btts-no','ev-spread-home-pt','ev-spread-home','ev-spread-away-pt','ev-spread-away'].forEach(id=>{ const el=document.getElementById(id); const key=id.replace('ev-','').replace(/-([a-z])/g,(_,c)=>c.toUpperCase()); if(el) el.value=e[key]||''; }); admOnEvSportChange(); openModal('event-modal-overlay'); }
 
-function admOpenResolveEvent(id){
-  const e=_manualEvents.find(x=>x.id===id);
-  if(!e) return;
-  const existing=document.getElementById('adm-resolve-modal');
-  if(existing) existing.remove();
-  const html=`<div id="adm-resolve-modal" style="position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.75);display:flex;align-items:center;justify-content:center;padding:16px">
-    <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:16px;width:100%;max-width:400px;padding:24px">
-      <div style="font-size:16px;font-weight:700;margin-bottom:6px">Resolver Partido</div>
-      <div style="font-size:13px;color:var(--text2);margin-bottom:20px">${esc(e.home_team)} vs ${esc(e.away_team)}</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:20px">
-        <button class="adm-btn" style="background:var(--green)" onclick="admResolveEvent('${id}','1')">🏆 ${esc(e.home_team.split(' ').pop())}</button>
-        <button class="adm-btn" style="background:var(--text3)" onclick="admResolveEvent('${id}','X')">🤝 Empate</button>
-        <button class="adm-btn" style="background:var(--red)" onclick="admResolveEvent('${id}','2')">🏆 ${esc(e.away_team.split(' ').pop())}</button>
-      </div>
-      <button onclick="document.getElementById('adm-resolve-modal').remove()" style="width:100%;padding:9px;border-radius:8px;background:var(--bg3);border:1px solid var(--border);color:var(--text2);cursor:pointer">Cancelar</button>
-    </div></div>`;
-  document.body.insertAdjacentHTML('beforeend',html);
-}
-
-async function admResolveEvent(id,result){
-  const e=_manualEvents.find(x=>x.id===id);
-  if(!e) return;
-  await _SB.from('manual_events').update({status:'finished',result,updated_at:new Date().toISOString()}).eq('id',id);
-  const {data:openBets}=await _SB.from('bets').select('*').eq('status','open').ilike('match_name',`%${e.home_team}%`);
-  let resolved=0;
-  for(const bet of (openBets||[])){
-    const won=bet.pick===result||(result==='1'&&bet.pick===e.home_team)||(result==='2'&&bet.pick===e.away_team)||(result==='X'&&(bet.pick==='Empate'||bet.pick==='X'));
-    const newStatus=won?'win':'loss';
-    const ret=won?+(bet.odd*bet.stake).toFixed(2):0;
-    await _SB.from('bets').update({status:newStatus,ret}).eq('id',bet.id);
-    if(won&&ret>0){
-      const {data:prof}=await _SB.from('profiles').select('balance').eq('email',bet.user_email).single();
-      if(prof){
-        const newBal=+(prof.balance+ret).toFixed(2);
-        await _SB.from('profiles').update({balance:newBal}).eq('email',bet.user_email);
-        await _SB.from('transactions').insert({user_email:bet.user_email,description:`Premio: ${bet.pick}`,type:'win',amount:ret,balance:newBal,created_at:new Date().toISOString()});
-      }
-    }
-    resolved++;
-  }
-  document.getElementById('adm-resolve-modal')?.remove();
-  showToast(`✅ Resuelto · ${resolved} apuesta${resolved!==1?'s':''} procesada${resolved!==1?'s':''}`);
-  await renderEvents();
-}
-
-// ── Formulario de partido ──
-function admOnEvSportChange(){
-  const sport=document.getElementById('ev-sport')?.value||'';
-  const cat=sport.split('_')[0];
-  const xw=document.getElementById('ev-oddx-wrap');
-  if(xw) xw.style.display=(cat==='soccer'||cat==='icehockey')?'':'none';
-  const sm=document.getElementById('ev-soccer-markets');
-  if(sm) sm.style.display=cat==='soccer'?'':'none';
-}
-
-function admOpenCreateEvent(){
-  _editingEventId=null;
-  document.getElementById('event-modal-title').textContent='Nuevo Partido';
-  ['ev-league','ev-home','ev-away','ev-odd1','ev-oddx','ev-odd2','ev-total-line','ev-total-over','ev-total-under','ev-btts-yes','ev-btts-no','ev-spread-home-pt','ev-spread-home','ev-spread-away-pt','ev-spread-away'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
-  document.getElementById('ev-featured').checked=false;
-  document.getElementById('ev-live').checked=false;
-  document.getElementById('ev-sport').value='soccer_epl';
-  const tomorrow=new Date(Date.now()+86400000); tomorrow.setMinutes(0,0,0);
-  document.getElementById('ev-datetime').value=tomorrow.toISOString().slice(0,16);
-  admOnEvSportChange();
-  const overlay=document.getElementById('event-modal-overlay');
-  overlay.style.display='flex'; overlay.style.zIndex='9999';
-}
-
-function admOpenEditEvent(id){
-  const e=_manualEvents.find(x=>x.id===id);
-  if(!e) return;
-  _editingEventId=id;
-  document.getElementById('event-modal-title').textContent='Editar Partido';
-  document.getElementById('ev-sport').value=e.sport_key||'soccer_epl';
-  document.getElementById('ev-league').value=e.league||'';
-  document.getElementById('ev-home').value=e.home_team||'';
-  document.getElementById('ev-away').value=e.away_team||'';
-  document.getElementById('ev-datetime').value=e.commence_time?new Date(e.commence_time).toISOString().slice(0,16):'';
-  document.getElementById('ev-featured').checked=!!e.featured;
-  document.getElementById('ev-live').checked=e.status==='live';
-  document.getElementById('ev-odd1').value=e.odd_1||'';
-  document.getElementById('ev-oddx').value=e.odd_x||'';
-  document.getElementById('ev-odd2').value=e.odd_2||'';
-  document.getElementById('ev-total-line').value=e.total_line||'';
-  document.getElementById('ev-total-over').value=e.total_over||'';
-  document.getElementById('ev-total-under').value=e.total_under||'';
-  document.getElementById('ev-btts-yes').value=e.btts_yes||'';
-  document.getElementById('ev-btts-no').value=e.btts_no||'';
-  document.getElementById('ev-spread-home-pt').value=e.spread_home_pt||'';
-  document.getElementById('ev-spread-home').value=e.spread_home||'';
-  document.getElementById('ev-spread-away-pt').value=e.spread_away_pt||'';
-  document.getElementById('ev-spread-away').value=e.spread_away||'';
-  admOnEvSportChange();
-  const overlay=document.getElementById('event-modal-overlay');
-  overlay.style.display='flex'; overlay.style.zIndex='9999';
-}
-
-function admCloseEventModal(){
-  document.getElementById('event-modal-overlay').style.display='none';
-  _editingEventId=null;
-}
+function admCloseEventModal(){ closeModal('event-modal-overlay'); }
 
 async function admSaveEvent(){
   const sport=document.getElementById('ev-sport').value;
@@ -973,47 +1519,69 @@ async function admSaveEvent(){
   const home=document.getElementById('ev-home').value.trim();
   const away=document.getElementById('ev-away').value.trim();
   const dt=document.getElementById('ev-datetime').value;
-  if(!league||!home||!away||!dt){showToast('❌ Completa todos los campos obligatorios');return;}
-  const sportTitles={soccer_epl:'Fútbol',basketball_nba:'Baloncesto',americanfootball_nfl:'Fútbol Americano',baseball_mlb:'Béisbol',icehockey_nhl:'Hockey',mma_mixed_martial_arts:'MMA'};
+  if(!league||!home||!away||!dt){showToast('❌ Completa todos los campos obligatorios','error');return;}
+  const sportTitles={soccer_epl:'Fútbol',basketball_nba:'Baloncesto',americanfootball_nfl:'NFL',baseball_mlb:'Béisbol',icehockey_nhl:'Hockey',mma_mixed_martial_arts:'MMA'};
   const isLiveChk=document.getElementById('ev-live').checked;
-  const payload={
-    sport_key:sport, sport_title:sportTitles[sport]||'Deporte', league, home_team:home, away_team:away,
-    commence_time:new Date(dt).toISOString(),
-    featured:document.getElementById('ev-featured').checked,
-    status:isLiveChk?'live':(new Date(dt)<=new Date()?'live':'upcoming'),
-    odd_1:parseFloat(document.getElementById('ev-odd1').value)||null,
-    odd_x:parseFloat(document.getElementById('ev-oddx').value)||null,
-    odd_2:parseFloat(document.getElementById('ev-odd2').value)||null,
-    total_line:parseFloat(document.getElementById('ev-total-line').value)||null,
-    total_over:parseFloat(document.getElementById('ev-total-over').value)||null,
-    total_under:parseFloat(document.getElementById('ev-total-under').value)||null,
-    btts_yes:parseFloat(document.getElementById('ev-btts-yes').value)||null,
-    btts_no:parseFloat(document.getElementById('ev-btts-no').value)||null,
-    spread_home_pt:parseFloat(document.getElementById('ev-spread-home-pt').value)||null,
-    spread_home:parseFloat(document.getElementById('ev-spread-home').value)||null,
-    spread_away_pt:parseFloat(document.getElementById('ev-spread-away-pt').value)||null,
-    spread_away:parseFloat(document.getElementById('ev-spread-away').value)||null,
-    created_by:SESSION?.email||'',
-    updated_at:new Date().toISOString(),
-  };
+  const payload={ sport_key:sport, sport_title:sportTitles[sport]||'Deporte', league, home_team:home, away_team:away, commence_time:new Date(dt).toISOString(), featured:document.getElementById('ev-featured').checked, status:isLiveChk?'live':(new Date(dt)<=new Date()?'live':'upcoming'), odd_1:parseFloat(document.getElementById('ev-odd1').value)||null, odd_x:parseFloat(document.getElementById('ev-oddx').value)||null, odd_2:parseFloat(document.getElementById('ev-odd2').value)||null, total_line:parseFloat(document.getElementById('ev-total-line').value)||null, total_over:parseFloat(document.getElementById('ev-total-over').value)||null, total_under:parseFloat(document.getElementById('ev-total-under').value)||null, btts_yes:parseFloat(document.getElementById('ev-btts-yes').value)||null, btts_no:parseFloat(document.getElementById('ev-btts-no').value)||null, spread_home_pt:parseFloat(document.getElementById('ev-spread-home-pt').value)||null, spread_home:parseFloat(document.getElementById('ev-spread-home').value)||null, spread_away_pt:parseFloat(document.getElementById('ev-spread-away-pt').value)||null, spread_away:parseFloat(document.getElementById('ev-spread-away').value)||null, created_by:SESSION?.email||'', updated_at:new Date().toISOString() };
   let error;
   if(_editingEventId){ ({error}=await _SB.from('manual_events').update(payload).eq('id',_editingEventId)); }
-  else               { ({error}=await _SB.from('manual_events').insert(payload)); }
-  if(error){showToast('❌ '+error.message);return;}
-  showToast(_editingEventId?'✅ Partido actualizado':'✅ Partido creado');
-  admCloseEventModal();
+  else { ({error}=await _SB.from('manual_events').insert(payload)); }
+  if(error){showToast('❌ '+error.message,'error');return;}
+  showToast(_editingEventId?'✅ Partido actualizado':'✅ Partido creado','success');
+  admCloseEventModal(); await renderEvents();
+}
+
+async function admToggleEventLive(id,currentStatus){ const newStatus=currentStatus==='live'?'upcoming':'live'; await _SB.from('manual_events').update({status:newStatus,updated_at:new Date().toISOString()}).eq('id',id); showToast(newStatus==='live'?'🔴 En Vivo':'⏸ Pausado'); await renderEvents(); }
+
+async function admDeleteEvent(id){ if(!confirm('¿Borrar este partido?'))return; await _SB.from('manual_events').delete().eq('id',id); showToast('🗑 Partido eliminado'); await renderEvents(); }
+
+function admOpenResolveEvent(id){
+  const e=_manualEvents.find(x=>x.id===id); if(!e)return;
+  const container=document.getElementById('adm-resolve-modal-container');
+  container.innerHTML=`
+  <div style="position:fixed;inset:0;z-index:800;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;padding:16px" onclick="if(event.target===this)this.remove()">
+    <div style="background:#fff;border-radius:14px;width:100%;max-width:420px;padding:28px;box-shadow:0 8px 40px rgba(0,0,0,.2)">
+      <div style="font-size:17px;font-weight:700;margin-bottom:6px">Declarar resultado</div>
+      <div style="font-size:13px;color:#6c757d;margin-bottom:24px">${esc(e.home_team)} vs ${esc(e.away_team)}</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:20px">
+        <button class="btn btn-success" onclick="admResolveEvent('${id}','1')">🏆 ${esc(e.home_team.split(' ').pop())}</button>
+        <button class="btn btn-ghost" onclick="admResolveEvent('${id}','X')">🤝 Empate</button>
+        <button class="btn btn-danger" onclick="admResolveEvent('${id}','2')">🏆 ${esc(e.away_team.split(' ').pop())}</button>
+      </div>
+      <button onclick="document.getElementById('adm-resolve-modal-container').innerHTML=''" style="width:100%;padding:9px;border-radius:8px;background:#f4f6f9;border:1px solid #e9ecef;cursor:pointer;font-size:13px">Cancelar</button>
+    </div>
+  </div>`;
+}
+
+async function admResolveEvent(id,result){
+  const e=_manualEvents.find(x=>x.id===id); if(!e)return;
+  await _SB.from('manual_events').update({status:'finished',result,updated_at:new Date().toISOString()}).eq('id',id);
+  const {data:openBets}=await _SB.from('bets').select('*').eq('status','open').ilike('match_name',`%${e.home_team}%`);
+  let resolved=0;
+  for(const bet of (openBets||[])){
+    const won=bet.pick===result||(result==='1'&&bet.pick===e.home_team)||(result==='2'&&bet.pick===e.away_team)||(result==='X'&&(bet.pick==='Empate'||bet.pick==='X'));
+    const newStatus=won?'win':'loss'; const ret=won?+(bet.odd*bet.stake).toFixed(2):0;
+    await _SB.from('bets').update({status:newStatus,ret}).eq('id',bet.id);
+    if(won&&ret>0){
+      const {data:prof}=await _SB.from('profiles').select('balance').eq('email',bet.user_email).single();
+      if(prof){ const newBal=+(prof.balance+ret).toFixed(2); await _SB.from('profiles').update({balance:newBal}).eq('email',bet.user_email); await _SB.from('transactions').insert({user_email:bet.user_email,description:`Premio: ${bet.pick}`,type:'win',amount:ret,balance:newBal,created_at:new Date().toISOString()}); }
+    }
+    resolved++;
+  }
+  document.getElementById('adm-resolve-modal-container').innerHTML='';
+  showToast(`✅ Partido resuelto · ${resolved} apuesta${resolved!==1?'s':''} procesada${resolved!==1?'s':''}`, 'success');
   await renderEvents();
 }
 
 // ── Configuración ──
 async function loadAdmConfig(){
   const {data}=await _SB.from('site_config').select('*').eq('id',1).single().catch(()=>({data:null}));
-  if(!data) return;
+  if(!data)return;
   const sv=(id,v)=>{const e=document.getElementById(id);if(e&&v!=null)e.value=v;};
   const sc=(id,v)=>{const e=document.getElementById(id);if(e)e.checked=!!v;};
   sv('cfg-bonus-pct',data.bonus_pct); sv('cfg-bonus-max',data.bonus_max);
   sv('cfg-dep-min',data.dep_min); sv('cfg-wit-min',data.wit_min);
-  sv('cfg-initial-balance',data.initial_balance); sv('cfg-house-margin',data.house_margin);
+  sv('cfg-house-margin',data.house_margin);
   sc('cfg-allow-register',data.allow_register); sc('cfg-allow-deposits',data.allow_deposits);
   sc('cfg-allow-bets',data.allow_bets); sc('cfg-maintenance',data.maintenance);
 }
@@ -1024,311 +1592,357 @@ async function admSaveConfig(){
   const {error}=await _SB.from('site_config').update({
     bonus_pct:gv('cfg-bonus-pct'), bonus_max:gv('cfg-bonus-max'),
     dep_min:gv('cfg-dep-min'), wit_min:gv('cfg-wit-min'),
-    initial_balance:gv('cfg-initial-balance'), house_margin:gv('cfg-house-margin'),
+    house_margin:gv('cfg-house-margin'),
     allow_register:gc('cfg-allow-register'), allow_deposits:gc('cfg-allow-deposits'),
     allow_bets:gc('cfg-allow-bets'), maintenance:gc('cfg-maintenance'),
     updated_at:new Date().toISOString(),
   }).eq('id',1);
-  if(error){showToast('❌ '+error.message);return;}
-  showToast('✅ Configuración guardada');
+  if(error){showToast('❌ '+error.message,'error');return;}
+  showToast('✅ Configuración guardada','success');
 }
 
-async function admPromoteUser(){
-  const email=document.getElementById('cfg-promote-email').value.trim();
-  if(!email){showToast('❌ Introduce un email');return;}
-  const {error}=await _SB.from('profiles').update({role:'owner'}).eq('email',email);
-  if(error){showToast('❌ '+error.message);return;}
-  showToast('✅ Usuario promovido a Owner');
-}
-
-async function admDemoteUser(){
-  const email=document.getElementById('cfg-promote-email').value.trim();
-  if(!email){showToast('❌ Introduce un email');return;}
-  const {error}=await _SB.from('profiles').update({role:'user'}).eq('email',email);
-  if(error){showToast('❌ '+error.message);return;}
-  showToast('✅ Usuario degradado a Usuario');
-}
+async function admPromoteUser(){ const email=document.getElementById('cfg-promote-email').value.trim(); if(!email){showToast('❌ Introduce un email','error');return;} const {error}=await _SB.from('profiles').update({role:'owner'}).eq('email',email); if(error){showToast('❌ '+error.message,'error');return;} showToast('✅ Usuario promovido a Owner','success'); }
+async function admDemoteUser(){  const email=document.getElementById('cfg-promote-email').value.trim(); if(!email){showToast('❌ Introduce un email','error');return;} const {error}=await _SB.from('profiles').update({role:'user'}).eq('email',email); if(error){showToast('❌ '+error.message,'error');return;} showToast('✅ Usuario degradado a Usuario','success'); }
 
 
-// ── Deportes ──
-let _sports = [];
-let _editingSportKey = null;
+// ═══════════════════════════════════════════════════════════
+// ── EQUIPOS ──
+// ═══════════════════════════════════════════════════════════
+let _teams = [], _editingTeamId = null, _teamSearch = '';
 
-async function renderSports() {
-  const list = document.getElementById('adm-sports-list');
-  list.innerHTML = '<div class="adm-empty">Cargando...</div>';
+async function renderTeams(){
+  const body = document.getElementById('adm-teams-body');
+  body.innerHTML = '<tr><td colspan="7" class="table-empty">⏳ Cargando...</td></tr>';
   try {
-    const { data, error } = await _SB.from('sports').select('*').order('sort_order');
-    if (error) throw error;
-    _sports = data || [];
-    if (!_sports.length) { list.innerHTML = '<div class="adm-empty">No hay deportes. Crea uno con "+ Nuevo deporte"</div>'; return; }
-    list.innerHTML = _sports.map(s => `
-      <div class="ev-row" style="align-items:center">
-        <div style="font-size:28px;width:40px;text-align:center;flex-shrink:0">${esc(s.icon||'⚽')}</div>
-        <div class="ev-row-main">
-          <div class="ev-row-match">${esc(s.title)}</div>
-          <div class="ev-row-meta">
-            <span class="ev-tag">🔑 ${esc(s.key)}</span>
-            <span class="ev-tag">📊 Orden: ${s.sort_order}</span>
-            <span class="ev-tag ${s.active?'upcoming':'finished'}">${s.active?'✅ Activo':'⏸ Inactivo'}</span>
-          </div>
-        </div>
-        <div class="ev-row-actions">
-          <button class="tbl-action" onclick="admToggleSport('${esc(s.key)}',${!s.active})">${s.active?'⏸ Desactivar':'▶ Activar'}</button>
-          <button class="tbl-action" onclick="admOpenEditSport('${esc(s.key)}')">✏️ Editar</button>
-          <button class="tbl-action danger" onclick="admDeleteSport('${esc(s.key)}')">🗑 Borrar</button>
-        </div>
-      </div>`).join('');
-    // Update leagues sport filter
-    const filter = document.getElementById('adm-leagues-sport-filter');
-    if (filter) {
-      filter.innerHTML = '<button class="ev-filter-btn active" onclick="admFilterLeagues(\'all\',this)">Todas</button>' +
-        _sports.map(s => `<button class="ev-filter-btn" onclick="admFilterLeagues('${esc(s.key)}',this)">${esc(s.icon)} ${esc(s.title)}</button>`).join('');
-    }
+    const { data, error } = await _SB.from('teams').select('*').order('name');
+    if(error) throw error;
+    _teams = data || [];
+    let list = _teams;
+    if(_teamSearch) list = list.filter(t => (t.name||'').toLowerCase().includes(_teamSearch.toLowerCase()) || (t.short_name||'').toLowerCase().includes(_teamSearch.toLowerCase()));
+    if(!list.length){ body.innerHTML = '<tr><td colspan="7" class="table-empty">Sin equipos. Crea el primero con "+ Añadir equipo"</td></tr>'; return; }
+    const sportIcons = {soccer:'⚽',basketball:'🏀',americanfootball:'🏈',baseball:'⚾',icehockey:'🏒',mma:'🥊'};
+    const avatarColors = ['#5F3DFF','#28a745','#fd7e14','#007bff','#dc3545','#6f42c1','#20c997','#e83e8c'];
+    body.innerHTML = list.map(t => {
+      const color = avatarColors[t.name.charCodeAt(0) % avatarColors.length];
+      return `<tr>
+        <td><div class="user-chip">
+          <div class="user-chip-avatar" style="background:${color}">${(t.name||'?')[0].toUpperCase()}</div>
+          <div class="user-chip-name">${esc(t.name)}</div>
+        </div></td>
+        <td><span class="badge badge-blue">${esc(t.short_name||'—')}</span></td>
+        <td><span class="badge badge-purple">${sportIcons[t.sport_key]||'🏅'} ${esc(t.sport_key||'—')}</span></td>
+        <td>${esc(t.league_id||'—')}</td>
+        <td>${esc(t.country||'—')}</td>
+        <td>${t.active?'<span class="badge badge-green">Activo</span>':'<span class="badge badge-orange">Inactivo</span>'}</td>
+        <td><div class="action-group">
+          <button class="btn btn-outline btn-sm" onclick="admOpenEditTeam(${t.id})">✏️ Editar</button>
+          <button class="btn btn-danger btn-sm" onclick="admDeleteTeam(${t.id})">🗑</button>
+        </div></td>
+      </tr>`;}).join('');
   } catch(err) {
-    list.innerHTML = `<div class="adm-empty" style="color:var(--red)">❌ ${esc(err.message)}</div>`;
+    body.innerHTML = `<tr><td colspan="7" class="table-empty" style="color:var(--red)">❌ ${esc(err.message)}</td></tr>`;
   }
 }
 
-function admOpenSportModal() {
-  _editingSportKey = null;
-  document.getElementById('sport-modal-title').textContent = 'Nuevo Deporte';
-  document.getElementById('sport-key').value = '';
-  document.getElementById('sport-title').value = '';
-  document.getElementById('sport-icon').value = '⚽';
-  document.getElementById('sport-order').value = '0';
-  document.getElementById('sport-active').checked = true;
-  document.getElementById('sport-key').disabled = false;
-  const o = document.getElementById('sport-modal-overlay');
-  o.style.display='flex'; o.style.zIndex='9999';
-}
+function admSearchTeams(q){ _teamSearch = q; renderTeams(); }
+function admOpenTeamModal(){ _editingTeamId=null; document.getElementById('team-modal-title').textContent='Nuevo Equipo'; document.getElementById('team-name').value=''; document.getElementById('team-short').value=''; document.getElementById('team-sport').value='soccer'; document.getElementById('team-country').value=''; document.getElementById('team-active').checked=true; openModal('team-modal-overlay'); }
+function admOpenEditTeam(id){ const t=_teams.find(x=>x.id===id); if(!t)return; _editingTeamId=id; document.getElementById('team-modal-title').textContent='Editar Equipo'; document.getElementById('team-name').value=t.name||''; document.getElementById('team-short').value=t.short_name||''; document.getElementById('team-sport').value=t.sport_key||'soccer'; document.getElementById('team-country').value=t.country||''; document.getElementById('team-active').checked=!!t.active; openModal('team-modal-overlay'); }
+function admCloseTeamModal(){ closeModal('team-modal-overlay'); }
 
-function admOpenEditSport(key) {
-  const s = _sports.find(x => x.key === key);
-  if (!s) return;
-  _editingSportKey = key;
-  document.getElementById('sport-modal-title').textContent = 'Editar Deporte';
-  document.getElementById('sport-key').value = s.key;
-  document.getElementById('sport-key').disabled = true;
-  document.getElementById('sport-title').value = s.title;
-  document.getElementById('sport-icon').value = s.icon||'⚽';
-  document.getElementById('sport-order').value = s.sort_order||0;
-  document.getElementById('sport-active').checked = !!s.active;
-  const o = document.getElementById('sport-modal-overlay');
-  o.style.display='flex'; o.style.zIndex='9999';
-}
-
-function admCloseSportModal() { document.getElementById('sport-modal-overlay').style.display='none'; }
-
-async function admSaveSport() {
-  const key   = document.getElementById('sport-key').value.trim().toLowerCase().replace(/\s+/g,'_');
-  const title = document.getElementById('sport-title').value.trim();
-  const icon  = document.getElementById('sport-icon').value.trim() || '⚽';
-  const order = parseInt(document.getElementById('sport-order').value)||0;
-  const active = document.getElementById('sport-active').checked;
-  if (!key || !title) { showToast('❌ Clave y nombre son obligatorios'); return; }
-  const payload = { key, title, icon, sort_order: order, active };
+async function admSaveTeam(){
+  const name  = document.getElementById('team-name').value.trim();
+  const short = document.getElementById('team-short').value.trim();
+  const sport = document.getElementById('team-sport').value;
+  const country = document.getElementById('team-country').value.trim();
+  const active  = document.getElementById('team-active').checked;
+  if(!name){ showToast('❌ El nombre es obligatorio','error'); return; }
+  const payload = { name, short_name:short||null, sport_key:sport, country:country||null, active };
   let error;
-  if (_editingSportKey) {
-    ({ error } = await _SB.from('sports').update({ title, icon, sort_order: order, active }).eq('key', _editingSportKey));
-  } else {
-    ({ error } = await _SB.from('sports').insert(payload));
-  }
-  if (error) { showToast('❌ ' + error.message); return; }
-  showToast(_editingSportKey ? '✅ Deporte actualizado' : '✅ Deporte creado');
-  admCloseSportModal();
-  await renderSports();
+  if(_editingTeamId){ ({error}=await _SB.from('teams').update(payload).eq('id',_editingTeamId)); }
+  else { ({error}=await _SB.from('teams').insert(payload)); }
+  if(error){ showToast('❌ '+error.message,'error'); return; }
+  showToast(_editingTeamId?'✅ Equipo actualizado':'✅ Equipo creado','success');
+  admCloseTeamModal(); await renderTeams();
 }
 
-async function admToggleSport(key, active) {
-  const { error } = await _SB.from('sports').update({ active }).eq('key', key);
-  if (error) { showToast('❌ ' + error.message); return; }
-  showToast(active ? '✅ Deporte activado' : '⏸ Deporte desactivado');
-  await renderSports();
-}
+async function admDeleteTeam(id){ if(!confirm('¿Borrar este equipo?'))return; await _SB.from('teams').delete().eq('id',id); showToast('🗑 Equipo eliminado'); await renderTeams(); }
 
-async function admDeleteSport(key) {
-  if (!confirm(`¿Borrar el deporte "${key}"? Esto también borrará sus ligas.`)) return;
-  await _SB.from('leagues').delete().eq('sport_key', key);
-  const { error } = await _SB.from('sports').delete().eq('key', key);
-  if (error) { showToast('❌ ' + error.message); return; }
-  showToast('🗑 Deporte eliminado');
-  await renderSports();
-}
-
-// ── Ligas ──
-let _leagues = [];
-let _editingLeagueId = null;
-let _leagueFilter = 'all';
-
-async function renderLeagues() {
-  const list = document.getElementById('adm-leagues-list');
-  list.innerHTML = '<div class="adm-empty">Cargando...</div>';
+// ═══════════════════════════════════════════════════════════
+// ── DECLARAR RESULTADOS ──
+// ═══════════════════════════════════════════════════════════
+async function renderOutcomes(){
+  const body = document.getElementById('adm-outcomes-body');
+  body.innerHTML = '<tr><td colspan="6" class="table-empty">⏳ Cargando...</td></tr>';
   try {
-    const { data, error } = await _SB.from('leagues').select('*').order('sort_order');
-    if (error) throw error;
-    _leagues = data || [];
-    admFilterLeagues(_leagueFilter);
+    const { data, error } = await _SB.from('manual_events').select('*').eq('status','live').order('commence_time',{ascending:true});
+    if(error) throw error;
+    const events = data || [];
+    if(!events.length){ body.innerHTML = '<tr><td colspan="6" class="table-empty">Sin partidos en vivo para resolver. Marca un partido como "En Vivo" primero.</td></tr>'; return; }
+    // Get open bets count per event
+    const { data: openBets } = await _SB.from('bets').select('match_name,id').eq('status','open');
+    const betCount = {};
+    (openBets||[]).forEach(b => { const key = (b.match_name||'').toLowerCase(); events.forEach(e => { if(key.includes((e.home_team||'').toLowerCase())) betCount[e.id]=(betCount[e.id]||0)+1; }); });
+    body.innerHTML = events.map(e => `<tr>
+      <td>
+        <div style="font-size:11px;color:var(--text2)">${esc(e.league)}</div>
+        <div style="font-weight:600;font-size:13px">${esc(e.home_team)} vs ${esc(e.away_team)}</div>
+      </td>
+      <td><span class="badge badge-purple">${esc(e.sport_key?.split('_')[0]||'—')}</span></td>
+      <td style="font-size:12px;color:var(--text2)">${fDate(e.commence_time)}</td>
+      <td><span class="badge badge-orange">${betCount[e.id]||0} apuestas</span></td>
+      <td><span class="badge badge-red">🔴 En Vivo</span></td>
+      <td><div class="action-group">
+        <button class="btn btn-success btn-sm" onclick="admOutcomeDeclare('${e.id}','1')">🏆 ${esc((e.home_team||'').split(' ').pop())}</button>
+        <button class="btn btn-ghost btn-sm"   onclick="admOutcomeDeclare('${e.id}','X')">🤝 Empate</button>
+        <button class="btn btn-danger btn-sm"  onclick="admOutcomeDeclare('${e.id}','2')">🏆 ${esc((e.away_team||'').split(' ').pop())}</button>
+      </div></td>
+    </tr>`).join('');
   } catch(err) {
-    list.innerHTML = `<div class="adm-empty" style="color:var(--red)">❌ ${esc(err.message)}</div>`;
+    body.innerHTML = `<tr><td colspan="6" class="table-empty" style="color:var(--red)">❌ ${esc(err.message)}</td></tr>`;
   }
 }
 
-function admFilterLeagues(filter, btn) {
-  _leagueFilter = filter;
-  if (btn) { document.querySelectorAll('#adm-leagues-sport-filter .ev-filter-btn').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); }
-  const list = document.getElementById('adm-leagues-list');
-  let leagues = _leagues;
-  if (filter !== 'all') leagues = leagues.filter(l => l.sport_key === filter);
-  if (!leagues.length) { list.innerHTML = '<div class="adm-empty">No hay ligas. Crea una con "+ Nueva liga"</div>'; return; }
-  const sportIcons = { soccer:'⚽', basketball:'🏀', americanfootball:'🏈', baseball:'⚾', icehockey:'🏒', mma:'🥊' };
-  list.innerHTML = leagues.map(l => `
-    <div class="ev-row" style="align-items:center">
-      <div style="font-size:24px;width:36px;text-align:center;flex-shrink:0">${esc(l.icon||'🏆')}</div>
-      <div class="ev-row-main">
-        <div class="ev-row-match">${esc(l.name)}</div>
-        <div class="ev-row-meta">
-          <span class="ev-tag">${sportIcons[l.sport_key]||'🏅'} ${esc(l.sport_key)}</span>
-          ${l.country?`<span class="ev-tag">🌍 ${esc(l.country)}</span>`:''}
-          ${l.api_key?`<span class="ev-tag">🔗 ${esc(l.api_key)}</span>`:''}
-          <span class="ev-tag ${l.active?'upcoming':'finished'}">${l.active?'✅ Activa':'⏸ Inactiva'}</span>
-        </div>
-      </div>
-      <div class="ev-row-actions">
-        <button class="tbl-action" onclick="admToggleLeague(${l.id},${!l.active})">${l.active?'⏸ Desactivar':'▶ Activar'}</button>
-        <button class="tbl-action" onclick="admOpenEditLeague(${l.id})">✏️ Editar</button>
-        <button class="tbl-action danger" onclick="admDeleteLeague(${l.id})">🗑 Borrar</button>
-      </div>
-    </div>`).join('');
+async function admOutcomeDeclare(id, result){
+  if(!confirm(`¿Declarar resultado "${result==='1'?'Local':result==='2'?'Visitante':'Empate'}" para este partido? Esta acción procesará todas las apuestas.`)) return;
+  await admResolveEvent(id, result);
+  await renderOutcomes();
 }
 
-function admOpenLeagueModal() {
-  _editingLeagueId = null;
-  document.getElementById('league-modal-title').textContent = 'Nueva Liga';
-  ['league-name','league-country','league-api-key'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
-  document.getElementById('league-icon').value = '🏆';
-  document.getElementById('league-order').value = '0';
-  document.getElementById('league-sport').value = 'soccer';
-  document.getElementById('league-active').checked = true;
-  const o = document.getElementById('league-modal-overlay');
-  o.style.display='flex'; o.style.zIndex='9999';
-}
+// ═══════════════════════════════════════════════════════════
+// ── SOPORTE ──
+// ═══════════════════════════════════════════════════════════
+let _tickets = [], _editingTicketId = null, _supportFilter = 'all';
 
-function admOpenEditLeague(id) {
-  const l = _leagues.find(x => x.id === id);
-  if (!l) return;
-  _editingLeagueId = id;
-  document.getElementById('league-modal-title').textContent = 'Editar Liga';
-  document.getElementById('league-name').value    = l.name||'';
-  document.getElementById('league-country').value = l.country||'';
-  document.getElementById('league-icon').value    = l.icon||'🏆';
-  document.getElementById('league-sport').value   = l.sport_key||'soccer';
-  document.getElementById('league-api-key').value = l.api_key||'';
-  document.getElementById('league-order').value   = l.sort_order||0;
-  document.getElementById('league-active').checked = !!l.active;
-  const o = document.getElementById('league-modal-overlay');
-  o.style.display='flex'; o.style.zIndex='9999';
-}
-
-function admCloseLeagueModal() { document.getElementById('league-modal-overlay').style.display='none'; }
-
-async function admSaveLeague() {
-  const name      = document.getElementById('league-name').value.trim();
-  const country   = document.getElementById('league-country').value.trim();
-  const icon      = document.getElementById('league-icon').value.trim()||'🏆';
-  const sport_key = document.getElementById('league-sport').value;
-  const api_key   = document.getElementById('league-api-key').value.trim()||null;
-  const sort_order = parseInt(document.getElementById('league-order').value)||0;
-  const active    = document.getElementById('league-active').checked;
-  if (!name) { showToast('❌ El nombre es obligatorio'); return; }
-  const payload = { name, country:country||null, icon, sport_key, api_key, sort_order, active };
-  let error;
-  if (_editingLeagueId) {
-    ({ error } = await _SB.from('leagues').update(payload).eq('id', _editingLeagueId));
-  } else {
-    ({ error } = await _SB.from('leagues').insert(payload));
+async function renderSupport(filter){
+  _supportFilter = filter || _supportFilter;
+  const body = document.getElementById('adm-support-body');
+  body.innerHTML = '<tr><td colspan="7" class="table-empty">⏳ Cargando...</td></tr>';
+  try {
+    let query = _SB.from('support_tickets').select('*').order('created_at',{ascending:false});
+    if(_supportFilter !== 'all') query = query.eq('status', _supportFilter);
+    const { data, error } = await query;
+    if(error) throw error;
+    _tickets = data || [];
+    // Update badge
+    _SB.from('support_tickets').select('id',{count:'exact'}).eq('status','open').then(({count})=>{
+      const sb=document.getElementById('adm-badge-support');
+      if(sb){ sb.textContent=count||0; sb.style.display=count>0?'':'none'; }
+    }).catch(()=>{});
+    if(!_tickets.length){ body.innerHTML = '<tr><td colspan="7" class="table-empty">Sin tickets de soporte</td></tr>'; return; }
+    const priorityMap = { low:'badge-blue Baja', normal:'badge-orange Normal', high:'badge-red Alta' };
+    const statusMap   = { open:'badge-red Abierto', in_progress:'badge-orange En proceso', closed:'badge-green Cerrado' };
+    body.innerHTML = _tickets.map(t => {
+      const [pCls,pLbl] = (priorityMap[t.priority]||'badge-blue Normal').split(' ');
+      const [sCls,sLbl] = (statusMap[t.status]||'badge-blue Desconocido').split(' ');
+      return `<tr>
+        <td style="font-family:var(--mono);font-size:11px;color:var(--text2)">#${t.id}</td>
+        <td style="font-size:12px;color:var(--blue)">@${esc((t.user_email||'').split('@')[0])}</td>
+        <td style="font-weight:600;font-size:13px">${esc(t.subject)}</td>
+        <td><span class="badge ${pCls}">${pLbl}</span></td>
+        <td><span class="badge ${sCls}">${sLbl}</span></td>
+        <td style="font-size:11px;color:var(--text2)">${fDate(t.created_at)}</td>
+        <td><button class="btn btn-outline btn-sm" onclick="admOpenTicket(${t.id})">💻 Detalle</button></td>
+      </tr>`;}).join('');
+  } catch(err) {
+    body.innerHTML = `<tr><td colspan="7" class="table-empty" style="color:var(--red)">❌ ${esc(err.message)}</td></tr>`;
   }
-  if (error) { showToast('❌ ' + error.message); return; }
-  showToast(_editingLeagueId ? '✅ Liga actualizada' : '✅ Liga creada');
-  admCloseLeagueModal();
-  await renderLeagues();
 }
 
-async function admToggleLeague(id, active) {
-  const { error } = await _SB.from('leagues').update({ active }).eq('id', id);
-  if (error) { showToast('❌ ' + error.message); return; }
-  showToast(active ? '✅ Liga activada' : '⏸ Liga desactivada');
-  await renderLeagues();
+function admFilterSupport(filter, btn){
+  document.querySelectorAll('#adm-support .page-hd-right .btn').forEach(b=>b.style.opacity='0.6');
+  if(btn) btn.style.opacity='1';
+  renderSupport(filter);
 }
 
-async function admDeleteLeague(id) {
-  if (!confirm('¿Borrar esta liga?')) return;
-  const { error } = await _SB.from('leagues').delete().eq('id', id);
-  if (error) { showToast('❌ ' + error.message); return; }
-  showToast('🗑 Liga eliminada');
-  await renderLeagues();
+function admOpenTicket(id){
+  const t = _tickets.find(x=>x.id===id);
+  if(!t) return;
+  _editingTicketId = id;
+  document.getElementById('support-modal-title').textContent = `Ticket #${t.id}`;
+  document.getElementById('support-modal-content').innerHTML = `
+    <div style="background:var(--bg,#f4f6f9);border-radius:10px;padding:16px;margin-bottom:4px">
+      <div style="font-size:11px;color:var(--text2,#6c757d);margin-bottom:4px">De: @${esc((t.user_email||'').split('@')[0])} · ${fDate(t.created_at)}</div>
+      <div style="font-size:15px;font-weight:700;margin-bottom:8px">${esc(t.subject)}</div>
+      <div style="font-size:13px;line-height:1.6;color:#333">${esc(t.message)}</div>
+    </div>
+    ${t.response?`<div style="background:#e8f5e9;border-radius:10px;padding:14px;margin-top:10px"><div style="font-size:11px;color:#388e3c;margin-bottom:4px">Respuesta del admin:</div><div style="font-size:13px;color:#333">${esc(t.response)}</div></div>`:''}`;
+  document.getElementById('support-response').value = t.response||'';
+  document.getElementById('support-status').value   = t.status||'open';
+  document.getElementById('support-priority').value = t.priority||'normal';
+  openModal('support-modal-overlay');
 }
+
+function admCloseSupportModal(){ closeModal('support-modal-overlay'); }
+
+async function admSaveTicketResponse(){
+  if(!_editingTicketId) return;
+  const response = document.getElementById('support-response').value.trim();
+  const status   = document.getElementById('support-status').value;
+  const priority = document.getElementById('support-priority').value;
+  const { error } = await _SB.from('support_tickets').update({ response:response||null, status, priority, updated_at:new Date().toISOString() }).eq('id',_editingTicketId);
+  if(error){ showToast('❌ '+error.message,'error'); return; }
+  showToast('✅ Ticket actualizado','success');
+  admCloseSupportModal();
+  await renderSupport();
+}
+
+// ═══════════════════════════════════════════════════════════
+// ── REPORTES ──
+// ═══════════════════════════════════════════════════════════
+function initReportDates(){
+  const to   = new Date();
+  const from = new Date(); from.setDate(from.getDate()-30);
+  document.getElementById('report-date-to').value   = to.toISOString().slice(0,10);
+  document.getElementById('report-date-from').value = from.toISOString().slice(0,10);
+}
+
+function generateReport(){
+  const from = document.getElementById('report-date-from').value;
+  const to   = document.getElementById('report-date-to').value;
+  if(!from||!to){ showToast('❌ Selecciona un rango de fechas','error'); return; }
+  const fromDate = new Date(from);
+  const toDate   = new Date(to); toDate.setHours(23,59,59);
+
+  // Filter data by date range
+  const filteredTx   = _cache.tx.filter(t=>{ const d=new Date(t.created_at||t.date||0); return d>=fromDate&&d<=toDate; });
+  const filteredBets = _cache.bets.filter(b=>{ const d=new Date(b.created_at||0); return d>=fromDate&&d<=toDate; });
+  const filteredUsers= _cache.users.filter(u=>{ const d=new Date(u.created_at||0); return d>=fromDate&&d<=toDate; });
+
+  const deps    = filteredTx.filter(t=>t.type==='deposit').reduce((a,t)=>a+(+t.amount||0),0);
+  const wits    = filteredTx.filter(t=>t.type==='withdraw').reduce((a,t)=>a+(+t.amount||0),0);
+  const prizes  = filteredTx.filter(t=>t.type==='win').reduce((a,t)=>a+(+t.amount||0),0);
+  const staked  = filteredBets.reduce((a,b)=>a+(+b.stake||0),0);
+  const profit  = staked - prizes;
+
+  document.getElementById('report-finance').innerHTML = `
+    <div style="display:flex;flex-direction:column;gap:10px">
+      ${statRow('Depósitos',fMoney(deps),'green')}
+      ${statRow('Retiradas',fMoney(wits),'red')}
+      ${statRow('Premios pagados',fMoney(prizes),'red')}
+      ${statRow('Margen de la casa',fMoney(profit),profit>=0?'green':'red')}
+    </div>`;
+
+  document.getElementById('report-bets').innerHTML = `
+    <div style="display:flex;flex-direction:column;gap:10px">
+      ${statRow('Total apuestas',filteredBets.length,'blue')}
+      ${statRow('Total apostado',fMoney(staked),'blue')}
+      ${statRow('Ganadas',filteredBets.filter(b=>b.status==='win').length,'green')}
+      ${statRow('Perdidas',filteredBets.filter(b=>b.status==='loss').length,'red')}
+      ${statRow('Pendientes',filteredBets.filter(b=>b.status==='open').length,'orange')}
+    </div>`;
+
+  document.getElementById('report-users').innerHTML = `
+    <div style="display:flex;flex-direction:column;gap:10px">
+      ${statRow('Nuevos usuarios',filteredUsers.length,'blue')}
+      ${statRow('Total usuarios',_cache.users.length,'purple')}
+      ${statRow('Usuarios activos',_cache.users.filter(u=>!u.is_suspended).length,'green')}
+      ${statRow('Suspendidos',_cache.users.filter(u=>u.is_suspended).length,'red')}
+    </div>`;
+}
+
+function statRow(label, value, color){
+  const colors={green:'var(--green)',red:'var(--red)',blue:'var(--blue)',orange:'var(--orange)',purple:'var(--accent)'};
+  return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #e9ecef">
+    <span style="font-size:13px;color:#6c757d">${label}</span>
+    <span style="font-size:14px;font-weight:700;color:${colors[color]||'#1a1d2e'}">${value}</span>
+  </div>`;
+}
+
+function exportCSV(type){
+  let rows=[], headers=[], data=[];
+  if(type==='users'){
+    headers=['Email','Nombre','País','Saldo','Depositado','Rol','Creado'];
+    data=_cache.users.map(u=>[u.email,u.name||'',u.country||'',u.balance||0,u.deposited||0,u.role||'user',u.created_at||'']);
+  } else if(type==='bets'){
+    headers=['ID','Usuario','Partido','Pick','Cuota','Apuesta','Retorno','Estado','Fecha'];
+    data=_cache.bets.map(b=>[(b.id||'').slice(-8),b.user_email,b.match_name||'',b.pick||'',b.odd||0,b.stake||0,b.ret||0,b.status,b.created_at||'']);
+  } else if(type==='transactions'){
+    headers=['ID','Usuario','Descripción','Tipo','Importe','Saldo','Fecha'];
+    data=_cache.tx.map(t=>[(t.id||'').slice(-8),t.user_email,t.description||'',t.type,t.amount||0,t.balance||0,t.created_at||'']);
+  } else if(type==='events'){
+    headers=['ID','Liga','Local','Visitante','Inicio','Estado','Cuota 1','Cuota X','Cuota 2'];
+    // Use _manualEvents if loaded
+    data=(_manualEvents||[]).map(e=>[e.id,e.league,e.home_team,e.away_team,e.commence_time,e.status,e.odd_1||'',e.odd_x||'',e.odd_2||'']);
+  }
+  const csv=[headers,...data].map(r=>r.map(c=>'"'+String(c).replace(/"/g,'""')+'"').join(',')).join('\n');
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a'); a.href=url; a.download=`predictx_${type}_${new Date().toISOString().slice(0,10)}.csv`;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  showToast(`✅ ${type} exportado como CSV`,'success');
+}
+
+// ── Keyboard shortcut ──
+document.addEventListener('keydown', e => { if((e.ctrlKey||e.metaKey) && e.key==='k'){ e.preventDefault(); document.getElementById('topbar-search-inp')?.focus(); } });
 
 // ── Init ──
 document.addEventListener('DOMContentLoaded', () => initAdmin());
 </script>
 
-<!-- Modal Deporte -->
-<div class="owner-modal-overlay" id="sport-modal-overlay" style="display:none" onclick="if(event.target===this)admCloseSportModal()">
-  <div class="owner-modal" style="max-width:420px">
-    <div class="owner-modal-head"><span id="sport-modal-title">Nuevo Deporte</span><button onclick="admCloseSportModal()" class="owner-modal-close">✕</button></div>
-    <div class="owner-modal-body">
-      <div class="ev-form-row">
-        <div class="ev-form-group"><label class="ev-label">Clave (key)</label><input type="text" id="sport-key" class="ev-input" placeholder="ej: soccer"></div>
-        <div class="ev-form-group"><label class="ev-label">Nombre</label><input type="text" id="sport-title" class="ev-input" placeholder="ej: Fútbol"></div>
+<!-- Team Modal -->
+<div class="modal-overlay" id="team-modal-overlay" onclick="if(event.target===this)admCloseTeamModal()">
+  <div class="modal-box">
+    <div class="modal-hd"><span class="modal-title" id="team-modal-title">Nuevo Equipo</span><button class="modal-close" onclick="admCloseTeamModal()">✕</button></div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Nombre completo</label><input type="text" id="team-name" class="form-input" placeholder="ej: Real Madrid"></div>
+        <div class="form-group"><label class="form-label">Nombre corto</label><input type="text" id="team-short" class="form-input" placeholder="ej: RMA" maxlength="10"></div>
       </div>
-      <div class="ev-form-row">
-        <div class="ev-form-group"><label class="ev-label">Icono (emoji)</label><input type="text" id="sport-icon" class="ev-input" placeholder="⚽" maxlength="4"></div>
-        <div class="ev-form-group"><label class="ev-label">Orden</label><input type="number" id="sport-order" class="ev-input" value="0" min="0"></div>
-      </div>
-      <label class="ev-toggle-wrap"><input type="checkbox" id="sport-active" checked><span class="ev-toggle-lbl">✅ Activo (visible en la app)</span></label>
-    </div>
-    <div class="owner-modal-foot">
-      <button onclick="admCloseSportModal()" style="padding:9px 18px;border-radius:8px;background:var(--bg3);border:1px solid var(--border);color:var(--text2);cursor:pointer">Cancelar</button>
-      <button class="adm-btn" onclick="admSaveSport()">Guardar</button>
-    </div>
-  </div>
-</div>
-
-<!-- Modal Liga -->
-<div class="owner-modal-overlay" id="league-modal-overlay" style="display:none" onclick="if(event.target===this)admCloseLeagueModal()">
-  <div class="owner-modal" style="max-width:480px">
-    <div class="owner-modal-head"><span id="league-modal-title">Nueva Liga</span><button onclick="admCloseLeagueModal()" class="owner-modal-close">✕</button></div>
-    <div class="owner-modal-body">
-      <div class="ev-form-row">
-        <div class="ev-form-group"><label class="ev-label">Nombre</label><input type="text" id="league-name" class="ev-input" placeholder="ej: Premier League"></div>
-        <div class="ev-form-group"><label class="ev-label">País</label><input type="text" id="league-country" class="ev-input" placeholder="ej: England"></div>
-      </div>
-      <div class="ev-form-row">
-        <div class="ev-form-group"><label class="ev-label">Deporte</label>
-          <select id="league-sport" class="ev-input">
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Categoría</label>
+          <select id="team-sport" class="form-select">
             <option value="soccer">⚽ Fútbol</option>
             <option value="basketball">🏀 Baloncesto</option>
-            <option value="americanfootball">🏈 Fútbol Americano</option>
+            <option value="americanfootball">🏈 NFL</option>
             <option value="baseball">⚾ Béisbol</option>
             <option value="icehockey">🏒 Hockey</option>
             <option value="mma">🥊 MMA</option>
           </select>
         </div>
-        <div class="ev-form-group"><label class="ev-label">Icono (emoji)</label><input type="text" id="league-icon" class="ev-input" placeholder="🏆" maxlength="4"></div>
+        <div class="form-group"><label class="form-label">País</label><input type="text" id="team-country" class="form-input" placeholder="ej: España"></div>
       </div>
-      <div class="ev-form-row">
-        <div class="ev-form-group"><label class="ev-label">API Key (opcional)</label><input type="text" id="league-api-key" class="ev-input" placeholder="ej: soccer_epl"></div>
-        <div class="ev-form-group"><label class="ev-label">Orden</label><input type="number" id="league-order" class="ev-input" value="0" min="0"></div>
-      </div>
-      <label class="ev-toggle-wrap"><input type="checkbox" id="league-active" checked><span class="ev-toggle-lbl">✅ Activa (visible en la app)</span></label>
+      <label class="form-check"><input type="checkbox" id="team-active" checked><span style="font-size:13px">✅ Activo</span></label>
     </div>
-    <div class="owner-modal-foot">
-      <button onclick="admCloseLeagueModal()" style="padding:9px 18px;border-radius:8px;background:var(--bg3);border:1px solid var(--border);color:var(--text2);cursor:pointer">Cancelar</button>
-      <button class="adm-btn" onclick="admSaveLeague()">Guardar</button>
+    <div class="modal-ft">
+      <button class="btn btn-ghost" onclick="admCloseTeamModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="admSaveTeam()">Guardar</button>
     </div>
   </div>
 </div>
 
+<!-- Support Ticket Modal -->
+<div class="modal-overlay" id="support-modal-overlay" onclick="if(event.target===this)admCloseSupportModal()">
+  <div class="modal-box" style="max-width:560px">
+    <div class="modal-hd"><span class="modal-title" id="support-modal-title">Ticket de Soporte</span><button class="modal-close" onclick="admCloseSupportModal()">✕</button></div>
+    <div class="modal-body">
+      <div id="support-modal-content"></div>
+      <div class="form-section">Respuesta del admin</div>
+      <div class="form-group" style="margin-top:8px">
+        <label class="form-label">Tu respuesta</label>
+        <textarea id="support-response" class="form-input" rows="4" style="resize:vertical" placeholder="Escribe tu respuesta aquí..."></textarea>
+      </div>
+      <div class="form-row" style="margin-top:12px">
+        <div class="form-group"><label class="form-label">Estado</label>
+          <select id="support-status" class="form-select">
+            <option value="open">Abierto</option>
+            <option value="in_progress">En proceso</option>
+            <option value="closed">Cerrado</option>
+          </select>
+        </div>
+        <div class="form-group"><label class="form-label">Prioridad</label>
+          <select id="support-priority" class="form-select">
+            <option value="low">Baja</option>
+            <option value="normal" selected>Normal</option>
+            <option value="high">Alta</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="modal-ft">
+      <button class="btn btn-ghost" onclick="admCloseSupportModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="admSaveTicketResponse()">Guardar respuesta</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
