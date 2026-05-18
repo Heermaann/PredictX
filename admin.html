@@ -1661,15 +1661,17 @@ async function admResolveEvent(id,result){
 
 // ── Configuración ──
 async function loadAdmConfig(){
-  const {data}=await _SB.from('site_config').select('*').eq('id',1).single().catch(()=>({data:null}));
-  if(!data)return;
-  const sv=(id,v)=>{const e=document.getElementById(id);if(e&&v!=null)e.value=v;};
-  const sc=(id,v)=>{const e=document.getElementById(id);if(e)e.checked=!!v;};
-  sv('cfg-bonus-pct',data.bonus_pct); sv('cfg-bonus-max',data.bonus_max);
-  sv('cfg-dep-min',data.dep_min); sv('cfg-wit-min',data.wit_min);
-  sv('cfg-house-margin',data.house_margin);
-  sc('cfg-allow-register',data.allow_register); sc('cfg-allow-deposits',data.allow_deposits);
-  sc('cfg-allow-bets',data.allow_bets); sc('cfg-maintenance',data.maintenance);
+  try {
+    const {data} = await _SB.from('site_config').select('*').eq('id',1).single();
+    if(!data) return;
+    const sv=(id,v)=>{const e=document.getElementById(id);if(e&&v!=null)e.value=v;};
+    const sc=(id,v)=>{const e=document.getElementById(id);if(e)e.checked=!!v;};
+    sv('cfg-bonus-pct',data.bonus_pct); sv('cfg-bonus-max',data.bonus_max);
+    sv('cfg-dep-min',data.dep_min); sv('cfg-wit-min',data.wit_min);
+    sv('cfg-house-margin',data.house_margin);
+    sc('cfg-allow-register',data.allow_register); sc('cfg-allow-deposits',data.allow_deposits);
+    sc('cfg-allow-bets',data.allow_bets); sc('cfg-maintenance',data.maintenance);
+  } catch(_) {}
 }
 
 async function admSaveConfig(){
