@@ -479,7 +479,10 @@ tbody td { padding: 12px 16px; font-size: 13px; color: var(--text1); vertical-al
         <span class="nav-ico">👕</span> Equipos
       </button>
       <button class="nav-item" id="nav-events" onclick="admShowPage('events',this)">
-        <span class="nav-ico">⚽</span> Partidos
+        <span class="nav-ico">⚽</span> Partidos Manuales
+      </button>
+      <button class="nav-item" id="nav-api-events" onclick="admShowPage('api-events',this)">
+        <span class="nav-ico">🌐</span> Partidos API
       </button>
       <button class="nav-item" id="nav-outcomes" onclick="admShowPage('outcomes',this)">
         <span class="nav-ico">🏁</span> Declarar Resultados
@@ -812,6 +815,29 @@ tbody td { padding: 12px 16px; font-size: 13px; color: var(--text1); vertical-al
         </div>
       </div>
 
+      <!-- Partidos API -->
+      <div class="adm-page" id="adm-api-events">
+        <div class="page-hd">
+          <div class="page-hd-left"><div class="page-title">Partidos de la API</div><div class="page-sub">Histórico de eventos sincronizados desde The Odds API</div></div>
+          <div class="page-hd-right">
+            <button class="btn btn-ghost btn-sm" onclick="admFilterApiEvents('all',this)">Todos</button>
+            <button class="btn btn-outline btn-sm" onclick="admFilterApiEvents('upcoming',this)">Próximos</button>
+            <button class="btn btn-danger btn-sm" onclick="admFilterApiEvents('live',this)">En Vivo</button>
+            <button class="btn btn-success btn-sm" onclick="admFilterApiEvents('finished',this)">Finalizados</button>
+            <button class="btn btn-ghost" onclick="renderApiEvents()">🔄 Actualizar</button>
+          </div>
+        </div>
+        <div class="info-banner">🌐 Estos partidos se sincronizan automáticamente cada minuto desde The Odds API. El histórico se conserva permanentemente.</div>
+        <div class="table-card">
+          <div style="overflow-x:auto">
+            <table>
+              <thead><tr><th>Liga | Partido</th><th>Deporte</th><th>Inicio</th><th>Cuotas</th><th>Estado</th><th>Resultado</th></tr></thead>
+              <tbody id="adm-api-events-body"><tr><td colspan="6" class="table-empty">⏳ Cargando...</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
       <!-- Declarar Resultados -->
       <div class="adm-page" id="adm-outcomes">
         <div class="page-hd">
@@ -822,7 +848,7 @@ tbody td { padding: 12px 16px; font-size: 13px; color: var(--text1); vertical-al
         <div class="table-card">
           <div style="overflow-x:auto">
             <table>
-              <thead><tr><th>Liga | Partido</th><th>Categoría</th><th>Inicio</th><th>Apuestas abiertas</th><th>Estado</th><th>Declarar resultado</th></tr></thead>
+              <thead><tr><th>Liga | Partido</th><th>Categoría</th><th>Inicio</th><th>Apuestas abiertas</th><th>Fuente</th><th>Estado</th><th>Declarar resultado</th></tr></thead>
               <tbody id="adm-outcomes-body"><tr><td colspan="6" class="table-empty">⏳ Cargando...</td></tr></tbody>
             </table>
           </div>
@@ -1185,6 +1211,7 @@ function admShowPage(page, btn){
   if(page==='config')    loadAdmConfig();
   if(page==='teams')     renderTeams();
   if(page==='outcomes')  renderOutcomes();
+  if(page==='api-events') renderApiEvents();
   if(page==='support')   renderSupport('all');
   if(page==='withdrawals') renderWithdrawals('all');
   if(page==='reports')   initReportDates();
@@ -1731,34 +1758,88 @@ async function admDeleteTeam(id){ if(!confirm('¿Borrar este equipo?'))return; a
 // ═══════════════════════════════════════════════════════════
 async function renderOutcomes(){
   const body = document.getElementById('adm-outcomes-body');
-  body.innerHTML = '<tr><td colspan="6" class="table-empty">⏳ Cargando...</td></tr>';
+  body.innerHTML = '<tr><td colspan="7" class="table-empty">⏳ Cargando...</td></tr>';
   try {
-    const { data, error } = await _SB.from('manual_events').select('*').eq('status','live').order('commence_time',{ascending:true});
-    if(error) throw error;
-    const events = data || [];
-    if(!events.length){ body.innerHTML = '<tr><td colspan="6" class="table-empty">Sin partidos en vivo para resolver. Marca un partido como "En Vivo" primero.</td></tr>'; return; }
-    // Get open bets count per event
-    const { data: openBets } = await _SB.from('bets').select('match_name,id').eq('status','open');
+    // Load both manual (live) and API (live) events
+    const [manualRes, apiRes, betsRes] = await Promise.all([
+      _SB.from('manual_events').select('*').eq('status','live').order('commence_time',{ascending:true}),
+      _SB.from('api_events').select('*').eq('status','live').is('result',null).order('commence_time',{ascending:true}),
+      _SB.from('bets').select('match_name,id,user_email').eq('status','open'),
+    ]);
+    const manualEvents = (manualRes.data||[]).map(e=>({...e, _source:'manual'}));
+    const apiEvents    = (apiRes.data||[]).map(e=>({...e, _source:'api'}));
+    const allEvents    = [...manualEvents, ...apiEvents];
+
+    if(!allEvents.length){
+      body.innerHTML = '<tr><td colspan="7" class="table-empty">Sin partidos en vivo pendientes de resolver.</td></tr>';
+      return;
+    }
+
+    // Count open bets per event
+    const openBets = betsRes.data||[];
     const betCount = {};
-    (openBets||[]).forEach(b => { const key = (b.match_name||'').toLowerCase(); events.forEach(e => { if(key.includes((e.home_team||'').toLowerCase())) betCount[e.id]=(betCount[e.id]||0)+1; }); });
-    body.innerHTML = events.map(e => `<tr>
+    openBets.forEach(b => {
+      const key = (b.match_name||'').toLowerCase();
+      allEvents.forEach(e => {
+        if(key.includes((e.home_team||'').toLowerCase())) {
+          betCount[e.id] = (betCount[e.id]||0)+1;
+        }
+      });
+    });
+
+    body.innerHTML = allEvents.map(e => `<tr>
       <td>
-        <div style="font-size:11px;color:var(--text2)">${esc(e.league)}</div>
+        <div style="font-size:11px;color:var(--text2)">${esc(e.league||e.sport_title||'—')}</div>
         <div style="font-weight:600;font-size:13px">${esc(e.home_team)} vs ${esc(e.away_team)}</div>
       </td>
-      <td><span class="badge badge-purple">${esc(e.sport_key?.split('_')[0]||'—')}</span></td>
+      <td><span class="badge badge-purple">${esc((e.sport_key||'').split('_')[0]||'—')}</span></td>
       <td style="font-size:12px;color:var(--text2)">${fDate(e.commence_time)}</td>
       <td><span class="badge badge-orange">${betCount[e.id]||0} apuestas</span></td>
+      <td>${e._source==='api'?'<span class="badge badge-blue">🌐 API</span>':'<span class="badge badge-purple">✏️ Manual</span>'}</td>
       <td><span class="badge badge-red">🔴 En Vivo</span></td>
       <td><div class="action-group">
-        <button class="btn btn-success btn-sm" onclick="admOutcomeDeclare('${e.id}','1')">🏆 ${esc((e.home_team||'').split(' ').pop())}</button>
-        <button class="btn btn-ghost btn-sm"   onclick="admOutcomeDeclare('${e.id}','X')">🤝 Empate</button>
-        <button class="btn btn-danger btn-sm"  onclick="admOutcomeDeclare('${e.id}','2')">🏆 ${esc((e.away_team||'').split(' ').pop())}</button>
+        <button class="btn btn-success btn-sm" onclick="admDeclareOutcome('${e.id}','${e._source}','1','${esc(e.home_team)}','${esc(e.away_team)}')">🏆 ${esc((e.home_team||'').split(' ').slice(-1)[0])}</button>
+        ${(e.sport_key||'').startsWith('soccer')||(e.sport_key||'').startsWith('icehockey')?
+          `<button class="btn btn-ghost btn-sm" onclick="admDeclareOutcome('${e.id}','${e._source}','X','${esc(e.home_team)}','${esc(e.away_team)}')">🤝 Empate</button>`:''}
+        <button class="btn btn-danger btn-sm"  onclick="admDeclareOutcome('${e.id}','${e._source}','2','${esc(e.home_team)}','${esc(e.away_team)}')">🏆 ${esc((e.away_team||'').split(' ').slice(-1)[0])}</button>
       </div></td>
     </tr>`).join('');
   } catch(err) {
-    body.innerHTML = `<tr><td colspan="6" class="table-empty" style="color:var(--red)">❌ ${esc(err.message)}</td></tr>`;
+    body.innerHTML = `<tr><td colspan="7" class="table-empty" style="color:var(--red)">❌ ${esc(err.message)}</td></tr>`;
   }
+}
+
+async function admDeclareOutcome(id, source, result, homeTeam, awayTeam){
+  const resultLabel = result==='1'?`Local (${homeTeam})`:result==='2'?`Visitante (${awayTeam})`:'Empate';
+  if(!confirm(`¿Declarar resultado "${resultLabel}"? Esta acción procesará todas las apuestas abiertas de este partido.`)) return;
+
+  // Update the event status
+  if(source === 'manual'){
+    await _SB.from('manual_events').update({status:'finished',result,updated_at:new Date().toISOString()}).eq('id',id);
+  } else {
+    await _SB.from('api_events').update({status:'finished',result,last_updated_at:new Date().toISOString()}).eq('id',id);
+  }
+
+  // Resolve open bets for this event
+  const { data: openBets } = await _SB.from('bets').select('*').eq('status','open').ilike('match_name',`%${homeTeam}%`);
+  let resolved = 0;
+  for(const bet of (openBets||[])){
+    const won = bet.pick===result||(result==='1'&&bet.pick===homeTeam)||(result==='2'&&bet.pick===awayTeam)||(result==='X'&&(bet.pick==='Empate'||bet.pick==='X'));
+    const newStatus = won?'win':'loss';
+    const ret = won?+(bet.odd*bet.stake).toFixed(2):0;
+    await _SB.from('bets').update({status:newStatus,ret}).eq('id',bet.id);
+    if(won&&ret>0){
+      const {data:prof}=await _SB.from('profiles').select('balance').eq('email',bet.user_email).single();
+      if(prof){
+        const newBal=+(prof.balance+ret).toFixed(2);
+        await _SB.from('profiles').update({balance:newBal}).eq('email',bet.user_email);
+        await _SB.from('transactions').insert({user_email:bet.user_email,description:`Premio: ${bet.pick} (${homeTeam} vs ${awayTeam})`,type:'win',amount:ret,balance:newBal,created_at:new Date().toISOString()});
+      }
+    }
+    resolved++;
+  }
+  showToast(`✅ Resultado declarado · ${resolved} apuesta${resolved!==1?'s':''} procesada${resolved!==1?'s':''}`, 'success');
+  await renderOutcomes();
 }
 
 async function admOutcomeDeclare(id, result){
@@ -2095,6 +2176,50 @@ async function admMarkWdPaid(id){
   if(error){ showToast('❌ '+error.message,'error'); return; }
   showToast('💸 Retiro marcado como pagado','success');
   await renderWithdrawals();
+}
+
+
+// ═══════════════════════════════════════════════════════════
+// ── PARTIDOS API ──
+// ═══════════════════════════════════════════════════════════
+let _apiEvFilter = 'all';
+
+async function renderApiEvents(){
+  const body = document.getElementById('adm-api-events-body');
+  body.innerHTML = '<tr><td colspan="6" class="table-empty">⏳ Cargando...</td></tr>';
+  try {
+    let query = _SB.from('api_events').select('*').order('commence_time',{ascending:false}).limit(200);
+    if(_apiEvFilter !== 'all') query = query.eq('status', _apiEvFilter);
+    const { data, error } = await query;
+    if(error) throw error;
+    const events = data || [];
+    if(!events.length){ body.innerHTML = '<tr><td colspan="6" class="table-empty">Sin eventos API sincronizados todavía. El cron job sincroniza cada minuto.</td></tr>'; return; }
+
+    body.innerHTML = events.map(e => `<tr>
+      <td>
+        <div style="font-size:11px;color:var(--text2)">${esc(e.league||e.sport_title||'—')}</div>
+        <div style="font-weight:600;font-size:13px">${esc(e.home_team)} vs ${esc(e.away_team)}</div>
+      </td>
+      <td><span class="badge badge-purple">${esc((e.sport_key||'').split('_')[0]||'—')}</span></td>
+      <td style="font-size:12px;color:var(--text2)">${fDate(e.commence_time)}</td>
+      <td style="font-size:12px;font-family:var(--mono)">
+        ${e.odd_1?`1:${(+e.odd_1).toFixed(2)}`:'—'}
+        ${e.odd_x?` X:${(+e.odd_x).toFixed(2)}`:''}
+        ${e.odd_2?` 2:${(+e.odd_2).toFixed(2)}`:'—'}
+      </td>
+      <td>${e.status==='live'?'<span class="badge badge-red">🔴 En Vivo</span>':e.status==='finished'?'<span class="badge badge-blue">✅ Finalizado</span>':'<span class="badge badge-green">📅 Próximo</span>'}</td>
+      <td>${e.result?`<span class="badge badge-orange">${e.result==='1'?'Local':e.result==='2'?'Visitante':'Empate'}</span>`:'<span style="color:var(--text3);font-size:12px">—</span>'}</td>
+    </tr>`).join('');
+  } catch(err) {
+    body.innerHTML = `<tr><td colspan="6" class="table-empty" style="color:var(--red)">❌ ${esc(err.message)}</td></tr>`;
+  }
+}
+
+function admFilterApiEvents(filter, btn){
+  _apiEvFilter = filter;
+  document.querySelectorAll('#adm-api-events .page-hd-right .btn').forEach(b=>b.classList.remove('btn-active-filter'));
+  if(btn) btn.classList.add('btn-active-filter');
+  renderApiEvents();
 }
 
 // ── Keyboard shortcut ──
