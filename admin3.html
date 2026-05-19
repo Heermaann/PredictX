@@ -820,18 +820,44 @@ tbody td { padding: 12px 16px; font-size: 13px; color: var(--text1); vertical-al
         <div class="page-hd">
           <div class="page-hd-left"><div class="page-title">Partidos de la API</div><div class="page-sub">Histórico de eventos sincronizados desde The Odds API</div></div>
           <div class="page-hd-right">
-            <button class="btn btn-ghost btn-sm" onclick="admFilterApiEvents('all',this)">Todos</button>
-            <button class="btn btn-outline btn-sm" onclick="admFilterApiEvents('upcoming',this)">Próximos</button>
-            <button class="btn btn-danger btn-sm" onclick="admFilterApiEvents('live',this)">En Vivo</button>
-            <button class="btn btn-success btn-sm" onclick="admFilterApiEvents('finished',this)">Finalizados</button>
-            <button class="btn btn-ghost" onclick="renderApiEvents()">🔄 Actualizar</button>
+            <button class="btn btn-outline btn-sm" onclick="window.open('/api/sync-events','_blank')">🔄 Sincronizar</button>
           </div>
         </div>
-        <div class="info-banner">🌐 Estos partidos se sincronizan automáticamente cada minuto desde The Odds API. El histórico se conserva permanentemente.</div>
+        <div class="info-banner">🌐 Partidos de solo lectura sincronizados desde The Odds API. Los resultados se declaran manualmente en "Declarar Resultados" cuando termina el partido real.</div>
+        <!-- Filtros y buscador -->
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;align-items:center">
+          <div class="table-search" style="flex:1;min-width:200px;max-width:300px">
+            <span>🔍</span>
+            <input type="text" placeholder="Buscar equipo o liga..." id="api-events-search" oninput="admSearchApiEvents(this.value)">
+          </div>
+          <select id="api-events-sport" class="form-select" style="width:160px" onchange="renderApiEvents()">
+            <option value="">Todos los deportes</option>
+            <option value="soccer">⚽ Fútbol</option>
+            <option value="basketball">🏀 Baloncesto</option>
+            <option value="americanfootball">🏈 NFL</option>
+            <option value="baseball">⚾ Béisbol</option>
+            <option value="icehockey">🏒 Hockey</option>
+            <option value="mma">🥊 MMA</option>
+          </select>
+          <select id="api-events-status" class="form-select" style="width:140px" onchange="renderApiEvents()">
+            <option value="">Todos los estados</option>
+            <option value="upcoming">📅 Próximos</option>
+            <option value="live">🔴 En Vivo</option>
+            <option value="finished">✅ Finalizados</option>
+          </select>
+          <select id="api-events-sort" class="form-select" style="width:160px" onchange="renderApiEvents()">
+            <option value="date_desc">📅 Más recientes</option>
+            <option value="date_asc">📅 Más antiguos</option>
+            <option value="alpha_asc">🔤 A → Z</option>
+            <option value="alpha_desc">🔤 Z → A</option>
+            <option value="sport">🏅 Por deporte</option>
+          </select>
+        </div>
         <div class="table-card">
+          <div id="api-events-count" style="padding:10px 16px;font-size:12px;color:var(--text2);border-bottom:1px solid var(--border)">Cargando...</div>
           <div style="overflow-x:auto">
             <table>
-              <thead><tr><th>Liga | Partido</th><th>Deporte</th><th>Inicio</th><th>Cuotas</th><th>Estado</th><th>Resultado</th></tr></thead>
+              <thead><tr><th>Liga | Partido</th><th>Deporte</th><th>Inicio</th><th>Cuotas 1X2</th><th>Estado</th><th>Resultado</th></tr></thead>
               <tbody id="adm-api-events-body"><tr><td colspan="6" class="table-empty">⏳ Cargando...</td></tr></tbody>
             </table>
           </div>
@@ -2186,44 +2212,94 @@ async function admMarkWdPaid(id){
 // ═══════════════════════════════════════════════════════════
 // ── PARTIDOS API ──
 // ═══════════════════════════════════════════════════════════
-let _apiEvFilter = 'all';
+let _apiEventsCache = [];
+let _apiEvSearch = '';
 
 async function renderApiEvents(){
   const body = document.getElementById('adm-api-events-body');
+  const countEl = document.getElementById('api-events-count');
   body.innerHTML = '<tr><td colspan="6" class="table-empty">⏳ Cargando...</td></tr>';
-  try {
-    let query = _SB.from('api_events').select('*').order('commence_time',{ascending:false}).limit(200);
-    if(_apiEvFilter !== 'all') query = query.eq('status', _apiEvFilter);
-    const { data, error } = await query;
-    if(error) throw error;
-    const events = data || [];
-    if(!events.length){ body.innerHTML = '<tr><td colspan="6" class="table-empty">Sin eventos API sincronizados todavía. El cron job sincroniza cada minuto.</td></tr>'; return; }
 
-    body.innerHTML = events.map(e => `<tr>
-      <td>
-        <div style="font-size:11px;color:var(--text2)">${esc(e.league||e.sport_title||'—')}</div>
-        <div style="font-weight:600;font-size:13px">${esc(e.home_team)} vs ${esc(e.away_team)}</div>
-      </td>
-      <td><span class="badge badge-purple">${esc((e.sport_key||'').split('_')[0]||'—')}</span></td>
-      <td style="font-size:12px;color:var(--text2)">${fDate(e.commence_time)}</td>
-      <td style="font-size:12px;font-family:var(--mono)">
-        ${e.odd_1?`1:${(+e.odd_1).toFixed(2)}`:'—'}
-        ${e.odd_x?` X:${(+e.odd_x).toFixed(2)}`:''}
-        ${e.odd_2?` 2:${(+e.odd_2).toFixed(2)}`:'—'}
-      </td>
-      <td>${e.status==='live'?'<span class="badge badge-red">🔴 En Vivo</span>':e.status==='finished'?'<span class="badge badge-blue">✅ Finalizado</span>':'<span class="badge badge-green">📅 Próximo</span>'}</td>
-      <td>${e.result?`<span class="badge badge-orange">${e.result==='1'?'Local':e.result==='2'?'Visitante':'Empate'}</span>`:'<span style="color:var(--text3);font-size:12px">—</span>'}</td>
-    </tr>`).join('');
+  try {
+    // Load all events (up to 500)
+    const { data, error } = await _SB.from('api_events').select('*').order('commence_time',{ascending:false}).limit(500);
+    if(error) throw error;
+    _apiEventsCache = data || [];
+    admApplyApiEventFilters();
   } catch(err) {
     body.innerHTML = `<tr><td colspan="6" class="table-empty" style="color:var(--red)">❌ ${esc(err.message)}</td></tr>`;
   }
 }
 
+function admSearchApiEvents(q){
+  _apiEvSearch = q;
+  admApplyApiEventFilters();
+}
+
+function admApplyApiEventFilters(){
+  const body   = document.getElementById('adm-api-events-body');
+  const countEl = document.getElementById('api-events-count');
+  const sport  = document.getElementById('api-events-sport')?.value || '';
+  const status = document.getElementById('api-events-status')?.value || '';
+  const sort   = document.getElementById('api-events-sort')?.value || 'date_desc';
+  const search = _apiEvSearch.toLowerCase();
+
+  let list = _apiEventsCache;
+
+  // Filter by sport
+  if(sport) list = list.filter(e => (e.sport_key||'').startsWith(sport));
+
+  // Filter by status
+  if(status) list = list.filter(e => e.status === status);
+
+  // Filter by search
+  if(search) list = list.filter(e =>
+    (e.home_team||'').toLowerCase().includes(search) ||
+    (e.away_team||'').toLowerCase().includes(search) ||
+    (e.league||'').toLowerCase().includes(search)
+  );
+
+  // Sort
+  if(sort === 'date_desc') list.sort((a,b) => new Date(b.commence_time) - new Date(a.commence_time));
+  if(sort === 'date_asc')  list.sort((a,b) => new Date(a.commence_time) - new Date(b.commence_time));
+  if(sort === 'alpha_asc') list.sort((a,b) => `${a.home_team} vs ${a.away_team}`.localeCompare(`${b.home_team} vs ${b.away_team}`));
+  if(sort === 'alpha_desc') list.sort((a,b) => `${b.home_team} vs ${b.away_team}`.localeCompare(`${a.home_team} vs ${a.away_team}`));
+  if(sort === 'sport') list.sort((a,b) => (a.sport_key||'').localeCompare(b.sport_key||''));
+
+  // Update count
+  if(countEl) countEl.textContent = `${list.length} partido${list.length!==1?'s':''} encontrado${list.length!==1?'s':''}`;
+
+  if(!list.length){
+    body.innerHTML = '<tr><td colspan="6" class="table-empty">Sin partidos con estos filtros</td></tr>';
+    return;
+  }
+
+  const sportIcons = {soccer:'⚽',basketball:'🏀',americanfootball:'🏈',baseball:'⚾',icehockey:'🏒',mma:'🥊'};
+
+  body.innerHTML = list.map(e => {
+    const sportCat = (e.sport_key||'').split('_')[0];
+    const icon = sportIcons[sportCat] || '🏅';
+    return `<tr>
+      <td>
+        <div style="font-size:11px;color:var(--text2)">${icon} ${esc(e.league||e.sport_title||'—')}</div>
+        <div style="font-weight:600;font-size:13px">${esc(e.home_team)} vs ${esc(e.away_team)}</div>
+      </td>
+      <td><span class="badge badge-purple">${esc(sportCat)}</span></td>
+      <td style="font-size:12px;color:var(--text2);white-space:nowrap">${fDate(e.commence_time)}</td>
+      <td style="font-size:12px;font-family:var(--mono);white-space:nowrap">
+        ${e.odd_1?`1:${(+e.odd_1).toFixed(2)}`:'—'}
+        ${e.odd_x?` X:${(+e.odd_x).toFixed(2)}`:''}
+        ${e.odd_2?` 2:${(+e.odd_2).toFixed(2)}`:'—'}
+      </td>
+      <td>${e.status==='live'?'<span class="badge badge-red">🔴 En Vivo</span>':e.status==='finished'?'<span class="badge badge-blue">✅ Finalizado</span>':'<span class="badge badge-green">📅 Próximo</span>'}</td>
+      <td>${e.result?`<span class="badge badge-orange">${e.result==='1'?'🏆 Local':e.result==='2'?'🏆 Visit.':'🤝 Empate'}</span>`:'<span style="color:var(--text3);font-size:12px">Pendiente</span>'}</td>
+    </tr>`;}).join('');
+}
+
 function admFilterApiEvents(filter, btn){
-  _apiEvFilter = filter;
-  document.querySelectorAll('#adm-api-events .page-hd-right .btn').forEach(b=>b.classList.remove('btn-active-filter'));
-  if(btn) btn.classList.add('btn-active-filter');
-  renderApiEvents();
+  const statusEl = document.getElementById('api-events-status');
+  if(statusEl) statusEl.value = filter === 'all' ? '' : filter;
+  admApplyApiEventFilters();
 }
 
 // ── Keyboard shortcut ──
