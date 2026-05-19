@@ -13,12 +13,5 @@
         { "key": "Cache-Control", "value": "no-store, no-cache, must-revalidate" }
       ]
     }
-  ],
-  "crons": [
-    {
-      "path": "/api/sync-events",
-      "schedule": "* * * * *"
-    }
   ]
 }
-
