@@ -437,10 +437,7 @@ function applyFilters() {
   const now = new Date();
 
   // navMode: sidebar tabs (Destacados, En Vivo, Próximos, Mayor Volumen)
-  if (S.navMode === 'live') {
-    // En Vivo: only matches currently in progress
-    list = list.filter(m => isLive(m));
-  } else if (S.navMode === 'upcoming') {
+  if (S.navMode === 'upcoming') {
     // Próximos: matches starting in the future (not yet live)
     const future = list.filter(m => !isLive(m) && new Date(m.commence_time) > now);
     list = future.length ? future : list.filter(m => !isLive(m));
@@ -479,14 +476,14 @@ function applyFilters() {
 function updateMeta() {
   const n = S.filtered.length;
   const catLabels = {
-    all:'Todos los mercados', live:'🔴 En Vivo', new:'✨ Más recientes',
+    all:'Todos los mercados', new:'✨ Más recientes',
     soccer:'⚽ Fútbol', basketball:'🏀 Baloncesto', americanfootball:'🏈 Fútbol Americano',
     baseball:'⚾ Béisbol', icehockey:'🏒 Hockey', mma:'🥊 MMA & UFC',
     tennis:'🎾 Tenis', golf:'⛳ Golf'
   };
   const navLabels = {
     home:     '🔥 Tendencia',
-    live:     '🔴 En Vivo',
+    
     upcoming: '📅 Próximos',
     best:     '📊 Mayor Volumen',
   };
@@ -909,6 +906,7 @@ function openDetail(idx) {
   closeSidebar();
 
   document.getElementById('view-list').style.display   = 'none';
+  setTimeout(updateSidebarVisibility, 50);
   document.getElementById('view-detail').style.display = 'block';
   renderDetail(m);
 }
@@ -1368,7 +1366,7 @@ function renderDetail(m) {
         <div class="det-tags">
           <span class="det-tag league">${esc(m.sport_title)}</span>
           <span class="det-tag">📅 ${fDate(m.commence_time)}</span>
-          ${isLive(m)?'<span class="det-tag" style="border-color:var(--red-bd);color:var(--red);background:var(--red-bg)">🔴 En Vivo</span>':''}
+          
           <span class="det-tag">Margen: ${m.margin||'—'}%</span>
         </div>
       </div>
@@ -1673,7 +1671,7 @@ function renderSearchDrop(q) {
           <div class="sd-ico">${live ? '🔴' : '⚽'}</div>
           <div class="sd-info">
             <div class="sd-title">${highlight(m.home_team, lq)} vs ${highlight(m.away_team, lq)}</div>
-            <div class="sd-sub">${live ? 'En Vivo · ' : ''}${fDate(m.commence_time)}</div>
+            <div class="sd-sub">${fDate(m.commence_time)}</div>
           </div>
           <div class="sd-odds">${fOdd(m.best1)}</div>
         </div>`;
@@ -1877,7 +1875,7 @@ Tu apuesta: ${bet.pick} @ ${fOdd(bet.odd)}`,
         });
         if (Notification.permission === 'granted') {
           try {
-            new Notification('PredictX — ¡En Vivo!', {
+            new Notification('PredictX — Partido iniciado', {
               body: `${bet.match} ha comenzado
 Tu apuesta: ${bet.pick}`,
               tag: liveKey,
@@ -3016,6 +3014,18 @@ function txHistory()   { return DB.get('tx') || []; }
 // En producción esto se valida TAMBIÉN desde Supabase (columna role='owner' en profiles)
 const OWNER_EMAIL = 'hermanncadevillajr@gmail.com';
 
+
+// ── Sidebar visibility: only show in home and event detail ──
+function updateSidebarVisibility() {
+  const sidebar = document.getElementById('sidebar');
+  if (!sidebar) return;
+  const vl = document.getElementById('view-list');
+  const vd = document.getElementById('view-detail');
+  const inHome   = vl && vl.style.display !== 'none';
+  const inDetail = vd && vd.style.display !== 'none';
+  sidebar.style.display = (inHome || inDetail) ? '' : 'none';
+}
+
 function isOwner() {
   return SESSION && (
     SESSION.role === 'owner' ||
@@ -3030,6 +3040,7 @@ function hideAllViews() {
   });
 }
 function showListView() {
+  setTimeout(updateSidebarVisibility, 50);
   ['view-detail','view-admin','view-owner'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.style.display = 'none';
@@ -3049,6 +3060,7 @@ function openAdmin() {
   if (vd) vd.style.display = 'none';
   if (va) va.style.display = 'block';
   if (vo) vo.style.display = 'none';
+  updateSidebarVisibility();
   refreshAdminData();
   showAdminPage('dashboard', document.getElementById('ap-nav-dashboard'));
   document.querySelectorAll('.bn-btn').forEach(b => b.classList.remove('active'));
@@ -3056,6 +3068,7 @@ function openAdmin() {
 }
 function closeAdmin() {
   showListView();
+  updateSidebarVisibility();
   document.querySelectorAll('.bn-btn').forEach(b => b.classList.remove('active'));
   const bh = document.getElementById('bn-home'); if (bh) bh.classList.add('active');
 }
