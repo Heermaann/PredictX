@@ -16,7 +16,9 @@ export default async function handler(req, res) {
 
   const startTime = Date.now();
 
-  // ── Load config from Supabase ──
+  // ── Check if syncing a single sport ──
+  const singleSport = req.query?.sport || (req.body?.sport);
+
   let config = null;
   try {
     const cfgRes = await fetch(`${SB_URL}/rest/v1/api_config?id=eq.1&select=*`, { headers: sbHeaders });
@@ -32,7 +34,8 @@ export default async function handler(req, res) {
   const apiKey = config.api_key || ODDS_KEY;
   if (!apiKey) return res.status(500).json({ error: 'No API key configured.' });
 
-  const sports    = config.sports_active || [];
+  const allSports  = config.sports_active || [];
+  const sports     = singleSport ? [singleSport] : allSports;
   const bookmakers = (config.bookmakers || []).join(',');
   const regions   = (config.regions || ['eu']).join(',');
   const rateLimitMs = config.rate_limit_ms || 3000;
