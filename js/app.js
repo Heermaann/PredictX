@@ -373,7 +373,7 @@ function fOdd(o) {
 }
 
 function fVol(n) {
-  return n>=1e6?'€'+(n/1e6).toFixed(1)+'M':n>=1000?'€'+(n/1000).toFixed(0)+'K':'€'+n;
+  return n>=1e6?'$'+(n/1e6).toFixed(1)+'M':n>=1000?'$'+(n/1000).toFixed(0)+'K':'$'+n;
 }
 
 function fDate(d) {
@@ -786,17 +786,17 @@ function renderSingleSlip(body, foot, items) {
       <div class="slip-stake-row">
         <span class="slip-stake-lbl">Apuesta</span>
         <input class="slip-stake-inp" type="number" min="1" value="${sel.stake}"
-               oninput="updateStake('${esc(sel.key)}',this.value)" placeholder="€" name="€">
+               oninput="updateStake('${esc(sel.key)}',this.value)" placeholder="$" name="$">
       </div>
-      <div class="slip-stake-return">Retorno: <span>€${ret.toFixed(2)}</span></div>
+      <div class="slip-stake-return">Retorno: <span>${ret.toFixed(2)}</span></div>
       <div class="quick-stakes">
-        ${[5,10,20,50].map(v=>`<div class="qs-btn" onclick="setStake('${esc(sel.key)}',${v})">€${v}</div>`).join('')}
+        ${[5,10,20,50].map(v=>`<div class="qs-btn" onclick="setStake('${esc(sel.key)}',${v})">${v}</div>`).join('')}
       </div>
     </div>`;
   }).join('');
 
-  document.getElementById('slip-ttl-stake').textContent = '€' + totalStake.toFixed(2);
-  document.getElementById('slip-ttl-ret').textContent   = '€' + totalReturn.toFixed(2);
+  document.getElementById('slip-ttl-stake').textContent = '$' + totalStake.toFixed(2);
+  document.getElementById('slip-ttl-ret').textContent   = '$' + totalReturn.toFixed(2);
   foot.style.display = 'block';
 }
 
@@ -832,11 +832,11 @@ function renderComboSlip(body, foot, items) {
         <div class="slip-stake-row">
           <span class="slip-stake-lbl">Apuesta</span>
           <input class="slip-stake-inp" type="number" min="1" value="${stake}"
-                 oninput="updateComboStake(this.value)" placeholder="€" name="€">
+                 oninput="updateComboStake(this.value)" placeholder="$" name="$">
         </div>
-        <div class="slip-stake-return">Retorno potencial: <span>€${ret.toFixed(2)}</span></div>
+        <div class="slip-stake-return">Retorno potencial: <span>${ret.toFixed(2)}</span></div>
         <div class="quick-stakes">
-          ${[5,10,20,50].map(v=>`<div class="qs-btn" onclick="updateComboStake(${v},true)">€${v}</div>`).join('')}
+          ${[5,10,20,50].map(v=>`<div class="qs-btn" onclick="updateComboStake(${v},true)">${v}</div>`).join('')}
         </div>
        </div>`
   );
@@ -845,8 +845,8 @@ function renderComboSlip(body, foot, items) {
   const betBtn = document.querySelector('.slip-bet-btn');
   if (betBtn) betBtn.disabled = hasConflict;
 
-  document.getElementById('slip-ttl-stake').textContent = hasConflict ? '—' : '€' + stake.toFixed(2);
-  document.getElementById('slip-ttl-ret').textContent   = hasConflict ? '—' : '€' + ret.toFixed(2);
+  document.getElementById('slip-ttl-stake').textContent = hasConflict ? '—' : '$' + stake.toFixed(2);
+  document.getElementById('slip-ttl-ret').textContent   = hasConflict ? '—' : '$' + ret.toFixed(2);
   foot.style.display = 'block';
 }
 
@@ -859,14 +859,14 @@ function updateStake(key, val) {
     const sel = document.querySelector(`[onclick="removeFromSlip('${CSS.escape(key)}')"]`)?.closest('.slip-sel');
     if (sel) {
       const retEl = sel.querySelector('.slip-stake-return span');
-      if (retEl) retEl.textContent = '€' + ret.toFixed(2);
+      if (retEl) retEl.textContent = '$' + ret.toFixed(2);
     }
     // Update totals
     const items = Object.values(SLIP);
     const ts = items.reduce((a,s)=>a+s.stake,0);
     const tr = items.reduce((a,s)=>a+s.stake*s.odd,0);
-    document.getElementById('slip-ttl-stake').textContent = '€' + ts.toFixed(2);
-    document.getElementById('slip-ttl-ret').textContent   = '€' + tr.toFixed(2);
+    document.getElementById('slip-ttl-stake').textContent = '$' + ts.toFixed(2);
+    document.getElementById('slip-ttl-ret').textContent   = '$' + tr.toFixed(2);
   }
 }
 
@@ -884,8 +884,8 @@ function updateComboStake(val, doRender) {
   else {
     const comboOdd = Object.values(SLIP).reduce((acc,s)=>acc*s.odd,1);
     const ret = comboOdd * n;
-    document.getElementById('slip-ttl-stake').textContent = '€'+n.toFixed(2);
-    document.getElementById('slip-ttl-ret').textContent   = '€'+ret.toFixed(2);
+    document.getElementById('slip-ttl-stake').textContent = '$'+n.toFixed(2);
+    document.getElementById('slip-ttl-ret').textContent   = '$'+ret.toFixed(2);
   }
 }
 
@@ -895,7 +895,7 @@ function placeBets() {
   const total = S.slipMode==='combo'
     ? (items[0]?.comboStake||10)
     : items.reduce((a,s)=>a+s.stake,0);
-  showToast(`✅ Apuesta de €${total.toFixed(2)} registrada (simulación)`);
+  showToast(`✅ Apuesta de ${total.toFixed(2)} registrada (simulación)`);
   clearSlip();
   closeBetslip();
 }
@@ -2106,7 +2106,7 @@ function defaultAdmin(s) {
   return {
     name: s?.name||'', email: s?.email||'',
     balance: 0, deposited: 0, withdrawn: 0,
-    currency: 'EUR', phone: '', country: s?.country||'',
+    currency: 'USD', phone: '', country: s?.country||'',
     twofa: false, firstDeposit: true
   };
 }
@@ -2290,7 +2290,7 @@ async function doRegister() {
   );
 
   // Save profile in Supabase DB
-  const profile = { email, name, country, balance: 0, deposited: 0, withdrawn: 0, currency: 'EUR', phone: '', twofa: false, first_deposit: true, created_at: new Date().toISOString() };
+  const profile = { email, name, country, balance: 0, deposited: 0, withdrawn: 0, currency: 'USD', phone: '', twofa: false, first_deposit: true, created_at: new Date().toISOString() };
   await sbUpsert('profiles', profile);
   _sbProfile = profile;
 
@@ -2552,9 +2552,9 @@ function selectPayMethod(method, el) {
   document.querySelectorAll('.pay-method').forEach(m=>m.classList.remove('selected'));
   el.classList.add('selected');
   // Update currency symbol
-  const sym = { yape:'S/', card:'€', transfer:'S/' };
+  const sym = { yape:'S/', card:'$', transfer:'S/' };
   const symEl = document.getElementById('pay-currency-sym');
-  if (symEl) symEl.textContent = sym[method]||'€';
+  if (symEl) symEl.textContent = sym[method]||'$';
 }
 
 function setQuickAmt(v, btn) {
@@ -2843,8 +2843,8 @@ window.placeBets = function() {
   document.querySelectorAll('.ev-odd-btn.in-slip,.odd-card').forEach(el=>{ el.classList.remove('in-slip','active'); });
   document.querySelectorAll('.xmkt-btn.active').forEach(el=>el.classList.remove('active'));
   renderSlip(); updateSlipCount(); closeBetslip();
-  setText('sc-balance','€'+d.balance.toFixed(2));
-  showToast('✅ Apuesta registrada · Saldo: €'+d.balance.toFixed(2));
+  setText('sc-balance','$'+d.balance.toFixed(2));
+  showToast('✅ Apuesta registrada · Saldo: $'+d.balance.toFixed(2));
   refreshAdminData();
 };
 
@@ -2879,13 +2879,13 @@ window.refreshAdminData = function() {
   const totalStake = bets.reduce((a,b)=>a+(b.stake||0),0);
   const totalRet   = bets.filter(b=>b.status==='win').reduce((a,b)=>a+(b.ret||0),0);
   const roi  = totalStake>0?((totalRet-totalStake)/totalStake*100).toFixed(1)+'%':'—';
-  setText('sc-balance',  '€'+d.balance.toFixed(2));
+  setText('sc-balance',  '$'+d.balance.toFixed(2));
   setText('sc-open',     open);
   setText('sc-won',      won);
   setText('sc-roi',      roi);
-  setText('tx-balance',  '€'+d.balance.toFixed(2));
-  setText('tx-deposited','€'+d.deposited.toFixed(2));
-  setText('tx-withdrawn','€'+d.withdrawn.toFixed(2));
+  setText('tx-balance',  '$'+d.balance.toFixed(2));
+  setText('tx-deposited','$'+d.deposited.toFixed(2));
+  setText('tx-withdrawn','$'+d.withdrawn.toFixed(2));
   const badge=document.getElementById('open-bets-badge');
   if(badge){badge.textContent=open;badge.style.display=open>0?'':'none';}
   renderSecurityBadges();
@@ -2900,10 +2900,10 @@ window.renderBets = function(filter) {
   const ts=shown.reduce((a,b)=>a+(b.stake||0),0);
   const tr=shown.reduce((a,b)=>a+(b.ret||0),0);
   const pnl=tr-ts;
-  setText('bets-total-stake','€'+ts.toFixed(2));
-  setText('bets-total-ret','€'+tr.toFixed(2));
+  setText('bets-total-stake','$'+ts.toFixed(2));
+  setText('bets-total-ret','$'+tr.toFixed(2));
   const pEl=document.getElementById('bets-pnl');
-  if(pEl){pEl.textContent=(pnl>=0?'+':'')+'€'+pnl.toFixed(2);pEl.className='sc-val '+(pnl>=0?'g':'r');}
+  if(pEl){pEl.textContent=(pnl>=0?'+':'')+'$'+pnl.toFixed(2);pEl.className='sc-val '+(pnl>=0?'g':'r');}
   const tb=document.getElementById('bets-body');
   if(!tb) return;
   if(!shown.length){tb.innerHTML='<tr><td colspan="8" style="text-align:center;color:var(--text2);padding:36px;font-size:13px">No hay apuestas '+( filter==='all'?'':'con este estado')+'</td></tr>';return;}
@@ -2913,8 +2913,8 @@ window.renderBets = function(filter) {
     <td style="font-weight:600">${esc(b.pick)}</td>
     <td><span class="tx-type ${b.type==='combo'?'bet':'bet'}">${b.type==='combo'?'Combinada':'Simple'}</span></td>
     <td style="font-family:var(--mono)">${parseFloat(b.odd).toFixed(2)}</td>
-    <td style="font-family:var(--mono)">€${parseFloat(b.stake).toFixed(2)}</td>
-    <td style="font-family:var(--mono);color:${b.status==='win'?'var(--green)':'var(--text2)'}">€${parseFloat(b.ret||0).toFixed(2)}</td>
+    <td style="font-family:var(--mono)">${parseFloat(b.stake).toFixed(2)}</td>
+    <td style="font-family:var(--mono);color:${b.status==='win'?'var(--green)':'var(--text2)'}">${parseFloat(b.ret||0).toFixed(2)}</td>
     <td>${badgeHtml(b.status)}</td>
   </tr>`).join('');
 };
@@ -2932,9 +2932,9 @@ window.renderTx = function(filter) {
     <td>${esc(t.desc)}</td>
     <td><span class="tx-type ${t.type}">${txTypeLabel(t.type)}</span></td>
     <td style="font-family:var(--mono);font-weight:600;color:${t.type==='dep'||t.type==='win'?'var(--green)':'var(--red)'}">
-      ${t.type==='dep'||t.type==='win'?'+':'−'}€${Math.abs(t.amount).toFixed(2)}
+      ${t.type==='dep'||t.type==='win'?'+':'−'}${Math.abs(t.amount).toFixed(2)}
     </td>
-    <td style="font-family:var(--mono)">€${parseFloat(t.balance||0).toFixed(2)}</td>
+    <td style="font-family:var(--mono)">${parseFloat(t.balance||0).toFixed(2)}</td>
   </tr>`).join('');
 };
 
@@ -2946,7 +2946,7 @@ window.renderProfile = function() {
   setVal('pf-email',   SESSION.email);
   setVal('pf-phone',   d.phone||'');
   setVal('pf-country', d.country||'');
-  setVal('pf-currency',d.currency||'EUR');
+  setVal('pf-currency',d.currency||'USD');
   renderSecurityBadges();
 };
 
@@ -2974,7 +2974,7 @@ window.saveProfile = function() {
 // Load stored data or create defaults
 function adminData() {
   return DB.get('admin') || {
-    name:'', surname:'', email:'usuario@predictx.com', phone:'', country:'', currency:'EUR',
+    name:'', surname:'', email:'usuario@predictx.com', phone:'', country:'', currency:'USD',
     balance: 0,
     deposited: 0,
     withdrawn: 0,
@@ -3142,7 +3142,7 @@ async function renderOwnerDashboard() {
   const openExposure  = bets.filter(b => b.status === 'open').reduce((a,b) => a + ((+b.odd||1) * (+b.stake||0)), 0);
 
   setText('kpi-users',     totalUsers);
-  setText('kpi-deposits',  '€' + totalDeposits.toFixed(0));
+  setText('kpi-deposits',  '$' + totalDeposits.toFixed(0));
   setText('kpi-open-bets', openBets);
   setText('kpi-margin',    totalBet > 0 ? margin + '%' : '—');
   setText('own-users-badge', totalUsers);
@@ -3161,9 +3161,9 @@ async function renderOwnerDashboard() {
           <td style="font-weight:500">${esc(shortEmail(t.user_email||''))}</td>
           <td>${esc(t.description||t.desc||'')}</td>
           <td style="font-family:var(--mono);font-weight:600;color:${t.type==='dep'||t.type==='win'?'var(--green)':'var(--red)'}">
-            ${t.type==='dep'||t.type==='win'?'+':'−'}€${Math.abs(+t.amount).toFixed(2)}
+            ${t.type==='dep'||t.type==='win'?'+':'−'}${Math.abs(+t.amount).toFixed(2)}
           </td>
-          <td style="font-family:var(--mono)">€${(+t.balance||0).toFixed(2)}</td>
+          <td style="font-family:var(--mono)">${(+t.balance||0).toFixed(2)}</td>
         </tr>`).join('');
     }
   }
@@ -3206,8 +3206,8 @@ async function renderOwnerDashboard() {
             <div><div style="font-size:12px;font-weight:600">${esc(u.name||'—')}</div>
             <div style="font-size:10px;color:var(--text2)">${esc(shortEmail(u.email||''))}</div></div>
           </div></td>
-          <td style="font-family:var(--mono);color:var(--green)">€${(+u.deposited||0).toFixed(0)}</td>
-          <td style="font-family:var(--mono)">€${(+u.balance||0).toFixed(2)}</td>
+          <td style="font-family:var(--mono);color:var(--green)">${(+u.deposited||0).toFixed(0)}</td>
+          <td style="font-family:var(--mono)">${(+u.balance||0).toFixed(2)}</td>
         </tr>`).join('');
     }
   }
@@ -3258,8 +3258,8 @@ function paintOwnerUsers(list) {
         </div>
       </td>
       <td style="color:var(--text2)">${u.country ? '🌍 '+u.country.toUpperCase() : '—'}</td>
-      <td style="font-family:var(--mono);font-weight:600">€${(+u.balance||0).toFixed(2)}</td>
-      <td style="font-family:var(--mono);color:var(--green)">€${(+u.deposited||0).toFixed(2)}</td>
+      <td style="font-family:var(--mono);font-weight:600">${(+u.balance||0).toFixed(2)}</td>
+      <td style="font-family:var(--mono);color:var(--green)">${(+u.deposited||0).toFixed(2)}</td>
       <td style="text-align:center">${userBets[u.email]||0}</td>
       <td>
         ${u.is_suspended
@@ -3352,16 +3352,16 @@ function viewUserDetail(email) {
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;padding:16px 20px">
         <div style="background:var(--bg3);border-radius:10px;padding:12px;text-align:center">
           <div style="font-size:11px;color:var(--text2);margin-bottom:4px">Saldo actual</div>
-          <div style="font-size:17px;font-weight:700;font-family:var(--mono)">€${(+u.balance||0).toFixed(2)}</div>
+          <div style="font-size:17px;font-weight:700;font-family:var(--mono)">${(+u.balance||0).toFixed(2)}</div>
         </div>
         <div style="background:var(--bg3);border-radius:10px;padding:12px;text-align:center">
           <div style="font-size:11px;color:var(--text2);margin-bottom:4px">Total depositado</div>
-          <div style="font-size:17px;font-weight:700;font-family:var(--mono);color:var(--green)">€${(+u.deposited||0).toFixed(2)}</div>
+          <div style="font-size:17px;font-weight:700;font-family:var(--mono);color:var(--green)">${(+u.deposited||0).toFixed(2)}</div>
         </div>
         <div style="background:var(--bg3);border-radius:10px;padding:12px;text-align:center">
           <div style="font-size:11px;color:var(--text2);margin-bottom:4px">P&L neto</div>
           <div style="font-size:17px;font-weight:700;font-family:var(--mono);color:${netPnL>=0?'var(--green)':'var(--red)'}">
-            ${netPnL>=0?'+':''}€${netPnL.toFixed(2)}
+            ${netPnL>=0?'+':''}${netPnL.toFixed(2)}
           </div>
         </div>
       </div>
@@ -3390,7 +3390,7 @@ function viewUserDetail(email) {
                 <td style="font-size:11px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(b.match_name||b.match||'—')}</td>
                 <td style="font-size:11px;font-weight:600">${esc(b.pick||'—')}</td>
                 <td style="font-family:var(--mono);font-size:11px">${(+b.odd||0).toFixed(2)}</td>
-                <td style="font-family:var(--mono);font-size:11px">€${(+b.stake||0).toFixed(2)}</td>
+                <td style="font-family:var(--mono);font-size:11px">${(+b.stake||0).toFixed(2)}</td>
                 <td>${badgeHtml(b.status)}</td>
               </tr>`).join('')}
             </tbody>
@@ -3445,9 +3445,9 @@ function paintOwnerBets(filter) {
   const openList   = _ownerCache.bets.filter(b => b.status === 'open');
   const exposure   = openList.reduce((a,b) => a + ((+b.odd||1)*(+b.stake||0)), 0);
 
-  setText('own-bets-total',    '€' + totalStake.toFixed(2));
+  setText('own-bets-total',    '$' + totalStake.toFixed(2));
   setText('own-bets-open',     openList.length);
-  setText('own-bets-exposure', '€' + exposure.toFixed(2));
+  setText('own-bets-exposure', '$' + exposure.toFixed(2));
 
   const body = document.getElementById('own-bets-body');
   if (!body) return;
@@ -3462,8 +3462,8 @@ function paintOwnerBets(filter) {
       <td style="max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px">${esc(b.match_name||b.match||'')}</td>
       <td style="font-weight:600;font-size:12px">${esc(b.pick||'')}</td>
       <td style="font-family:var(--mono)">${(+b.odd||0).toFixed(2)}</td>
-      <td style="font-family:var(--mono)">€${(+b.stake||0).toFixed(2)}</td>
-      <td style="font-family:var(--mono);color:${b.status==='win'?'var(--green)':'var(--text2)'}">€${(+b.ret||0).toFixed(2)}</td>
+      <td style="font-family:var(--mono)">${(+b.stake||0).toFixed(2)}</td>
+      <td style="font-family:var(--mono);color:${b.status==='win'?'var(--green)':'var(--text2)'}">${(+b.ret||0).toFixed(2)}</td>
       <td>${badgeHtml(b.status)}</td>
       <td style="white-space:nowrap">
         ${b.status==='open'
@@ -3494,7 +3494,7 @@ async function resolveBet(betId, userEmail, stake, odd, result) {
         type: 'win', amount: ret, balance: newBal
       });
     }
-    showToast(`✅ Apuesta resuelta como GANADA — €${ret.toFixed(2)} acreditados`);
+    showToast(`✅ Apuesta resuelta como GANADA — ${ret.toFixed(2)} acreditados`);
   } else {
     showToast('✅ Apuesta resuelta como PERDIDA');
   }
@@ -3524,10 +3524,10 @@ function filterOwnerTx(filter) {
   const wit = _ownerCache.tx.filter(t=>t.type==='wit').reduce((a,t)=>a+(+t.amount||0),0);
   const bet = _ownerCache.tx.filter(t=>t.type==='bet').reduce((a,t)=>a+(+t.amount||0),0);
   const win = _ownerCache.tx.filter(t=>t.type==='win' && t.description!=='Bono de bienvenida').reduce((a,t)=>a+(+t.amount||0),0);
-  setText('own-tx-dep','€'+dep.toFixed(2));
-  setText('own-tx-wit','€'+wit.toFixed(2));
-  setText('own-tx-bet','€'+bet.toFixed(2));
-  setText('own-tx-win','€'+win.toFixed(2));
+  setText('own-tx-dep','$'+dep.toFixed(2));
+  setText('own-tx-wit','$'+wit.toFixed(2));
+  setText('own-tx-bet','$'+bet.toFixed(2));
+  setText('own-tx-win','$'+win.toFixed(2));
 
   const body = document.getElementById('own-tx-body');
   if (!body) return;
@@ -3542,7 +3542,7 @@ function filterOwnerTx(filter) {
       <td style="font-size:12px">${esc(t.description||t.desc||'')}</td>
       <td><span class="tx-type ${t.type}">${txTypeLabel(t.type)}</span></td>
       <td style="font-family:var(--mono);font-weight:600;color:${t.type==='dep'||t.type==='win'?'var(--green)':'var(--red)'}">
-        ${t.type==='dep'||t.type==='win'?'+':'−'}€${Math.abs(+t.amount||0).toFixed(2)}
+        ${t.type==='dep'||t.type==='win'?'+':'−'}${Math.abs(+t.amount||0).toFixed(2)}
       </td>
     </tr>`).join('');
 }
@@ -4022,13 +4022,13 @@ function refreshAdminData() {
   const totalRet   = bets.filter(b=>b.status==='win').reduce((a,b)=>a+(b.ret||0),0);
   const roi = totalStake>0 ? ((totalRet-totalStake)/totalStake*100).toFixed(1)+'%' : '—';
 
-  setText('sc-balance',  '€'+d.balance.toFixed(2));
+  setText('sc-balance',  '$'+d.balance.toFixed(2));
   setText('sc-open',     open);
   setText('sc-won',      won);
   setText('sc-roi',      roi);
-  setText('tx-balance',  '€'+d.balance.toFixed(2));
-  setText('tx-deposited','€'+d.deposited.toFixed(2));
-  setText('tx-withdrawn','€'+d.withdrawn.toFixed(2));
+  setText('tx-balance',  '$'+d.balance.toFixed(2));
+  setText('tx-deposited','$'+d.deposited.toFixed(2));
+  setText('tx-withdrawn','$'+d.withdrawn.toFixed(2));
 
   const badge = document.getElementById('open-bets-badge');
   if (badge) { badge.textContent=open; badge.style.display=open>0?'':'none'; }
@@ -4055,7 +4055,7 @@ function renderDashBets() {
       <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(b.match)}</td>
       <td style="font-weight:600">${esc(b.pick)}</td>
       <td><span style="font-family:var(--mono);color:var(--green)">${parseFloat(b.odd).toFixed(2)}</span></td>
-      <td style="font-family:var(--mono)">€${parseFloat(b.stake).toFixed(2)}</td>
+      <td style="font-family:var(--mono)">${parseFloat(b.stake).toFixed(2)}</td>
       <td>${badgeHtml(b.status)}</td>
     </tr>`).join('');
 }
@@ -4131,11 +4131,11 @@ function renderBets(filter) {
   const totalRet   = shown.reduce((a,b)=>a+(b.ret||0),0);
   const pnl        = totalRet - totalStake;
 
-  setText('bets-total-stake', '€'+totalStake.toFixed(2));
-  setText('bets-total-ret',   '€'+totalRet.toFixed(2));
+  setText('bets-total-stake', '$'+totalStake.toFixed(2));
+  setText('bets-total-ret',   '$'+totalRet.toFixed(2));
   const pnlEl = document.getElementById('bets-pnl');
   if (pnlEl) {
-    pnlEl.textContent = (pnl>=0?'+':'')+'€'+pnl.toFixed(2);
+    pnlEl.textContent = (pnl>=0?'+':'')+'$'+pnl.toFixed(2);
     pnlEl.className = 'sc-val '+(pnl>=0?'g':'r');
   }
 
@@ -4152,8 +4152,8 @@ function renderBets(filter) {
       <td style="font-weight:600">${esc(b.pick)}</td>
       <td><span class="tx-type ${b.type==='combo'?'bet':b.type||'bet'}">${b.type==='combo'?'Combinada':'Simple'}</span></td>
       <td style="font-family:var(--mono)">${parseFloat(b.odd).toFixed(2)}</td>
-      <td style="font-family:var(--mono)">€${parseFloat(b.stake).toFixed(2)}</td>
-      <td style="font-family:var(--mono);color:${b.status==='win'?'var(--green)':'var(--text2)'}">€${parseFloat(b.ret||0).toFixed(2)}</td>
+      <td style="font-family:var(--mono)">${parseFloat(b.stake).toFixed(2)}</td>
+      <td style="font-family:var(--mono);color:${b.status==='win'?'var(--green)':'var(--text2)'}">${parseFloat(b.ret||0).toFixed(2)}</td>
       <td>${badgeHtml(b.status)}</td>
     </tr>`).join('');
 }
@@ -4183,9 +4183,9 @@ function renderTx(filter) {
       <td>${esc(t.desc)}</td>
       <td><span class="tx-type ${t.type}">${txTypeLabel(t.type)}</span></td>
       <td style="font-family:var(--mono);font-weight:600;color:${t.type==='dep'||t.type==='win'?'var(--green)':'var(--red)'}">
-        ${t.type==='dep'||t.type==='win'?'+':'−'}€${Math.abs(t.amount).toFixed(2)}
+        ${t.type==='dep'||t.type==='win'?'+':'−'}${Math.abs(t.amount).toFixed(2)}
       </td>
-      <td style="font-family:var(--mono)">€${parseFloat(t.balance||0).toFixed(2)}</td>
+      <td style="font-family:var(--mono)">${parseFloat(t.balance||0).toFixed(2)}</td>
     </tr>`).join('');
 }
 function filterTx(v){ renderTx(v); }
