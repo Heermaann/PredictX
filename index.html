@@ -92,7 +92,6 @@
       <span class="sb-badge" id="badge-total">—</span>
     </div>
     <div class="sb-item" id="nav-live" onclick="navTo('live',this)">
-      <span class="sb-item-ico">🔴</span>En Vivo
     </div>
     <div class="sb-item" id="nav-upcoming" onclick="navTo('upcoming',this)">
       <span class="sb-item-ico">📅</span>Próximos
@@ -211,7 +210,6 @@
       <div id="live-section" style="display:none;background:var(--bg)">
         <div class="section-hdr">
           <span class="section-dot-live"></span>
-          <span class="section-ttl">En Vivo</span>
           <span class="section-count" id="live-count"></span>
         </div>
         <div class="cards-grid" id="live-grid"></div>
@@ -320,7 +318,6 @@
             <!-- Quick bets from live events -->
             <div class="admin-card" id="dash-quick-card">
               <div class="admin-card-hd">
-                <div class="admin-card-title">⚡ Apuestas rápidas — En Vivo</div>
                 <div class="admin-card-action" onclick="closeAdmin()">Ver todos →</div>
               </div>
               <div class="quick-row" id="dash-quick-grid" style="padding:12px">
@@ -753,7 +750,6 @@
             <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
               <button class="ev-filter-btn active" onclick="filterManualEvents('all',this)">Todos</button>
               <button class="ev-filter-btn" onclick="filterManualEvents('upcoming',this)">Próximos</button>
-              <button class="ev-filter-btn" onclick="filterManualEvents('live',this)">En Vivo</button>
               <button class="ev-filter-btn" onclick="filterManualEvents('finished',this)">Finalizados</button>
               <button class="ev-filter-btn" onclick="filterManualEvents('featured',this)">⭐ Destacados</button>
             </div>
@@ -1468,8 +1464,6 @@
                       <span class="ev-toggle-lbl">⭐ Destacado</span>
                     </label>
                     <label class="ev-toggle-wrap">
-                      <input type="checkbox" id="ev-live">
-                      <span class="ev-toggle-lbl">🔴 En Vivo</span>
                     </label>
                   </div>
                 </div>
