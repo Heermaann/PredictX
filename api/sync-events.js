@@ -106,11 +106,63 @@ export default async function handler(req, res) {
       });
 
       if (rows.length) {
-        await fetch(`${SB_URL}/rest/v1/api_events`, {
-          method: 'POST',
-          headers: { ...sbHeaders, 'Prefer': 'resolution=merge-duplicates' },
-          body: JSON.stringify(rows),
-        });
+        // For each row, check if it has overrides or is paused/frozen
+        // We need to fetch existing events to preserve overrides
+        const ids = rows.map(r => r.id);
+        const existingRes = await fetch(
+          `${SB_URL}/rest/v1/api_events?id=in.(${ids.map(id=>`"${id}"`).join(',')})&select=id,sync_paused,odds_frozen,overrides,original_data`,
+          { headers: sbHeaders }
+        );
+        const existing = existingRes.ok ? await existingRes.json() : [];
+        const existingMap = {};
+        (existing||[]).forEach(e => { existingMap[e.id] = e; });
+
+        const rowsToUpsert = rows.map(row => {
+          const prev = existingMap[row.id];
+          if (!prev) {
+            // New event — save original data
+            return { ...row, original_data: { odd_1: row.odd_1, odd_x: row.odd_x, odd_2: row.odd_2, total_line: row.total_line, total_over: row.total_over, total_under: row.total_under } };
+          }
+          // Skip entirely if sync is paused for this event
+          if (prev.sync_paused) return null;
+
+          const overrides = prev.overrides || {};
+          const result = { ...row };
+
+          // Preserve overridden fields
+          if (overrides.home_team)  result.home_team  = overrides.home_team;
+          if (overrides.away_team)  result.away_team  = overrides.away_team;
+          if (overrides.league)     result.league     = overrides.league;
+          if (overrides.commence_time) result.commence_time = overrides.commence_time;
+
+          // If odds are frozen, keep existing odds
+          if (prev.odds_frozen) {
+            result.odd_1        = overrides.odd_1        ?? prev.odd_1;
+            result.odd_x        = overrides.odd_x        ?? prev.odd_x;
+            result.odd_2        = overrides.odd_2        ?? prev.odd_2;
+            result.total_line   = overrides.total_line   ?? prev.total_line;
+            result.total_over   = overrides.total_over   ?? prev.total_over;
+            result.total_under  = overrides.total_under  ?? prev.total_under;
+          }
+
+          // Update original_data with latest API values (even if overridden)
+          result.original_data = {
+            odd_1: row.odd_1, odd_x: row.odd_x, odd_2: row.odd_2,
+            total_line: row.total_line, total_over: row.total_over, total_under: row.total_under,
+            home_team: row.home_team, away_team: row.away_team,
+            league: row.league, commence_time: row.commence_time,
+          };
+
+          return result;
+        }).filter(Boolean);
+
+        if (rowsToUpsert.length) {
+          await fetch(`${SB_URL}/rest/v1/api_events`, {
+            method: 'POST',
+            headers: { ...sbHeaders, 'Prefer': 'resolution=merge-duplicates' },
+            body: JSON.stringify(rowsToUpsert),
+          });
+        }
       }
 
       // Log credits per sport
