@@ -3,7 +3,7 @@
   "buildCommand": "",
   "outputDirectory": ".",
   "rewrites": [
-    { "source": "/admin", "destination": "/admin2.html" }
+    { "source": "/admin", "destination": "/admin.html" }
   ],
   "headers": [
     {
