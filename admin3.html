@@ -860,7 +860,7 @@ tbody td { padding: 12px 16px; font-size: 13px; color: var(--text1); vertical-al
           <div id="api-events-count" style="padding:10px 16px;font-size:12px;color:var(--text2);border-bottom:1px solid var(--border)">Cargando...</div>
           <div style="overflow-x:auto">
             <table>
-              <thead><tr><th>Liga | Partido</th><th>Deporte</th><th>Inicio</th><th>Cuotas 1X2</th><th>Estado</th><th>Resultado</th></tr></thead>
+              <thead><tr><th>Liga | Partido</th><th>Deporte</th><th>Inicio</th><th>Cuotas 1X2</th><th>Estado</th><th>Resultado</th><th>Acción</th></tr></thead>
               <tbody id="adm-api-events-body"><tr><td colspan="6" class="table-empty">⏳ Cargando...</td></tr></tbody>
             </table>
           </div>
@@ -1032,22 +1032,22 @@ tbody td { padding: 12px 16px; font-size: 13px; color: var(--text1); vertical-al
         <!-- Deportes activos -->
         <div class="table-card" style="padding:20px;margin-bottom:16px">
           <div style="font-size:15px;font-weight:700;margin-bottom:12px">⚽ Deportes activos en sincronización</div>
-          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px" id="cfg-sports-list">
-            <label class="form-check"><input type="checkbox" class="cfg-sport" value="soccer_epl" checked> ⚽ Premier League</label>
-            <label class="form-check"><input type="checkbox" class="cfg-sport" value="soccer_spain_la_liga" checked> ⚽ La Liga</label>
-            <label class="form-check"><input type="checkbox" class="cfg-sport" value="soccer_uefa_champs_league" checked> ⚽ Champions League</label>
-            <label class="form-check"><input type="checkbox" class="cfg-sport" value="soccer_germany_bundesliga" checked> ⚽ Bundesliga</label>
-            <label class="form-check"><input type="checkbox" class="cfg-sport" value="soccer_italy_serie_a" checked> ⚽ Serie A</label>
-            <label class="form-check"><input type="checkbox" class="cfg-sport" value="soccer_france_ligue_one" checked> ⚽ Ligue 1</label>
-            <label class="form-check"><input type="checkbox" class="cfg-sport" value="soccer_usa_mls" checked> ⚽ MLS</label>
-            <label class="form-check"><input type="checkbox" class="cfg-sport" value="soccer_brazil_campeonato" checked> ⚽ Brasileirão</label>
-            <label class="form-check"><input type="checkbox" class="cfg-sport" value="soccer_conmebol_copa_libertadores" checked> ⚽ Copa Libertadores</label>
-            <label class="form-check"><input type="checkbox" class="cfg-sport" value="basketball_nba" checked> 🏀 NBA</label>
-            <label class="form-check"><input type="checkbox" class="cfg-sport" value="basketball_euroleague" checked> 🏀 EuroLeague</label>
-            <label class="form-check"><input type="checkbox" class="cfg-sport" value="americanfootball_nfl" checked> 🏈 NFL</label>
-            <label class="form-check"><input type="checkbox" class="cfg-sport" value="baseball_mlb" checked> ⚾ MLB</label>
-            <label class="form-check"><input type="checkbox" class="cfg-sport" value="icehockey_nhl" checked> 🏒 NHL</label>
-            <label class="form-check"><input type="checkbox" class="cfg-sport" value="mma_mixed_martial_arts" checked> 🥊 MMA/UFC</label>
+          <div style="display:flex;flex-direction:column;gap:4px" id="cfg-sports-list">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)"><label class="form-check"><input type="checkbox" class="cfg-sport" value="soccer_epl" checked> ⚽ Premier League</label><button class="btn btn-ghost btn-sm" onclick="admSyncSport('soccer_epl','⚽ Premier League')" title="Refrescar ⚽ Premier League">🔄</button></div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)"><label class="form-check"><input type="checkbox" class="cfg-sport" value="soccer_spain_la_liga" checked> ⚽ La Liga</label><button class="btn btn-ghost btn-sm" onclick="admSyncSport('soccer_spain_la_liga','⚽ La Liga')" title="Refrescar ⚽ La Liga">🔄</button></div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)"><label class="form-check"><input type="checkbox" class="cfg-sport" value="soccer_uefa_champs_league" checked> ⚽ Champions League</label><button class="btn btn-ghost btn-sm" onclick="admSyncSport('soccer_uefa_champs_league','⚽ Champions League')" title="Refrescar ⚽ Champions League">🔄</button></div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)"><label class="form-check"><input type="checkbox" class="cfg-sport" value="soccer_germany_bundesliga" checked> ⚽ Bundesliga</label><button class="btn btn-ghost btn-sm" onclick="admSyncSport('soccer_germany_bundesliga','⚽ Bundesliga')" title="Refrescar ⚽ Bundesliga">🔄</button></div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)"><label class="form-check"><input type="checkbox" class="cfg-sport" value="soccer_italy_serie_a" checked> ⚽ Serie A</label><button class="btn btn-ghost btn-sm" onclick="admSyncSport('soccer_italy_serie_a','⚽ Serie A')" title="Refrescar ⚽ Serie A">🔄</button></div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)"><label class="form-check"><input type="checkbox" class="cfg-sport" value="soccer_france_ligue_one" checked> ⚽ Ligue 1</label><button class="btn btn-ghost btn-sm" onclick="admSyncSport('soccer_france_ligue_one','⚽ Ligue 1')" title="Refrescar ⚽ Ligue 1">🔄</button></div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)"><label class="form-check"><input type="checkbox" class="cfg-sport" value="soccer_usa_mls" checked> ⚽ MLS</label><button class="btn btn-ghost btn-sm" onclick="admSyncSport('soccer_usa_mls','⚽ MLS')" title="Refrescar ⚽ MLS">🔄</button></div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)"><label class="form-check"><input type="checkbox" class="cfg-sport" value="soccer_brazil_campeonato" checked> ⚽ Brasileirão</label><button class="btn btn-ghost btn-sm" onclick="admSyncSport('soccer_brazil_campeonato','⚽ Brasileirão')" title="Refrescar ⚽ Brasileirão">🔄</button></div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)"><label class="form-check"><input type="checkbox" class="cfg-sport" value="soccer_conmebol_copa_libertadores" checked> ⚽ Copa Libertadores</label><button class="btn btn-ghost btn-sm" onclick="admSyncSport('soccer_conmebol_copa_libertadores','⚽ Copa Libertadores')" title="Refrescar ⚽ Copa Libertadores">🔄</button></div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)"><label class="form-check"><input type="checkbox" class="cfg-sport" value="basketball_nba" checked> 🏀 NBA</label><button class="btn btn-ghost btn-sm" onclick="admSyncSport('basketball_nba','🏀 NBA')" title="Refrescar 🏀 NBA">🔄</button></div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)"><label class="form-check"><input type="checkbox" class="cfg-sport" value="basketball_euroleague" checked> 🏀 EuroLeague</label><button class="btn btn-ghost btn-sm" onclick="admSyncSport('basketball_euroleague','🏀 EuroLeague')" title="Refrescar 🏀 EuroLeague">🔄</button></div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)"><label class="form-check"><input type="checkbox" class="cfg-sport" value="americanfootball_nfl" checked> 🏈 NFL</label><button class="btn btn-ghost btn-sm" onclick="admSyncSport('americanfootball_nfl','🏈 NFL')" title="Refrescar 🏈 NFL">🔄</button></div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)"><label class="form-check"><input type="checkbox" class="cfg-sport" value="baseball_mlb" checked> ⚾ MLB</label><button class="btn btn-ghost btn-sm" onclick="admSyncSport('baseball_mlb','⚾ MLB')" title="Refrescar ⚾ MLB">🔄</button></div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)"><label class="form-check"><input type="checkbox" class="cfg-sport" value="icehockey_nhl" checked> 🏒 NHL</label><button class="btn btn-ghost btn-sm" onclick="admSyncSport('icehockey_nhl','🏒 NHL')" title="Refrescar 🏒 NHL">🔄</button></div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0"><label class="form-check"><input type="checkbox" class="cfg-sport" value="mma_mixed_martial_arts" checked> 🥊 MMA/UFC</label><button class="btn btn-ghost btn-sm" onclick="admSyncSport('mma_mixed_martial_arts','🥊 MMA/UFC')" title="Refrescar 🥊 MMA/UFC">🔄</button></div>
           </div>
         </div>
 
@@ -2444,6 +2444,11 @@ function admApplyApiEventFilters(){
       </td>
       <td>${e.status==='live'?'<span class="badge badge-red">🔴 En Vivo</span>':e.status==='finished'?'<span class="badge badge-blue">✅ Finalizado</span>':'<span class="badge badge-green">📅 Próximo</span>'}</td>
       <td>${e.result?`<span class="badge badge-orange">${e.result==='1'?'🏆 Local':e.result==='2'?'🏆 Visit.':'🤝 Empate'}</span>`:'<span style="color:var(--text3);font-size:12px">Pendiente</span>'}</td>
+      <td><div class="action-group">
+        <button class="btn btn-outline btn-sm" onclick="admOpenApiEventEdit('${esc(e.id)}')">✏️ Editar</button>
+        ${e.sync_paused?'<span class="badge badge-orange">⏸ Pausado</span>':''}
+        ${e.odds_frozen?'<span class="badge badge-blue">🧊 Cuotas fijas</span>':''}
+      </div></td>
     </tr>`;}).join('');
 }
 
@@ -2603,6 +2608,211 @@ async function admLoadCreditsLog(){
 }
 
 
+
+async function admSyncSport(sportKey, sportName){
+  showToast(`⏳ Sincronizando ${sportName}...`, '');
+  try {
+    const r = await fetch(`/api/sync-events?sport=${encodeURIComponent(sportKey)}`);
+    const data = await r.json();
+    if(data.ok){
+      const sportData = data.sports?.[sportKey];
+      const count = sportData?.count || 0;
+      showToast(`✅ ${sportName}: ${count} eventos actualizados`, 'success');
+    } else {
+      showToast(`⚠️ ${data.message||'Error'}`, 'error');
+    }
+    await admLoadApiConfig();
+  } catch(err) {
+    showToast('❌ Error: ' + err.message, 'error');
+  }
+}
+
+
+// ═══════════════════════════════════════════════════════════
+// ── EDICIÓN DE EVENTOS API (OVERRIDES) ──
+// ═══════════════════════════════════════════════════════════
+let _editingApiEvent = null;
+let _pendingOverrides = {};
+
+function admMarkOverride(field, tagId){
+  _pendingOverrides[field] = true;
+  const tag = document.getElementById(tagId);
+  if(tag) tag.style.display = 'inline-flex';
+}
+
+async function admOpenApiEventEdit(eventId){
+  const { data, error } = await _SB.from('api_events').select('*').eq('id', eventId).single();
+  if(error || !data){ showToast('❌ No se pudo cargar el evento','error'); return; }
+
+  _editingApiEvent = data;
+  _pendingOverrides = {};
+
+  const overrides  = data.overrides  || {};
+  const origData   = data.original_data || {};
+  const el = id => document.getElementById(id);
+
+  // Fill form with current values (override takes priority)
+  el('ae-home').value     = overrides.home_team    || data.home_team    || '';
+  el('ae-away').value     = overrides.away_team    || data.away_team    || '';
+  el('ae-league').value   = overrides.league       || data.league       || '';
+  el('ae-commence').value = new Date(overrides.commence_time || data.commence_time).toISOString().slice(0,16);
+  el('ae-odd1').value     = overrides.odd_1        ?? data.odd_1        ?? '';
+  el('ae-oddx').value     = overrides.odd_x        ?? data.odd_x        ?? '';
+  el('ae-odd2').value     = overrides.odd_2        ?? data.odd_2        ?? '';
+  el('ae-tline').value    = overrides.total_line   ?? data.total_line   ?? '';
+  el('ae-tover').value    = overrides.total_over   ?? data.total_over   ?? '';
+  el('ae-tunder').value   = overrides.total_under  ?? data.total_under  ?? '';
+
+  el('ae-sync-paused').checked = !!data.sync_paused;
+  el('ae-odds-frozen').checked = !!data.odds_frozen;
+
+  // Show override badges for existing overrides
+  const overrideTags = { home_team:'ae-home-tag', away_team:'ae-away-tag', league:'ae-league-tag', commence_time:'ae-time-tag', odd_1:'ae-odd1-tag', odd_x:'ae-oddx-tag', odd_2:'ae-odd2-tag', total_line:'ae-tline-tag', total_over:'ae-tover-tag', total_under:'ae-tunder-tag' };
+  Object.entries(overrideTags).forEach(([field, tagId]) => {
+    const tag = document.getElementById(tagId);
+    if(tag) tag.style.display = overrides[field] != null ? 'inline-flex' : 'none';
+  });
+
+  // Show frozen label
+  const frozenLabel = el('ae-odds-frozen-label');
+  if(frozenLabel) frozenLabel.style.display = data.odds_frozen ? '' : 'none';
+
+  // Show original data
+  const origEl = el('ae-original-data');
+  if(origEl && Object.keys(origData).length){
+    origEl.innerHTML = Object.entries(origData).map(([k,v]) =>
+      `<span style="margin-right:12px"><strong>${k}:</strong> ${v??'—'}</span>`
+    ).join('');
+  } else if(origEl) {
+    origEl.textContent = 'Sin datos originales guardados todavía';
+  }
+
+  // Show original odds under fields
+  if(origData.odd_1  != null) el('ae-odd1-orig').textContent  = `API: ${origData.odd_1}`;
+  if(origData.odd_x  != null) el('ae-oddx-orig').textContent  = `API: ${origData.odd_x}`;
+  if(origData.odd_2  != null) el('ae-odd2-orig').textContent  = `API: ${origData.odd_2}`;
+
+  document.getElementById('api-event-edit-overlay').classList.add('open');
+}
+
+function admCloseApiEventEdit(){
+  document.getElementById('api-event-edit-overlay').classList.remove('open');
+  _editingApiEvent = null;
+  _pendingOverrides = {};
+}
+
+// Toggle frozen odds label on checkbox change
+document.addEventListener('change', e => {
+  if(e.target.id === 'ae-odds-frozen'){
+    const label = document.getElementById('ae-odds-frozen-label');
+    if(label) label.style.display = e.target.checked ? '' : 'none';
+  }
+});
+
+async function admSaveApiEventEdit(){
+  if(!_editingApiEvent) return;
+
+  const el = id => document.getElementById(id);
+  const syncPaused = el('ae-sync-paused').checked;
+  const oddsFrozen = el('ae-odds-frozen').checked;
+
+  // Build overrides object — only save fields that differ from original
+  const orig = _editingApiEvent.original_data || {};
+  const existingOverrides = _editingApiEvent.overrides || {};
+
+  const newOverrides = { ...existingOverrides };
+
+  const fields = [
+    { key:'home_team',     val: el('ae-home').value.trim() },
+    { key:'away_team',     val: el('ae-away').value.trim() },
+    { key:'league',        val: el('ae-league').value.trim() },
+    { key:'commence_time', val: el('ae-commence').value ? new Date(el('ae-commence').value).toISOString() : null },
+    { key:'odd_1',         val: parseFloat(el('ae-odd1').value)||null },
+    { key:'odd_x',         val: parseFloat(el('ae-oddx').value)||null },
+    { key:'odd_2',         val: parseFloat(el('ae-odd2').value)||null },
+    { key:'total_line',    val: parseFloat(el('ae-tline').value)||null },
+    { key:'total_over',    val: parseFloat(el('ae-tover').value)||null },
+    { key:'total_under',   val: parseFloat(el('ae-tunder').value)||null },
+  ];
+
+  fields.forEach(({key, val}) => {
+    if(val != null && String(val) !== String(orig[key] ?? _editingApiEvent[key] ?? '')) {
+      newOverrides[key] = val;
+    }
+  });
+
+  const payload = {
+    sync_paused:  syncPaused,
+    odds_frozen:  oddsFrozen,
+    overrides:    newOverrides,
+    edited_by:    SESSION?.email || '',
+    edited_at:    new Date().toISOString(),
+    // Apply overrides to actual columns
+    home_team:     newOverrides.home_team    || _editingApiEvent.home_team,
+    away_team:     newOverrides.away_team    || _editingApiEvent.away_team,
+    league:        newOverrides.league       || _editingApiEvent.league,
+    commence_time: newOverrides.commence_time|| _editingApiEvent.commence_time,
+    odd_1:         oddsFrozen ? (newOverrides.odd_1    ?? _editingApiEvent.odd_1)   : _editingApiEvent.odd_1,
+    odd_x:         oddsFrozen ? (newOverrides.odd_x    ?? _editingApiEvent.odd_x)   : _editingApiEvent.odd_x,
+    odd_2:         oddsFrozen ? (newOverrides.odd_2    ?? _editingApiEvent.odd_2)   : _editingApiEvent.odd_2,
+    total_line:    oddsFrozen ? (newOverrides.total_line  ?? _editingApiEvent.total_line)  : _editingApiEvent.total_line,
+    total_over:    oddsFrozen ? (newOverrides.total_over  ?? _editingApiEvent.total_over)  : _editingApiEvent.total_over,
+    total_under:   oddsFrozen ? (newOverrides.total_under ?? _editingApiEvent.total_under) : _editingApiEvent.total_under,
+    last_updated_at: new Date().toISOString(),
+  };
+
+  // Apply non-frozen overrides to columns too
+  if(!oddsFrozen) {
+    if(newOverrides.odd_1)   payload.odd_1   = newOverrides.odd_1;
+    if(newOverrides.odd_x)   payload.odd_x   = newOverrides.odd_x;
+    if(newOverrides.odd_2)   payload.odd_2   = newOverrides.odd_2;
+    if(newOverrides.total_line)  payload.total_line  = newOverrides.total_line;
+    if(newOverrides.total_over)  payload.total_over  = newOverrides.total_over;
+    if(newOverrides.total_under) payload.total_under = newOverrides.total_under;
+  }
+
+  const { error } = await _SB.from('api_events').update(payload).eq('id', _editingApiEvent.id);
+  if(error){ showToast('❌ '+error.message,'error'); return; }
+
+  const overrideCount = Object.keys(newOverrides).length;
+  showToast(`✅ Partido actualizado · ${overrideCount} override${overrideCount!==1?'s':''}`, 'success');
+  admCloseApiEventEdit();
+  await renderApiEvents();
+}
+
+async function admRestoreApiEvent(){
+  if(!_editingApiEvent) return;
+  if(!confirm('¿Restaurar todos los datos originales de la API? Se perderán todos los overrides.')) return;
+
+  const orig = _editingApiEvent.original_data || {};
+  const payload = {
+    overrides:    {},
+    sync_paused:  false,
+    odds_frozen:  false,
+    edited_by:    SESSION?.email || '',
+    edited_at:    new Date().toISOString(),
+    last_updated_at: new Date().toISOString(),
+  };
+
+  // Restore original values
+  if(orig.home_team)     payload.home_team     = orig.home_team;
+  if(orig.away_team)     payload.away_team     = orig.away_team;
+  if(orig.league)        payload.league        = orig.league;
+  if(orig.commence_time) payload.commence_time = orig.commence_time;
+  if(orig.odd_1  != null) payload.odd_1   = orig.odd_1;
+  if(orig.odd_x  != null) payload.odd_x   = orig.odd_x;
+  if(orig.odd_2  != null) payload.odd_2   = orig.odd_2;
+  if(orig.total_line  != null) payload.total_line  = orig.total_line;
+  if(orig.total_over  != null) payload.total_over  = orig.total_over;
+  if(orig.total_under != null) payload.total_under = orig.total_under;
+
+  const { error } = await _SB.from('api_events').update(payload).eq('id', _editingApiEvent.id);
+  if(error){ showToast('❌ '+error.message,'error'); return; }
+  showToast('↩ Datos originales restaurados','success');
+  admCloseApiEventEdit();
+  await renderApiEvents();
+}
+
 // ── Keyboard shortcut ──
 document.addEventListener('keydown', e => { if((e.ctrlKey||e.metaKey) && e.key==='k'){ e.preventDefault(); document.getElementById('topbar-search-inp')?.focus(); } });
 
@@ -2687,6 +2897,100 @@ document.addEventListener('DOMContentLoaded', () => initAdmin());
   </div>
   <div style="padding:12px 20px;border-top:1px solid var(--border);text-align:center">
     <button onclick="markAllRead()" class="btn btn-ghost btn-sm" style="width:100%">Marcar todo como leído</button>
+  </div>
+</div>
+
+<!-- Modal edición evento API -->
+<div class="modal-overlay" id="api-event-edit-overlay" onclick="if(event.target===this)admCloseApiEventEdit()" style="z-index:700">
+  <div class="modal-box" style="max-width:620px">
+    <div class="modal-hd">
+      <div>
+        <div class="modal-title">Editar Partido (API)</div>
+        <div style="font-size:11px;color:var(--text2);margin-top:2px">Los campos editados quedan marcados como override y el cron no los sobreescribirá</div>
+      </div>
+      <button class="modal-close" onclick="admCloseApiEventEdit()">✕</button>
+    </div>
+    <div class="modal-body">
+      <!-- Controles principales -->
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;padding:12px;background:var(--bg,#f4f6f9);border-radius:10px">
+        <label class="form-check">
+          <input type="checkbox" id="ae-sync-paused">
+          <div><div style="font-size:13px;font-weight:600;color:var(--orange,#fd7e14)">⏸ Pausar sincronización</div><div style="font-size:11px;color:var(--text2,#6c757d)">El cron ignorará este partido completamente</div></div>
+        </label>
+        <label class="form-check" style="margin-left:16px">
+          <input type="checkbox" id="ae-odds-frozen">
+          <div><div style="font-size:13px;font-weight:600;color:var(--blue,#007bff)">🧊 Congelar cuotas</div><div style="font-size:11px;color:var(--text2,#6c757d)">El cron actualizará todo menos las cuotas</div></div>
+        </label>
+      </div>
+
+      <!-- Equipos y liga -->
+      <div class="form-section">Información del partido</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Equipo local <span id="ae-home-tag" class="badge badge-orange" style="display:none;margin-left:4px">override</span></label>
+          <input type="text" id="ae-home" class="form-input" oninput="admMarkOverride('home_team','ae-home-tag')">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Equipo visitante <span id="ae-away-tag" class="badge badge-orange" style="display:none;margin-left:4px">override</span></label>
+          <input type="text" id="ae-away" class="form-input" oninput="admMarkOverride('away_team','ae-away-tag')">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Liga <span id="ae-league-tag" class="badge badge-orange" style="display:none;margin-left:4px">override</span></label>
+          <input type="text" id="ae-league" class="form-input" oninput="admMarkOverride('league','ae-league-tag')">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Fecha y hora <span id="ae-time-tag" class="badge badge-orange" style="display:none;margin-left:4px">override</span></label>
+          <input type="datetime-local" id="ae-commence" class="form-input" oninput="admMarkOverride('commence_time','ae-time-tag')">
+        </div>
+      </div>
+
+      <!-- Cuotas -->
+      <div class="form-section">Cuotas <span id="ae-odds-frozen-label" style="display:none;font-size:11px;color:var(--blue,#007bff);font-weight:600">🧊 CONGELADAS</span></div>
+      <div class="form-row form-row-3">
+        <div class="form-group">
+          <label class="form-label">1 Local <span id="ae-odd1-tag" class="badge badge-orange" style="display:none;margin-left:4px">override</span></label>
+          <input type="number" id="ae-odd1" class="form-input" step="0.01" min="1.01" oninput="admMarkOverride('odd_1','ae-odd1-tag')">
+          <div style="font-size:10px;color:var(--text3,#adb5bd)" id="ae-odd1-orig"></div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">X Empate <span id="ae-oddx-tag" class="badge badge-orange" style="display:none;margin-left:4px">override</span></label>
+          <input type="number" id="ae-oddx" class="form-input" step="0.01" min="1.01" oninput="admMarkOverride('odd_x','ae-oddx-tag')">
+          <div style="font-size:10px;color:var(--text3,#adb5bd)" id="ae-oddx-orig"></div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">2 Visitante <span id="ae-odd2-tag" class="badge badge-orange" style="display:none;margin-left:4px">override</span></label>
+          <input type="number" id="ae-odd2" class="form-input" step="0.01" min="1.01" oninput="admMarkOverride('odd_2','ae-odd2-tag')">
+          <div style="font-size:10px;color:var(--text3,#adb5bd)" id="ae-odd2-orig"></div>
+        </div>
+      </div>
+      <div class="form-row form-row-3">
+        <div class="form-group">
+          <label class="form-label">Línea total <span id="ae-tline-tag" class="badge badge-orange" style="display:none;margin-left:4px">override</span></label>
+          <input type="number" id="ae-tline" class="form-input" step="0.5" oninput="admMarkOverride('total_line','ae-tline-tag')">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Over <span id="ae-tover-tag" class="badge badge-orange" style="display:none;margin-left:4px">override</span></label>
+          <input type="number" id="ae-tover" class="form-input" step="0.01" min="1.01" oninput="admMarkOverride('total_over','ae-tover-tag')">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Under <span id="ae-tunder-tag" class="badge badge-orange" style="display:none;margin-left:4px">override</span></label>
+          <input type="number" id="ae-tunder" class="form-input" step="0.01" min="1.01" oninput="admMarkOverride('total_under','ae-tunder-tag')">
+        </div>
+      </div>
+
+      <!-- Datos originales de la API -->
+      <div style="background:var(--bg,#f4f6f9);border-radius:10px;padding:12px;margin-top:8px">
+        <div style="font-size:12px;font-weight:700;margin-bottom:8px;color:var(--text2,#6c757d)">📡 Datos originales de la API</div>
+        <div id="ae-original-data" style="font-size:12px;color:var(--text2,#6c757d);font-family:monospace"></div>
+      </div>
+    </div>
+    <div class="modal-ft">
+      <button class="btn btn-danger" onclick="admRestoreApiEvent()" style="margin-right:auto">↩ Restaurar original</button>
+      <button class="btn btn-ghost" onclick="admCloseApiEventEdit()">Cancelar</button>
+      <button class="btn btn-primary" onclick="admSaveApiEventEdit()">💾 Guardar cambios</button>
+    </div>
   </div>
 </div>
 </body>
