@@ -489,6 +489,9 @@ tbody td { padding: 12px 16px; font-size: 13px; color: var(--text1); vertical-al
       </button>
       <div class="nav-divider"></div>
       <div class="nav-section-label">Sistema</div>
+      <button class="nav-item" id="nav-api-mgmt" onclick="admShowPage('api-mgmt',this)">
+        <span class="nav-ico">⚡</span> Gestión API
+      </button>
       <button class="nav-item" id="nav-withdrawals" onclick="admShowPage('withdrawals',this)">
         <span class="nav-ico">📤</span> Retiros
         <span class="nav-badge" id="adm-badge-wd" style="display:none;background:var(--red)">0</span>
@@ -929,6 +932,153 @@ tbody td { padding: 12px 16px; font-size: 13px; color: var(--text1); vertical-al
         </div>
       </div>
 
+
+      <!-- Gestión API -->
+      <div class="adm-page" id="adm-api-mgmt">
+        <div class="page-hd">
+          <div class="page-hd-left"><div class="page-title">Gestión de API</div><div class="page-sub">Configuración y monitoreo de The Odds API</div></div>
+          <div class="page-hd-right">
+            <button class="btn btn-primary" onclick="admRunSync()">▶ Sincronizar ahora</button>
+            <button class="btn btn-ghost" onclick="admLoadApiConfig()">🔄 Actualizar</button>
+          </div>
+        </div>
+
+        <!-- Estado de sincronización -->
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px">
+          <div class="kpi-card"><div class="kpi-ico green">✅</div><div class="kpi-body"><div class="kpi-label">Estado</div><div class="kpi-value" id="api-status-val" style="font-size:16px">—</div></div></div>
+          <div class="kpi-card"><div class="kpi-ico blue">⏱</div><div class="kpi-body"><div class="kpi-label">Última sincronización</div><div class="kpi-value" id="api-last-sync" style="font-size:13px">—</div></div></div>
+          <div class="kpi-card"><div class="kpi-ico orange">📊</div><div class="kpi-body"><div class="kpi-label">Créditos hoy</div><div class="kpi-value" id="api-credits-today">—</div></div></div>
+          <div class="kpi-card"><div class="kpi-ico purple">🎯</div><div class="kpi-body"><div class="kpi-label">Límite diario</div><div class="kpi-value" id="api-daily-limit-show">—</div></div></div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+
+          <!-- Config principal -->
+          <div class="table-card" style="padding:20px">
+            <div style="font-size:15px;font-weight:700;margin-bottom:16px">⚙️ Configuración</div>
+            <div class="form-group" style="margin-bottom:12px">
+              <label class="form-label">API Key</label>
+              <div style="display:flex;gap:8px">
+                <input type="password" id="cfg-api-key" class="form-input" placeholder="Introduce tu API key" style="flex:1">
+                <button class="btn btn-ghost btn-sm" onclick="document.getElementById('cfg-api-key').type=document.getElementById('cfg-api-key').type==='password'?'text':'password'">👁</button>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">Frecuencia (minutos)</label>
+                <select id="cfg-sync-freq" class="form-select">
+                  <option value="15">Cada 15 min</option>
+                  <option value="30">Cada 30 min</option>
+                  <option value="60" selected>Cada 1 hora</option>
+                  <option value="120">Cada 2 horas</option>
+                  <option value="360">Cada 6 horas</option>
+                  <option value="720">Cada 12 horas</option>
+                  <option value="1440">Una vez al día</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Límite diario (requests)</label>
+                <input type="number" id="cfg-daily-limit" class="form-input" value="500" min="1" max="50000">
+              </div>
+            </div>
+            <div class="form-group" style="margin-bottom:12px">
+              <label class="form-label">Rate limit protection (ms entre requests)</label>
+              <select id="cfg-rate-limit" class="form-select">
+                <option value="1000">1 segundo</option>
+                <option value="2000">2 segundos</option>
+                <option value="3000" selected>3 segundos (recomendado)</option>
+                <option value="5000">5 segundos</option>
+                <option value="10000">10 segundos</option>
+              </select>
+            </div>
+            <label class="form-check" style="margin-bottom:16px">
+              <input type="checkbox" id="cfg-api-active" checked>
+              <span style="font-size:13px;font-weight:600">✅ Sincronización activa</span>
+            </label>
+            <button class="btn btn-primary" style="width:100%" onclick="admSaveApiConfig()">💾 Guardar configuración</button>
+          </div>
+
+          <!-- Regiones y bookmakers -->
+          <div class="table-card" style="padding:20px">
+            <div style="font-size:15px;font-weight:700;margin-bottom:16px">🌍 Regiones</div>
+            <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:20px" id="cfg-regions-list">
+              <label class="form-check"><input type="checkbox" class="cfg-region" value="eu" checked> 🇪🇺 Europa (EU)</label>
+              <label class="form-check"><input type="checkbox" class="cfg-region" value="uk"> 🇬🇧 Reino Unido (UK)</label>
+              <label class="form-check"><input type="checkbox" class="cfg-region" value="us"> 🇺🇸 Estados Unidos (US)</label>
+              <label class="form-check"><input type="checkbox" class="cfg-region" value="au"> 🇦🇺 Australia (AU)</label>
+            </div>
+            <div style="font-size:15px;font-weight:700;margin-bottom:12px">📚 Bookmakers permitidos</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px" id="cfg-bookmakers-list">
+              <label class="form-check"><input type="checkbox" class="cfg-bk" value="bet365" checked> Bet365</label>
+              <label class="form-check"><input type="checkbox" class="cfg-bk" value="pinnacle" checked> Pinnacle</label>
+              <label class="form-check"><input type="checkbox" class="cfg-bk" value="draftkings" checked> DraftKings</label>
+              <label class="form-check"><input type="checkbox" class="cfg-bk" value="fanduel" checked> FanDuel</label>
+              <label class="form-check"><input type="checkbox" class="cfg-bk" value="betway" checked> Betway</label>
+              <label class="form-check"><input type="checkbox" class="cfg-bk" value="williamhill" checked> William Hill</label>
+              <label class="form-check"><input type="checkbox" class="cfg-bk" value="unibet" checked> Unibet</label>
+              <label class="form-check"><input type="checkbox" class="cfg-bk" value="bwin" checked> Bwin</label>
+              <label class="form-check"><input type="checkbox" class="cfg-bk" value="bovada"> Bovada</label>
+              <label class="form-check"><input type="checkbox" class="cfg-bk" value="mybookieag"> MyBookie</label>
+              <label class="form-check"><input type="checkbox" class="cfg-bk" value="betonlineag"> BetOnline</label>
+              <label class="form-check"><input type="checkbox" class="cfg-bk" value="lowvig"> LowVig</label>
+              <label class="form-check"><input type="checkbox" class="cfg-bk" value="superbook"> SuperBook</label>
+              <label class="form-check"><input type="checkbox" class="cfg-bk" value="betrivers"> BetRivers</label>
+              <label class="form-check"><input type="checkbox" class="cfg-bk" value="pointsbetus"> PointsBet</label>
+              <label class="form-check"><input type="checkbox" class="cfg-bk" value="barstool"> Barstool</label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Deportes activos -->
+        <div class="table-card" style="padding:20px;margin-bottom:16px">
+          <div style="font-size:15px;font-weight:700;margin-bottom:12px">⚽ Deportes activos en sincronización</div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px" id="cfg-sports-list">
+            <label class="form-check"><input type="checkbox" class="cfg-sport" value="soccer_epl" checked> ⚽ Premier League</label>
+            <label class="form-check"><input type="checkbox" class="cfg-sport" value="soccer_spain_la_liga" checked> ⚽ La Liga</label>
+            <label class="form-check"><input type="checkbox" class="cfg-sport" value="soccer_uefa_champs_league" checked> ⚽ Champions League</label>
+            <label class="form-check"><input type="checkbox" class="cfg-sport" value="soccer_germany_bundesliga" checked> ⚽ Bundesliga</label>
+            <label class="form-check"><input type="checkbox" class="cfg-sport" value="soccer_italy_serie_a" checked> ⚽ Serie A</label>
+            <label class="form-check"><input type="checkbox" class="cfg-sport" value="soccer_france_ligue_one" checked> ⚽ Ligue 1</label>
+            <label class="form-check"><input type="checkbox" class="cfg-sport" value="soccer_usa_mls" checked> ⚽ MLS</label>
+            <label class="form-check"><input type="checkbox" class="cfg-sport" value="soccer_brazil_campeonato" checked> ⚽ Brasileirão</label>
+            <label class="form-check"><input type="checkbox" class="cfg-sport" value="soccer_conmebol_copa_libertadores" checked> ⚽ Copa Libertadores</label>
+            <label class="form-check"><input type="checkbox" class="cfg-sport" value="basketball_nba" checked> 🏀 NBA</label>
+            <label class="form-check"><input type="checkbox" class="cfg-sport" value="basketball_euroleague" checked> 🏀 EuroLeague</label>
+            <label class="form-check"><input type="checkbox" class="cfg-sport" value="americanfootball_nfl" checked> 🏈 NFL</label>
+            <label class="form-check"><input type="checkbox" class="cfg-sport" value="baseball_mlb" checked> ⚾ MLB</label>
+            <label class="form-check"><input type="checkbox" class="cfg-sport" value="icehockey_nhl" checked> 🏒 NHL</label>
+            <label class="form-check"><input type="checkbox" class="cfg-sport" value="mma_mixed_martial_arts" checked> 🥊 MMA/UFC</label>
+          </div>
+        </div>
+
+        <!-- Logs de sincronización -->
+        <div class="table-card" style="margin-bottom:16px">
+          <div class="table-card-hd">
+            <div class="table-card-title">📋 Log de sincronizaciones</div>
+            <button class="btn btn-ghost btn-sm" onclick="admLoadSyncLogs()">🔄 Actualizar</button>
+          </div>
+          <div style="overflow-x:auto">
+            <table>
+              <thead><tr><th>Fecha</th><th>Estado</th><th>Eventos</th><th>Créditos</th><th>Duración</th><th>Detalle</th></tr></thead>
+              <tbody id="adm-sync-logs-body"><tr><td colspan="6" class="table-empty">⏳ Cargando...</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Log de créditos por deporte -->
+        <div class="table-card">
+          <div class="table-card-hd">
+            <div class="table-card-title">💳 Créditos usados hoy por deporte</div>
+          </div>
+          <div style="overflow-x:auto">
+            <table>
+              <thead><tr><th>Deporte</th><th>Requests hoy</th><th>Eventos obtenidos</th><th>Último remaining</th></tr></thead>
+              <tbody id="adm-credits-body"><tr><td colspan="4" class="table-empty">⏳ Cargando...</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
       <!-- Reportes -->
       <div class="adm-page" id="adm-reports">
         <div class="page-hd">
@@ -1238,6 +1388,7 @@ function admShowPage(page, btn){
   if(page==='teams')     renderTeams();
   if(page==='outcomes')  renderOutcomes();
   if(page==='api-events') renderApiEvents();
+  if(page==='api-mgmt')    admLoadApiConfig();
   if(page==='support')   renderSupport('all');
   if(page==='withdrawals') renderWithdrawals('all');
   if(page==='reports')   initReportDates();
@@ -2301,6 +2452,156 @@ function admFilterApiEvents(filter, btn){
   if(statusEl) statusEl.value = filter === 'all' ? '' : filter;
   admApplyApiEventFilters();
 }
+
+
+// ═══════════════════════════════════════════════════════════
+// ── GESTIÓN API ──
+// ═══════════════════════════════════════════════════════════
+let _apiConfig = null;
+
+async function admLoadApiConfig(){
+  try {
+    // Load config
+    const { data, error } = await _SB.from('api_config').select('*').eq('id',1).single();
+    if(error) throw error;
+    _apiConfig = data;
+
+    // Fill form
+    const el = id => document.getElementById(id);
+    if(_apiConfig.api_key) el('cfg-api-key').value = _apiConfig.api_key;
+    if(el('cfg-sync-freq'))  el('cfg-sync-freq').value  = _apiConfig.sync_frequency||60;
+    if(el('cfg-daily-limit')) el('cfg-daily-limit').value = _apiConfig.daily_limit||500;
+    if(el('cfg-rate-limit'))  el('cfg-rate-limit').value  = _apiConfig.rate_limit_ms||3000;
+    if(el('cfg-api-active'))  el('cfg-api-active').checked = !!_apiConfig.active;
+
+    // Regions
+    document.querySelectorAll('.cfg-region').forEach(cb => {
+      cb.checked = (_apiConfig.regions||[]).includes(cb.value);
+    });
+
+    // Bookmakers
+    document.querySelectorAll('.cfg-bk').forEach(cb => {
+      cb.checked = (_apiConfig.bookmakers||[]).includes(cb.value);
+    });
+
+    // Sports
+    document.querySelectorAll('.cfg-sport').forEach(cb => {
+      cb.checked = (_apiConfig.sports_active||[]).includes(cb.value);
+    });
+
+    // KPIs
+    if(el('api-status-val')){
+      const active = _apiConfig.active;
+      el('api-status-val').textContent = active ? '✅ Activa' : '⏸ Pausada';
+      el('api-status-val').style.color = active ? 'var(--green)' : 'var(--orange)';
+    }
+    if(el('api-last-sync')) el('api-last-sync').textContent = _apiConfig.last_sync_at ? fDate(_apiConfig.last_sync_at) : 'Nunca';
+    if(el('api-daily-limit-show')) el('api-daily-limit-show').textContent = _apiConfig.daily_limit||500;
+
+    // Load credits today
+    const today = new Date(); today.setHours(0,0,0,0);
+    const { data: credits } = await _SB.from('api_credits_log').select('credits_used').gte('logged_at', today.toISOString());
+    const usedToday = (credits||[]).reduce((a,c)=>a+(c.credits_used||1),0);
+    if(el('api-credits-today')) el('api-credits-today').textContent = `${usedToday} / ${_apiConfig.daily_limit||500}`;
+
+    // Load logs
+    await admLoadSyncLogs();
+    await admLoadCreditsLog();
+
+  } catch(err) {
+    showToast('❌ Error al cargar config API: ' + err.message, 'error');
+  }
+}
+
+async function admSaveApiConfig(){
+  const regions   = [...document.querySelectorAll('.cfg-region:checked')].map(cb=>cb.value);
+  const bookmakers = [...document.querySelectorAll('.cfg-bk:checked')].map(cb=>cb.value);
+  const sports    = [...document.querySelectorAll('.cfg-sport:checked')].map(cb=>cb.value);
+  const apiKey    = document.getElementById('cfg-api-key').value.trim();
+  const freq      = parseInt(document.getElementById('cfg-sync-freq').value)||60;
+  const limit     = parseInt(document.getElementById('cfg-daily-limit').value)||500;
+  const rateLimit = parseInt(document.getElementById('cfg-rate-limit').value)||3000;
+  const active    = document.getElementById('cfg-api-active').checked;
+
+  if(!regions.length){ showToast('❌ Selecciona al menos una región','error'); return; }
+  if(!sports.length) { showToast('❌ Selecciona al menos un deporte','error'); return; }
+
+  const payload = {
+    active, sync_frequency: freq, daily_limit: limit,
+    rate_limit_ms: rateLimit, regions, bookmakers, sports_active: sports,
+    updated_at: new Date().toISOString(),
+  };
+  if(apiKey) payload.api_key = apiKey;
+
+  const { error } = await _SB.from('api_config').update(payload).eq('id',1);
+  if(error){ showToast('❌ '+error.message,'error'); return; }
+  showToast('✅ Configuración guardada','success');
+  await admLoadApiConfig();
+}
+
+async function admRunSync(){
+  showToast('⏳ Iniciando sincronización...','');
+  try {
+    const r = await fetch('/api/sync-events');
+    const data = await r.json();
+    if(data.ok){
+      showToast(`✅ Sincronizado: ${data.synced} eventos en ${data.duration_ms}ms`,'success');
+    } else {
+      showToast(`⚠️ ${data.message||'Error en sincronización'}`,'error');
+    }
+    await admLoadApiConfig();
+  } catch(err) {
+    showToast('❌ Error: '+err.message,'error');
+  }
+}
+
+async function admLoadSyncLogs(){
+  const body = document.getElementById('adm-sync-logs-body');
+  if(!body) return;
+  const { data } = await _SB.from('api_sync_logs').select('*').order('synced_at',{ascending:false}).limit(20);
+  const logs = data||[];
+  if(!logs.length){ body.innerHTML='<tr><td colspan="6" class="table-empty">Sin sincronizaciones registradas</td></tr>'; return; }
+  body.innerHTML = logs.map(l=>{
+    const statusBadge = l.status==='success'?'<span class="badge badge-green">✅ Éxito</span>':l.status==='partial'?'<span class="badge badge-orange">⚠️ Parcial</span>':'<span class="badge badge-red">❌ Error</span>';
+    const sportsDetail = l.sports_log ? Object.entries(l.sports_log).map(([k,v])=>`${k.split('_')[0]}:${v.count||0}`).join(', ') : '—';
+    return `<tr>
+      <td style="font-size:12px;white-space:nowrap">${fDate(l.synced_at)}</td>
+      <td>${statusBadge}</td>
+      <td style="font-family:var(--mono)">${l.total_events||0}</td>
+      <td style="font-family:var(--mono)">${l.credits_used||0}</td>
+      <td style="font-size:12px;color:var(--text2)">${l.duration_ms?Math.round(l.duration_ms/1000)+'s':'—'}</td>
+      <td style="font-size:11px;color:var(--text2);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(sportsDetail)}">${esc(l.error_msg||sportsDetail)}</td>
+    </tr>`;}).join('');
+}
+
+async function admLoadCreditsLog(){
+  const body = document.getElementById('adm-credits-body');
+  if(!body) return;
+  const today = new Date(); today.setHours(0,0,0,0);
+  const { data } = await _SB.from('api_credits_log').select('sport_key,credits_used,events_count,remaining').gte('logged_at',today.toISOString()).order('logged_at',{ascending:false});
+  const logs = data||[];
+  if(!logs.length){ body.innerHTML='<tr><td colspan="4" class="table-empty">Sin créditos usados hoy</td></tr>'; return; }
+  
+  // Group by sport
+  const bysSport = {};
+  logs.forEach(l=>{
+    if(!bysSport[l.sport_key]) bysSport[l.sport_key]={credits:0,events:0,remaining:l.remaining};
+    bysSport[l.sport_key].credits += l.credits_used||1;
+    bysSport[l.sport_key].events  += l.events_count||0;
+    bysSport[l.sport_key].remaining = l.remaining;
+  });
+
+  const sportIcons={soccer:'⚽',basketball:'🏀',americanfootball:'🏈',baseball:'⚾',icehockey:'🏒',mma:'🥊'};
+  body.innerHTML = Object.entries(bysSport).map(([sport,v])=>{
+    const cat=(sport||'').split('_')[0];
+    return `<tr>
+      <td><span class="badge badge-purple">${sportIcons[cat]||'🏅'} ${esc(sport)}</span></td>
+      <td style="font-family:var(--mono)">${v.credits}</td>
+      <td style="font-family:var(--mono)">${v.events}</td>
+      <td style="font-family:var(--mono);color:${v.remaining<50?'var(--red)':'var(--green)'}">${v.remaining!=null?v.remaining:'—'}</td>
+    </tr>`;}).join('');
+}
+
 
 // ── Keyboard shortcut ──
 document.addEventListener('keydown', e => { if((e.ctrlKey||e.metaKey) && e.key==='k'){ e.preventDefault(); document.getElementById('topbar-search-inp')?.focus(); } });
