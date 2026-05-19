@@ -1,52 +1,81 @@
-// api/sync-events.js — Sin dependencias externas, usa fetch nativo
-
+// api/sync-events.js — Lee config desde Supabase, escribe logs
 export default async function handler(req, res) {
-  if (req.method !== 'GET' && req.method !== 'POST') {
-    return res.status(405).end('Method not allowed');
-  }
+  if (req.method !== 'GET' && req.method !== 'POST') return res.status(405).end();
 
-  const ODDS_KEY  = process.env.ODDS_API_KEY;
-  const SB_URL    = 'https://ghgkvtdhuqfpigbtzefz.supabase.co';
-  const SB_KEY    = process.env.SUPABASE_SERVICE_KEY;
+  const ODDS_KEY = process.env.ODDS_API_KEY;
+  const SB_URL   = 'https://ghgkvtdhuqfpigbtzefz.supabase.co';
+  const SB_KEY   = process.env.SUPABASE_SERVICE_KEY;
 
-  if (!ODDS_KEY) return res.status(500).json({ error: 'ODDS_API_KEY not configured' });
-  if (!SB_KEY)   return res.status(500).json({ error: 'SUPABASE_SERVICE_KEY not configured' });
+  if (!SB_KEY) return res.status(500).json({ error: 'SUPABASE_SERVICE_KEY not configured' });
 
-  const SPORTS = [
-    'soccer_epl','soccer_spain_la_liga','soccer_uefa_champs_league',
-    'soccer_germany_bundesliga','soccer_italy_serie_a','soccer_france_ligue_one',
-    'soccer_usa_mls','soccer_brazil_campeonato','soccer_conmebol_copa_libertadores',
-    'basketball_nba','basketball_euroleague',
-    'americanfootball_nfl','baseball_mlb','icehockey_nhl','mma_mixed_martial_arts',
-  ];
-
-  const upsertToSupabase = async (rows) => {
-    const r = await fetch(`${SB_URL}/rest/v1/api_events`, {
-      method: 'POST',
-      headers: {
-        'apikey': SB_KEY,
-        'Authorization': `Bearer ${SB_KEY}`,
-        'Content-Type': 'application/json',
-        'Prefer': 'resolution=merge-duplicates',
-      },
-      body: JSON.stringify(rows),
-    });
-    return r.ok;
+  const sbHeaders = {
+    'apikey': SB_KEY,
+    'Authorization': `Bearer ${SB_KEY}`,
+    'Content-Type': 'application/json',
   };
 
-  let totalSynced = 0;
-  const results = [];
+  const startTime = Date.now();
 
-  for (const sport of SPORTS) {
+  // ── Load config from Supabase ──
+  let config = null;
+  try {
+    const cfgRes = await fetch(`${SB_URL}/rest/v1/api_config?id=eq.1&select=*`, { headers: sbHeaders });
+    const cfgData = await cfgRes.json();
+    config = cfgData[0];
+  } catch(e) {
+    return res.status(500).json({ error: 'Cannot load API config: ' + e.message });
+  }
+
+  if (!config) return res.status(500).json({ error: 'API config not found. Run SQL migration.' });
+  if (!config.active) return res.status(200).json({ ok: false, message: 'Sincronización pausada por el administrador.' });
+
+  const apiKey = config.api_key || ODDS_KEY;
+  if (!apiKey) return res.status(500).json({ error: 'No API key configured.' });
+
+  const sports    = config.sports_active || [];
+  const bookmakers = (config.bookmakers || []).join(',');
+  const regions   = (config.regions || ['eu']).join(',');
+  const rateLimitMs = config.rate_limit_ms || 3000;
+
+  // ── Check daily limit ──
+  const todayStart = new Date(); todayStart.setHours(0,0,0,0);
+  const creditsRes = await fetch(`${SB_URL}/rest/v1/api_credits_log?logged_at=gte.${todayStart.toISOString()}&select=credits_used`, { headers: sbHeaders });
+  const creditsToday = await creditsRes.json();
+  const usedToday = (creditsToday||[]).reduce((a,c) => a + (c.credits_used||1), 0);
+
+  if (usedToday >= config.daily_limit) {
+    return res.status(200).json({ ok: false, message: `Límite diario alcanzado: ${usedToday}/${config.daily_limit} créditos usados.` });
+  }
+
+  // ── Sync each sport ──
+  let totalSynced = 0, totalCredits = 0;
+  const sportsLog = {};
+  const errors = [];
+
+  for (const sport of sports) {
+    // Rate limit protection
+    if (sports.indexOf(sport) > 0) {
+      await new Promise(r => setTimeout(r, rateLimitMs));
+    }
+
     try {
       const r = await fetch(
-        `https://api.the-odds-api.com/v4/sports/${sport}/odds/?apiKey=${ODDS_KEY}&regions=eu&markets=h2h,totals&oddsFormat=decimal`,
-        { signal: AbortSignal.timeout(8000) }
+        `https://api.the-odds-api.com/v4/sports/${sport}/odds/?apiKey=${apiKey}&regions=${regions}&markets=h2h,totals&oddsFormat=decimal${bookmakers ? '&bookmakers=' + bookmakers : ''}`,
+        { signal: AbortSignal.timeout(10000) }
       );
-      if (!r.ok) { results.push({ sport, status: 'skip', reason: r.status }); continue; }
-      const events = await r.json();
-      if (!events.length) { results.push({ sport, status: 'empty' }); continue; }
 
+      const remaining = parseInt(r.headers.get('x-requests-remaining') || '0');
+      const used      = parseInt(r.headers.get('x-requests-used') || '1');
+
+      if (!r.ok) {
+        sportsLog[sport] = { status: 'error', reason: r.status };
+        errors.push(`${sport}: HTTP ${r.status}`);
+        continue;
+      }
+
+      const events = await r.json();
+
+      // Process and upsert
       const rows = events.map(e => {
         const bks = e.bookmakers || [];
         let best1=null, bestX=null, best2=null, bestOver=null, bestUnder=null, totalLine=null;
@@ -63,37 +92,61 @@ export default async function handler(req, res) {
             });
           });
         });
-        const now = new Date();
-        const status = new Date(e.commence_time) <= now ? 'live' : 'upcoming';
         return {
           id: e.id, sport_key: sport, sport_title: e.sport_title||sport,
           league: e.sport_title||sport, home_team: e.home_team, away_team: e.away_team,
-          commence_time: e.commence_time, status,
+          commence_time: e.commence_time, status: 'upcoming',
           odd_1: best1, odd_x: bestX, odd_2: best2,
           total_line: totalLine, total_over: bestOver, total_under: bestUnder,
-          last_updated_at: now.toISOString(),
+          last_updated_at: new Date().toISOString(),
         };
       });
 
-      const ok = await upsertToSupabase(rows);
-      if (ok) totalSynced += rows.length;
-      results.push({ sport, status: ok?'ok':'error', count: rows.length });
+      if (rows.length) {
+        await fetch(`${SB_URL}/rest/v1/api_events`, {
+          method: 'POST',
+          headers: { ...sbHeaders, 'Prefer': 'resolution=merge-duplicates' },
+          body: JSON.stringify(rows),
+        });
+      }
+
+      // Log credits per sport
+      await fetch(`${SB_URL}/rest/v1/api_credits_log`, {
+        method: 'POST',
+        headers: sbHeaders,
+        body: JSON.stringify({ sport_key: sport, credits_used: 1, events_count: rows.length, remaining }),
+      });
+
+      totalSynced += rows.length;
+      totalCredits++;
+      sportsLog[sport] = { status: 'ok', count: rows.length, remaining };
+
     } catch(err) {
-      results.push({ sport, status: 'error', reason: err.message });
+      sportsLog[sport] = { status: 'error', reason: err.message };
+      errors.push(`${sport}: ${err.message}`);
     }
   }
 
-  // Mark old live events as finished (started > 3h ago)
-  const cutoff = new Date(Date.now() - 3*60*60*1000).toISOString();
-  await fetch(`${SB_URL}/rest/v1/api_events?status=eq.live&commence_time=lt.${cutoff}`, {
-    method: 'PATCH',
-    headers: {
-      'apikey': SB_KEY,
-      'Authorization': `Bearer ${SB_KEY}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ status: 'finished', last_updated_at: new Date().toISOString() }),
+  const duration = Date.now() - startTime;
+  const status = errors.length === 0 ? 'success' : errors.length < sports.length ? 'partial' : 'error';
+
+  // ── Write sync log ──
+  await fetch(`${SB_URL}/rest/v1/api_sync_logs`, {
+    method: 'POST',
+    headers: sbHeaders,
+    body: JSON.stringify({
+      status, total_events: totalSynced, credits_used: totalCredits,
+      sports_log: sportsLog, error_msg: errors.length ? errors.join('; ') : null,
+      duration_ms: duration,
+    }),
   });
 
-  return res.status(200).json({ ok: true, synced: totalSynced, sports: results });
+  // ── Update last_sync_at in config ──
+  await fetch(`${SB_URL}/rest/v1/api_config?id=eq.1`, {
+    method: 'PATCH',
+    headers: sbHeaders,
+    body: JSON.stringify({ last_sync_at: new Date().toISOString(), updated_at: new Date().toISOString() }),
+  });
+
+  return res.status(200).json({ ok: true, synced: totalSynced, credits: totalCredits, status, duration_ms: duration, sports: sportsLog });
 }
