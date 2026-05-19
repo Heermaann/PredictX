@@ -2008,10 +2008,32 @@ async function connectAPI() {
   }
 }
 function updateAPIPill(on) {
-  const dot = document.getElementById('api-dot');
-  const txt = document.getElementById('api-pill-txt');
+  const dot  = document.getElementById('api-dot');
+  const txt  = document.getElementById('api-pill-txt');
+  const pill = document.getElementById('api-pill');
   if (dot) dot.className = 'api-dot' + (on ? ' on' : '');
   if (txt) txt.textContent = on ? S.sport.replace(/_/g,' ') : 'Sin conexión';
+  // Only show API pill to admins
+  if (pill) pill.style.display = isOwner() ? '' : 'none';
+}
+
+// Hide admin-only elements for non-admin users
+function applyAdminOnlyVisibility() {
+  const admin = isOwner();
+  // Hide Izipay test card info
+  document.querySelectorAll('.admin-only-el').forEach(el => {
+    el.style.display = admin ? '' : 'none';
+  });
+  // Hide Izipay SDK bubble (Information / Test Methods)
+  const style = document.getElementById('admin-only-style');
+  if (!style) {
+    const s = document.createElement('style');
+    s.id = 'admin-only-style';
+    s.textContent = admin
+      ? ''
+      : '.kr-help-button, .kr-form-help, [class*="kr-help"], [class*="kr-info"] { display: none !important; }';
+    document.head.appendChild(s);
+  }
 }
 
 /* ════════════════════════════════════════════════════
@@ -2177,6 +2199,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   loadMarkets();
   // Load site config from Supabase (for config enforcement)
   await loadSiteConfig();
+  // Apply admin-only visibility rules
+  applyAdminOnlyVisibility();
   // Check manual events auto-live on startup
   checkManualEventsAutoLive();
   // Show maintenance banner if active and user is not owner
