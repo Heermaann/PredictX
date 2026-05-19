@@ -175,39 +175,45 @@ async function loadMarkets(force=false) {
   document.getElementById('events-list').innerHTML =
     '<div class="spinner-wrap"><div class="spin"></div><div>Cargando eventos…</div></div>';
   try {
-    // Fetch API events — primary source, must succeed
-    const res = await oddsApiFetch(S.sport, force);
-    if (!res.ok) { const e = await res.json().catch(()=>({})); throw new Error(e.message||'Error '+res.status); }
-    const data = await res.json();
-    const rem    = res.headers.get('x-requests-remaining');
-    const cached = res.headers.get('x-cache');
-    const ttl    = res.headers.get('x-cache-ttl');
-    if (cached === 'HIT') {
-      showToast(`⚡ ${data.length} eventos (caché ${ttl} restantes)`);
-    } else if (rem) {
-      showToast(`✅ ${data.length} eventos · ${rem} requests restantes`);
-    }
+    // ── Read from Supabase api_events (no API call) ──
+    const { data: apiData, error: apiError } = await _SB
+      .from('api_events')
+      .select('*')
+      .in('status', ['upcoming', 'live'])
+      .order('commence_time', { ascending: true })
+      .limit(500);
 
-    // Process API events
-    const apiMarkets = data.map(m => {
-      try { return processMarket(m); }
-      catch(e) { console.warn('processMarket error:', e, m); return null; }
-    }).filter(Boolean);
+    if (apiError) throw new Error(apiError.message);
 
-    // Fetch manual events independently — failure here doesn't block API events
+    const apiEvents = (apiData || []).map(e => processManualEvent({
+      ...e,
+      _fromApi: true,
+      sport_key: e.sport_key,
+      league:    e.league || e.sport_title,
+    }));
+
+    // ── Also load manual events ──
     let manualMarkets = [];
     try {
-      const manualData = await _SB.from('manual_events')
+      const { data: manualData } = await _SB
+        .from('manual_events')
         .select('*')
         .in('status', ['upcoming','live'])
         .order('commence_time', { ascending: true });
-      manualMarkets = (manualData.data || []).map(e => processManualEvent(e));
+      manualMarkets = (manualData || []).map(e => processManualEvent(e));
     } catch(e) {
-      console.warn('Manual events fetch failed (non-critical):', e.message);
+      console.warn('Manual events fetch failed:', e.message);
     }
 
-    // Merge: featured manual events first, then by time
-    S.markets = [...manualMarkets, ...apiMarkets].sort((a, b) => {
+    const total = apiEvents.length + manualMarkets.length;
+    if (total > 0) {
+      showToast(`✅ ${total} eventos cargados desde la base de datos`);
+    } else {
+      showToast('⚠️ Sin eventos. Sincroniza desde el panel admin.');
+    }
+
+    // Merge: featured manual first, then by time
+    S.markets = [...manualMarkets, ...apiEvents].sort((a, b) => {
       if (a._featured && !b._featured) return -1;
       if (!a._featured && b._featured) return 1;
       return new Date(a.commence_time) - new Date(b.commence_time);
@@ -217,8 +223,8 @@ async function loadMarkets(force=false) {
     applyFilters();
     updateAPIPill(true);
   } catch(err) {
-    const msg = err.message.includes('Failed to fetch') || err.message.includes('NetworkError') || err.message.includes('timeout')
-      ? 'Sin conexión a internet o la API no responde. Verifica tu red e intenta de nuevo.'
+    const msg = err.message.includes('Failed to fetch') || err.message.includes('NetworkError')
+      ? 'Sin conexión. Verifica tu red e intenta de nuevo.'
       : err.message;
     renderEmpty('error', msg);
     updateAPIPill(false);
