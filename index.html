@@ -26,7 +26,7 @@
 <!-- ════ NAV ════ -->
 <nav class="nav">
   <button class="nav-hamburger" id="hamburger" onclick="toggleSidebar()" ontouchend="event.preventDefault();toggleSidebar()" aria-label="Menú">☰</button>
-  <div class="nav-logo">
+  <div class="nav-logo" onclick="window.location.href='/'" style="cursor:pointer" title="Ir al inicio">
     <div class="nav-logo-mark">P</div>
     <div class="nav-logo-text">Predict<span>X</span></div>
   </div>
@@ -41,7 +41,7 @@
     <div class="search-drop" id="search-drop" style="display:none"></div>
   </div>
   <div class="nav-right">
-    <div class="api-pill" onclick="openModal()" id="api-pill">
+    <div class="api-pill" onclick="openModal()" id="api-pill" style="display:none">
       <div class="api-dot" id="api-dot"></div>
       <span class="api-pill-txt" id="api-pill-txt">Cargando…</span>
     </div>
@@ -1235,7 +1235,7 @@
           <div style="font-size:11px;color:var(--text3);text-align:center;margin-top:10px">
             🔒 Pago 100% seguro procesado por Izipay · PCI-DSS
           </div>
-          <div style="font-size:11px;color:var(--text3);text-align:center;margin-top:4px" id="iz-test-hint">
+          <div style="font-size:11px;color:var(--text3);text-align:center;margin-top:4px" id="iz-test-hint" class="admin-only-el">
             Tarjeta test: <strong style="color:var(--text2)">4970 1000 0000 0055</strong> · Exp: 12/25 · CVV: 123
           </div>
         </div>
