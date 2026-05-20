@@ -245,7 +245,7 @@ function applyOddsMargin(odd, marginPct) {
 
 function processManualEvent(e) {
   // Apply odds margin for API events (not manual ones)
-  const marginPct = e._fromApi ? (+(_siteConfig?.odds_margin || 0)) : 0;
+  const marginPct = e._fromApi ? (+(getSiteConfig().odds_margin || 0)) : 0;
   const o1 = applyOddsMargin(e.odd_1, marginPct);
   const oX = applyOddsMargin(e.odd_x, marginPct);
   const o2 = applyOddsMargin(e.odd_2, marginPct);
@@ -4012,7 +4012,7 @@ async function loadSiteConfig() {
         allowDeposits:  data.allow_deposits,
         allowBets:      data.allow_bets,
         maintenance:    data.maintenance,
-        odds_margin:    apiData?.odds_margin || 0,
+        odds_margin:    apiData?.odds_margin ?? 0,
       };
       DB.set('site_config', cfg);
     }
