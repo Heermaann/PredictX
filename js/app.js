@@ -236,23 +236,35 @@ async function loadMarkets(force=false) {
 ════════════════════════════════════════════════════ */
 
 /* Convert a manual_events DB row into the same shape as processMarket() output */
+function applyOddsMargin(odd, marginPct) {
+  if (!odd || !marginPct) return odd;
+  // Reduce odds by margin percentage
+  // e.g. odd=2.00, margin=5% → 2.00 / 1.05 = 1.905 → rounded to 1.90
+  return Math.max(1.01, +(odd / (1 + marginPct / 100)).toFixed(2));
+}
+
 function processManualEvent(e) {
-  const imp1 = e.odd_1 ? +(1/e.odd_1*100).toFixed(1) : null;
-  const impX = e.odd_x ? +(1/e.odd_x*100).toFixed(1) : null;
-  const imp2 = e.odd_2 ? +(1/e.odd_2*100).toFixed(1) : null;
+  // Apply odds margin for API events (not manual ones)
+  const marginPct = e._fromApi ? (+(_siteConfig?.odds_margin || 0)) : 0;
+  const o1 = applyOddsMargin(e.odd_1, marginPct);
+  const oX = applyOddsMargin(e.odd_x, marginPct);
+  const o2 = applyOddsMargin(e.odd_2, marginPct);
+  const imp1 = o1 ? +(1/o1*100).toFixed(1) : null;
+  const impX = oX ? +(1/oX*100).toFixed(1) : null;
+  const imp2 = o2 ? +(1/o2*100).toFixed(1) : null;
   const margin = [imp1,impX,imp2].filter(Boolean).reduce((a,b)=>a+b,0);
   return {
     id: e.id, sport_key: e.sport_key, sport_title: e.sport_title,
     home_team: e.home_team, away_team: e.away_team,
     commence_time: e.commence_time,
     bookmakers: [], _manual: true, _featured: e.featured, _status: e.status,
-    best1: e.odd_1||null, bestX: e.odd_x||null, best2: e.odd_2||null,
+    best1: o1||null, bestX: oX||null, best2: o2||null,
     imp1, impX, imp2,
     margin: margin > 0 ? +margin.toFixed(1) : null,
     bks: [], omap: {}, allMkts: {},
-    homeOdds: e.odd_1 ? [{bk:'Manual',price:e.odd_1}] : [],
-    awayOdds: e.odd_2 ? [{bk:'Manual',price:e.odd_2}] : [],
-    drawOdds:  e.odd_x ? [{bk:'Manual',price:e.odd_x}] : [],
+    homeOdds: o1 ? [{bk: e._fromApi ? 'API' : 'Manual', price: o1}] : [],
+    awayOdds: o2 ? [{bk: e._fromApi ? 'API' : 'Manual', price: o2}] : [],
+    drawOdds:  oX ? [{bk: e._fromApi ? 'API' : 'Manual', price: oX}] : [],
     totals: e.total_line ? { line:e.total_line, over:e.total_over||null, under:e.total_under||null, raw:{} } : null,
     btts: (e.btts_yes||e.btts_no) ? { yes:e.btts_yes, no:e.btts_no } : null,
     spreads: (e.spread_home||e.spread_away) ? {
@@ -3982,7 +3994,12 @@ async function saveOwnerConfig() {
 /* Load site config from Supabase on init and cache locally */
 async function loadSiteConfig() {
   try {
-    const { data } = await _SB.from('site_config').select('*').eq('id', 1).single();
+    const [siteRes, apiRes] = await Promise.all([
+      _SB.from('site_config').select('*').eq('id', 1).single(),
+      _SB.from('api_config').select('odds_margin').eq('id', 1).single(),
+    ]);
+    const data = siteRes.data;
+    const apiData = apiRes.data;
     if (data) {
       const cfg = {
         bonusPct:       data.bonus_pct,
@@ -3995,6 +4012,7 @@ async function loadSiteConfig() {
         allowDeposits:  data.allow_deposits,
         allowBets:      data.allow_bets,
         maintenance:    data.maintenance,
+        odds_margin:    apiData?.odds_margin || 0,
       };
       DB.set('site_config', cfg);
     }
