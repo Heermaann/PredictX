@@ -2023,15 +2023,15 @@ function updateAPIPill(on) {
   const pill = document.getElementById('api-pill');
   if (dot) dot.className = 'api-dot' + (on ? ' on' : '');
   if (txt) txt.textContent = on ? S.sport.replace(/_/g,' ') : 'Sin conexión';
-  if (pill) pill.style.display = isOwner() ? 'flex' : 'none';
+  if (pill) pill.classList.toggle('admin-visible', !!isOwner());
 }
 
 // Hide admin-only elements for non-admin users
 function applyAdminOnlyVisibility() {
   const admin = isOwner();
-  // Hide API pill
+  // Hide API pill — use class to override CSS !important
   const pill = document.getElementById('api-pill');
-  if (pill) pill.style.display = admin ? 'flex' : 'none';
+  if (pill) pill.classList.toggle('admin-visible', !!isOwner());
   // Hide Izipay test card info
   document.querySelectorAll('.admin-only-el').forEach(el => {
     el.style.display = admin ? '' : 'none';
