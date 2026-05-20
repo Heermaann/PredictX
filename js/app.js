@@ -2023,8 +2023,7 @@ function updateAPIPill(on) {
   const pill = document.getElementById('api-pill');
   if (dot) dot.className = 'api-dot' + (on ? ' on' : '');
   if (txt) txt.textContent = on ? S.sport.replace(/_/g,' ') : 'Sin conexión';
-  // Strictly enforce: only owners see the pill, always
-  if (pill) pill.style.display = isOwner() ? '' : 'none';
+  if (pill) pill.style.display = isOwner() ? 'flex' : 'none';
 }
 
 // Hide admin-only elements for non-admin users
@@ -2032,7 +2031,7 @@ function applyAdminOnlyVisibility() {
   const admin = isOwner();
   // Hide API pill
   const pill = document.getElementById('api-pill');
-  if (pill) pill.style.display = admin ? '' : 'none';
+  if (pill) pill.style.display = admin ? 'flex' : 'none';
   // Hide Izipay test card info
   document.querySelectorAll('.admin-only-el').forEach(el => {
     el.style.display = admin ? '' : 'none';
