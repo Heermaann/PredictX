@@ -2023,27 +2023,30 @@ function updateAPIPill(on) {
   const pill = document.getElementById('api-pill');
   if (dot) dot.className = 'api-dot' + (on ? ' on' : '');
   if (txt) txt.textContent = on ? S.sport.replace(/_/g,' ') : 'Sin conexión';
-  // Only show API pill to admins - always hide for non-admins regardless of SESSION state
-  if (pill) pill.style.display = (SESSION && isOwner()) ? '' : 'none';
+  // Strictly enforce: only owners see the pill, always
+  if (pill) pill.style.display = isOwner() ? '' : 'none';
 }
 
 // Hide admin-only elements for non-admin users
 function applyAdminOnlyVisibility() {
   const admin = isOwner();
+  // Hide API pill
+  const pill = document.getElementById('api-pill');
+  if (pill) pill.style.display = admin ? '' : 'none';
   // Hide Izipay test card info
   document.querySelectorAll('.admin-only-el').forEach(el => {
     el.style.display = admin ? '' : 'none';
   });
   // Hide Izipay SDK bubble (Information / Test Methods)
-  const style = document.getElementById('admin-only-style');
+  let style = document.getElementById('admin-only-style');
   if (!style) {
-    const s = document.createElement('style');
-    s.id = 'admin-only-style';
-    s.textContent = admin
-      ? ''
-      : '.kr-help-button, .kr-form-help, [class*="kr-help"], [class*="kr-info"] { display: none !important; }';
-    document.head.appendChild(s);
+    style = document.createElement('style');
+    style.id = 'admin-only-style';
+    document.head.appendChild(style);
   }
+  style.textContent = admin
+    ? ''
+    : '.kr-help-button, .kr-form-help, [class*="kr-help"], [class*="kr-info"] { display: none !important; }';
 }
 
 /* ════════════════════════════════════════════════════
