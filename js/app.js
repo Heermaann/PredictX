@@ -448,7 +448,7 @@ function applyFilters() {
 
   const now = new Date();
 
-  // navMode: sidebar tabs (Destacados, En Vivo, Próximos, Mayor Volumen)
+  // navMode: sidebar tabs (Todos, Próximos, Mayor Volumen)
   if (S.navMode === 'upcoming') {
     // Próximos: matches starting in the future (not yet live)
     const future = list.filter(m => !isLive(m) && new Date(m.commence_time) > now);
@@ -2017,21 +2017,11 @@ async function connectAPI() {
     updateAPIPill(false);
   }
 }
-function updateAPIPill(on) {
-  const dot  = document.getElementById('api-dot');
-  const txt  = document.getElementById('api-pill-txt');
-  const pill = document.getElementById('api-pill');
-  if (dot) dot.className = 'api-dot' + (on ? ' on' : '');
-  if (txt) txt.textContent = on ? S.sport.replace(/_/g,' ') : 'Sin conexión';
-  if (pill) pill.classList.toggle('admin-visible', !!isOwner());
-}
+function updateAPIPill(on) { /* api-pill removed from frontend */ }
 
 // Hide admin-only elements for non-admin users
 function applyAdminOnlyVisibility() {
   const admin = isOwner();
-  // Hide API pill — use class to override CSS !important
-  const pill = document.getElementById('api-pill');
-  if (pill) pill.classList.toggle('admin-visible', !!isOwner());
   // Hide Izipay test card info
   document.querySelectorAll('.admin-only-el').forEach(el => {
     el.style.display = admin ? '' : 'none';
@@ -2590,7 +2580,7 @@ function selectPayMethod(method, el) {
   document.querySelectorAll('.pay-method').forEach(m=>m.classList.remove('selected'));
   el.classList.add('selected');
   // Update currency symbol
-  const sym = { yape:'S/', card:'$', transfer:'S/' };
+  const sym = { yape:'$', card:'$', transfer:'$' };
   const symEl = document.getElementById('pay-currency-sym');
   if (symEl) symEl.textContent = sym[method]||'$';
 }
@@ -2608,12 +2598,12 @@ function payStep2() {
   const amt = parseFloat(document.getElementById('pay-amount').value);
   if (!amt || amt < 5) {
     document.getElementById('pay-status').className='auth-status err';
-    document.getElementById('pay-status').textContent='Introduce un importe mínimo de S/5.';
+    document.getElementById('pay-status').textContent='Introduce un importe mínimo de $5.';
     return;
   }
   if (amt > 50000) {
     document.getElementById('pay-status').className='auth-status err';
-    document.getElementById('pay-status').textContent='El importe máximo por depósito es S/50.000.';
+    document.getElementById('pay-status').textContent='El importe máximo por depósito es $50,000.';
     return;
   }
   document.getElementById('pay-step1').style.display='none';
@@ -2704,9 +2694,9 @@ async function creditBalance(amt, method, orderId) {
   document.getElementById('pay-step3').style.display = 'block';
   document.getElementById('pay-bonus-txt').textContent = '✅ Saldo acreditado';
   document.getElementById('pay-success-msg').textContent =
-    `Depósito de S/${amt.toFixed(2)} procesado. Tu saldo es S/${newBalance.toFixed(2)}.`;
-  setText('sc-balance', 'S/' + newBalance.toFixed(2));
-  setText('tx-balance', 'S/' + newBalance.toFixed(2));
+    `Depósito de $${amt.toFixed(2)} procesado. Tu saldo es $${newBalance.toFixed(2)}.`;
+  setText('sc-balance', '$' + newBalance.toFixed(2));
+  setText('tx-balance', '$' + newBalance.toFixed(2));
 }
 
 /* ─── Izipay token request ─── */
@@ -2728,7 +2718,7 @@ async function initIzipayForm() {
   const amt   = parseFloat(document.getElementById('pay-amount').value) || 0;
   const izAmt = document.getElementById('iz-amt-show');
   const izErr = document.getElementById('iz-error');
-  if (izAmt) izAmt.textContent = 'S/ ' + amt.toFixed(2);
+  if (izAmt) izAmt.textContent = '$' + amt.toFixed(2);
   if (izErr) { izErr.classList.remove('show'); izErr.textContent = ''; }
 
   // Reset container — SDK will re-render the smart form
@@ -2838,6 +2828,7 @@ function formatCard(inp) {
 /* ── Hook into placeBets to require login + deduct balance ── */
 window.placeBets = async function() {
   if (!SESSION) { openAuthGate(); return; }
+  try {
   const cfg = getSiteConfig();
   if (!cfg.allowBets) { showToast('⛔ Las apuestas están temporalmente desactivadas'); return; }
   const items = Object.values(SLIP);
@@ -2917,6 +2908,9 @@ window.placeBets = async function() {
   setText('sc-balance','$'+newBalance.toFixed(2));
   showToast('✅ Apuesta registrada · Saldo: $'+newBalance.toFixed(2));
   refreshAdminData();
+  } catch(err) {
+    showToast('❌ Error al procesar apuesta: ' + err.message, 'error');
+  }
 };
 
 /* ── Security page helpers ── */
@@ -3739,7 +3733,7 @@ function openEditEventModal(id) {
   document.getElementById('ev-away').value      = e.away_team || '';
   document.getElementById('ev-datetime').value  = e.commence_time ? new Date(e.commence_time).toISOString().slice(0,16) : '';
   document.getElementById('ev-featured').checked = !!e.featured;
-  document.getElementById('ev-live').checked     = e.status === 'live';
+  null.checked     = e.status === 'live';
   document.getElementById('ev-odd1').value       = e.odd_1 || '';
   document.getElementById('ev-oddx').value       = e.odd_x || '';
   document.getElementById('ev-odd2').value       = e.odd_2 || '';
@@ -3773,7 +3767,7 @@ function clearEventForm() {
     if (el) el.value = '';
   });
   document.getElementById('ev-featured').checked = false;
-  document.getElementById('ev-live').checked = false;
+  null.checked = false;
   document.getElementById('ev-sport').value = 'soccer_epl';
   onEvSportChange();
 }
@@ -3798,7 +3792,7 @@ async function saveManualEvent() {
   const away     = document.getElementById('ev-away').value.trim();
   const dt       = document.getElementById('ev-datetime').value;
   const featured = document.getElementById('ev-featured').checked;
-  const isLiveChk = document.getElementById('ev-live').checked;
+  const isLiveChk = null.checked;
 
   if (!league || !home || !away || !dt) { showToast('❌ Completa todos los campos obligatorios'); return; }
 
@@ -4107,8 +4101,21 @@ function fmtDateTime(iso) {
 /* badgeHtml defined later */
 
 /* ── Refresh stats ── */
-function refreshAdminData() {
-  const d   = adminData();
+async function refreshAdminData() {
+  if (!SESSION) return;
+  try {
+    // Read balance from Supabase (source of truth)
+    const { data: prof } = await _SB.from('profiles').select('balance,deposited,withdrawn').eq('email', SESSION.email).single();
+    if (prof) {
+      const d = adminData();
+      d.balance   = +(prof.balance   || 0);
+      d.deposited = +(prof.deposited || 0);
+      d.withdrawn = +(prof.withdrawn || 0);
+      saveAdminData(d);
+    }
+  } catch(_) { /* use cached value on error */ }
+
+  const d    = adminData();
   const bets = betHistory();
   const open = bets.filter(b=>b.status==='open').length;
   const won  = bets.filter(b=>b.status==='win').length;
@@ -4157,14 +4164,14 @@ function renderDashBets() {
 function renderDashQuick() {
   const grid = document.getElementById('dash-quick-grid');
   if (!grid) return;
-  const live = S.markets.filter(m=>isLive(m)).slice(0,4);
+  const live = S.markets.slice(0,4); // Show first 4 upcoming events
   if (!live.length) {
-    grid.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:24px;color:var(--text2);font-size:13px">No hay eventos en vivo actualmente</div>';
+    grid.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:24px;color:var(--text2);font-size:13px">Sin apuestas rápidas disponibles</div>';
     return;
   }
   grid.innerHTML = live.map(m=>`
     <div class="quick-bet-card">
-      <div class="qbc-match">${sportIco(m.sport_key)} ${esc(m.sport_title)} · ${isLive(m)?'<span style="color:var(--red);font-weight:600">🔴 En Vivo</span>':fDate(m.commence_time)}</div>
+      <div class="qbc-match">${sportIco(m.sport_key)} ${esc(m.sport_title)} · ${fDate(m.commence_time)}</div>
       <div class="qbc-title">${esc(m.home_team)} vs ${esc(m.away_team)}</div>
       <div class="qbc-odds">
         ${[{l:'1',v:m.best1,t:m.home_team},{l:'X',v:m.bestX,t:'Empate'},{l:'2',v:m.best2,t:m.away_team}]
@@ -4320,12 +4327,12 @@ function showWithdrawModal() { openWithdrawModal(); }
 ════════════════════════════════════════════════ */
 let _wdMethod = 'yape';
 
-function openWithdrawModal() {
+async function openWithdrawModal() {
   if (!SESSION) { openAuthGate(); return; }
   const cfg = getSiteConfig();
   if (cfg.maintenance && !isOwner()) { showToast('🔧 Sitio en mantenimiento'); return; }
 
-  // Reset
+  // Reset UI
   _wdMethod = 'yape';
   document.querySelectorAll('#withdraw-modal .pay-method').forEach(m=>m.classList.remove('selected'));
   document.getElementById('wd-yape')?.classList.add('selected');
@@ -4336,10 +4343,18 @@ function openWithdrawModal() {
   document.querySelectorAll('#withdraw-modal .quick-amt').forEach(b=>b.classList.remove('sel'));
   document.getElementById('withdraw-status').className = 'auth-status';
 
-  // Show available balance
-  const d = adminData();
+  // Show available balance from Supabase (source of truth)
   const balEl = document.getElementById('wd-balance-show');
-  if (balEl) balEl.textContent = 'S/' + (+d.balance||0).toFixed(2);
+  try {
+    const { data: prof } = await _SB.from('profiles').select('balance').eq('email', SESSION.email).single();
+    const bal = +(prof?.balance || 0);
+    // Update local cache
+    const d = adminData(); d.balance = bal; saveAdminData(d);
+    if (balEl) balEl.textContent = '$' + bal.toFixed(2);
+  } catch(_) {
+    const d = adminData();
+    if (balEl) balEl.textContent = '$' + (+d.balance||0).toFixed(2);
+  }
 
   document.getElementById('withdraw-modal').classList.add('show');
 }
@@ -4368,11 +4383,11 @@ function wdStep2() {
   const d   = adminData();
   const statusEl = document.getElementById('withdraw-status');
 
-  if (amt < 20)           { statusEl.className='auth-status error'; statusEl.textContent='❌ El monto mínimo es S/20'; return; }
-  if (amt > 5000)         { statusEl.className='auth-status error'; statusEl.textContent='❌ El monto máximo por solicitud es S/5,000'; return; }
+  if (amt < 20)           { statusEl.className='auth-status error'; statusEl.textContent='❌ El monto mínimo es $20'; return; }
+  if (amt > 5000)         { statusEl.className='auth-status error'; statusEl.textContent='❌ El monto máximo por solicitud es $5,000'; return; }
   if (amt > (+d.balance||0)) { statusEl.className='auth-status error'; statusEl.textContent='❌ Saldo insuficiente'; return; }
 
-  document.getElementById('wd-amt-show').textContent = 'S/' + amt.toFixed(2);
+  document.getElementById('wd-amt-show').textContent = '$' + amt.toFixed(2);
   document.getElementById('wd-step1').style.display = 'none';
   document.getElementById('wd-step2').style.display = 'block';
 
@@ -4441,16 +4456,16 @@ async function submitWithdraw() {
     const ld = adminData();
     ld.balance = newBal; ld.withdrawn = newWith;
     DB.set('admin', ld);
-    setText('sc-balance', 'S/' + newBal.toFixed(2));
-    setText('tx-balance', 'S/' + newBal.toFixed(2));
-    setText('tx-withdrawn', 'S/' + newWith.toFixed(2));
+    setText('sc-balance', '$' + newBal.toFixed(2));
+    setText('tx-balance', '$' + newBal.toFixed(2));
+    setText('tx-withdrawn', '$' + newWith.toFixed(2));
   }
 
   // Show success
   document.getElementById('wd-step2').style.display = 'none';
   document.getElementById('wd-step3').style.display = 'block';
   document.getElementById('wd-success-msg').textContent =
-    `Tu solicitud de retiro de S/${amt.toFixed(2)} vía ${_wdMethod === 'yape' ? 'Yape' : 'transferencia bancaria'} ha sido recibida. El saldo ha sido retenido de tu cuenta.`;
+    `Tu solicitud de retiro de $${amt.toFixed(2)} vía ${_wdMethod === 'yape' ? 'Yape' : 'transferencia bancaria'} ha sido recibida. El saldo ha sido retenido de tu cuenta.`;
 }
 
 /* ── Badge helper ── */
