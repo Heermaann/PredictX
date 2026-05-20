@@ -533,15 +533,15 @@
               <div class="profile-grid">
                 <div class="pf-group">
                   <div class="pf-label">Contraseña actual</div>
-                  <input class="pf-input" type="password" placeholder="••••••••" name="••••••••">
+                  <input class="pf-input" id="cfg-cur-pw" type="password" placeholder="••••••••" autocomplete="current-password">
                 </div>
                 <div class="pf-group">
                   <div class="pf-label">Nueva contraseña</div>
-                  <input class="pf-input" type="password" placeholder="••••••••" name="••••••••">
+                  <input class="pf-input" id="cfg-new-pw" type="password" placeholder="••••••••" autocomplete="new-password">
                 </div>
                 <div class="pf-group full">
                   <div class="pf-label">Confirmar contraseña</div>
-                  <input class="pf-input" type="password" placeholder="••••••••" name="••••••••">
+                  <input class="pf-input" id="cfg-conf-pw" type="password" placeholder="••••••••" autocomplete="new-password">
                 </div>
               </div>
               <div class="profile-foot">
@@ -1171,17 +1171,17 @@
       </div>
       <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Importe</div>
       <div class="pay-amount-row" id="quick-amts">
-        <div class="quick-amt" onclick="setQuickAmt(20,this)">S/20</div>
-        <div class="quick-amt" onclick="setQuickAmt(50,this)">S/50</div>
-        <div class="quick-amt" onclick="setQuickAmt(100,this)">S/100</div>
-        <div class="quick-amt" onclick="setQuickAmt(200,this)">S/200</div>
-        <div class="quick-amt" onclick="setQuickAmt(500,this)">S/500</div>
+        <div class="quick-amt" onclick="setQuickAmt(20,this)">$20</div>
+        <div class="quick-amt" onclick="setQuickAmt(50,this)">$50</div>
+        <div class="quick-amt" onclick="setQuickAmt(100,this)">$100</div>
+        <div class="quick-amt" onclick="setQuickAmt(200,this)">$200</div>
+        <div class="quick-amt" onclick="setQuickAmt(500,this)">$500</div>
       </div>
       <div class="pay-field" style="margin-top:10px">
         <div class="pay-label">Importe personalizado</div>
         <div style="position:relative">
           <input class="pay-input" id="pay-amount" type="number" min="10" placeholder="0.00" oninput="clearQuickAmt()">
-          <span style="position:absolute;right:13px;top:50%;transform:translateY(-50%);font-size:12px;color:var(--text3);font-family:var(--mono)" id="pay-currency-sym">S/</span>
+          <span style="position:absolute;right:13px;top:50%;transform:translateY(-50%);font-size:12px;color:var(--text3);font-family:var(--mono)" id="pay-currency-sym">$</span>
         </div>
       </div>
       <button class="auth-btn" onclick="payStep2()">Continuar →</button>
@@ -1217,7 +1217,7 @@
         <div class="izipay-wrap">
           <div class="izipay-env-badge" id="iz-env-badge">🧪 Modo TEST — usa tarjeta de prueba</div>
           <div id="izipay-amount-display">
-            <div class="iz-amt" id="iz-amt-show">S/ 0.00</div>
+            <div class="iz-amt" id="iz-amt-show">$0.00</div>
             <div class="iz-lbl">a pagar con tarjeta</div>
           </div>
           <!-- Izipay Smart Form — managed entirely by SDK -->
@@ -1295,7 +1295,7 @@
         <div class="pay-method selected" id="wd-yape" onclick="selectWdMethod('yape',this)">
           <div style="font-size:22px">📱</div>
           <div style="font-size:12px;font-weight:600">Yape</div>
-          <div style="font-size:10px;color:var(--text2)">Automático ≤ S/500</div>
+          <div style="font-size:10px;color:var(--text2)">Automático ≤ $500</div>
         </div>
         <div class="pay-method" id="wd-transfer" onclick="selectWdMethod('transfer',this)">
           <div style="font-size:22px">🏦</div>
@@ -1306,20 +1306,20 @@
 
       <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin:16px 0 8px">Importe a retirar</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
-        <button class="quick-amt" onclick="setWdAmt(20,this)">S/20</button>
-        <button class="quick-amt" onclick="setWdAmt(50,this)">S/50</button>
-        <button class="quick-amt" onclick="setWdAmt(100,this)">S/100</button>
-        <button class="quick-amt" onclick="setWdAmt(200,this)">S/200</button>
-        <button class="quick-amt" onclick="setWdAmt(500,this)">S/500</button>
+        <button class="quick-amt" onclick="setWdAmt(20,this)">$20</button>
+        <button class="quick-amt" onclick="setWdAmt(50,this)">$50</button>
+        <button class="quick-amt" onclick="setWdAmt(100,this)">$100</button>
+        <button class="quick-amt" onclick="setWdAmt(200,this)">$200</button>
+        <button class="quick-amt" onclick="setWdAmt(500,this)">$500</button>
       </div>
       <div style="display:flex;align-items:center;gap:8px;background:var(--bg3);border-radius:10px;padding:10px 14px;margin-bottom:6px">
-        <span style="font-size:14px;font-weight:600;color:var(--text2)">S/</span>
+        <span style="font-size:14px;font-weight:600;color:var(--text2)">$</span>
         <input type="number" id="wd-amount" placeholder="0.00" min="20" max="5000" step="0.01"
           style="flex:1;background:transparent;border:none;outline:none;font-size:20px;font-weight:700;color:var(--text1);width:100%"
           oninput="document.querySelectorAll('.quick-amt').forEach(b=>b.classList.remove('sel'))">
       </div>
       <div style="font-size:11px;color:var(--text3);margin-bottom:20px">
-        Mínimo S/20 · Máximo S/5,000 · Saldo disponible: <strong id="wd-balance-show">S/0.00</strong>
+        Mínimo $20 · Máximo $5,000 · Saldo disponible: <strong id="wd-balance-show">$0.00</strong>
       </div>
       <button class="auth-btn" style="margin:0" onclick="wdStep2()">Continuar →</button>
     </div>
@@ -1328,7 +1328,7 @@
     <div id="wd-step2" style="display:none">
       <div style="background:var(--bg3);border-radius:12px;padding:16px;text-align:center;margin-bottom:20px">
         <div style="font-size:13px;color:var(--text2)">Retiro solicitado</div>
-        <div style="font-size:28px;font-weight:800;margin:4px 0" id="wd-amt-show">S/0.00</div>
+        <div style="font-size:28px;font-weight:800;margin:4px 0" id="wd-amt-show">$0.00</div>
       </div>
 
       <!-- Yape fields -->
