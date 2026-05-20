@@ -2832,13 +2832,21 @@ function formatCard(inp) {
 }
 
 /* ── Hook into placeBets to require login + deduct balance ── */
-window.placeBets = function() {
+window.placeBets = async function() {
   if (!SESSION) { openAuthGate(); return; }
   const cfg = getSiteConfig();
   if (!cfg.allowBets) { showToast('⛔ Las apuestas están temporalmente desactivadas'); return; }
   const items = Object.values(SLIP);
   if (!items.length) return;
+
+  // ── Read balance from Supabase (source of truth) ──
+  const { data: prof, error: profErr } = await _SB.from('profiles').select('balance').eq('email', SESSION.email).single();
+  if (profErr || !prof) { showToast('❌ Error al verificar saldo'); return; }
+  const currentBalance = +(prof.balance || 0);
+
   const d = adminData();
+  d.balance = currentBalance; // sync local cache with Supabase
+
   const txs = txHistory();
   const bets = betHistory();
   const isCombo = S.slipMode==='combo';
@@ -2853,32 +2861,57 @@ window.placeBets = function() {
     }
   }
 
+  let totalStake = 0;
   if (isCombo) {
-    const stake = parseFloat(items[0]?.comboStake)||10;
-    if (stake > d.balance) { showToast('❌ Saldo insuficiente. Recarga tu cuenta.'); openPayModal('deposit'); return; }
-    const comboOdd = items.reduce((a,s)=>a*s.odd,1);
-    bets.push({ id:'B'+Date.now(), date:todayStr(), match:items.map(i=>i.match.split(' vs ')[0]).join(' + '), pick:items.map(i=>i.pick).join(' / '), odd:comboOdd, stake, ret:0, status:'open', type:'combo' });
-    d.balance -= stake;
-    txs.push({ id:'TX'+Date.now(), date:todayStr(), desc:'Apuesta combinada', type:'bet', amount:stake, balance:d.balance });
+    totalStake = parseFloat(items[0]?.comboStake)||10;
   } else {
-    let totalStake = items.reduce((a,s)=>a+s.stake,0);
-    if (totalStake > d.balance) { showToast('❌ Saldo insuficiente. Recarga tu cuenta.'); openPayModal('deposit'); return; }
-    items.forEach(sel=>{
-      const stake = Math.max(0.01, parseFloat(sel.stake) || 0.01);
-      if (stake > d.balance) return; // skip if single bet exceeds remaining balance
-      bets.push({ id:'B'+Date.now(), date:todayStr(), match:sel.match, pick:sel.pick, odd:sel.odd, stake, ret:0, status:'open', type:'single' });
-      d.balance -= stake;
-      txs.push({ id:'TX'+Date.now()+Math.random(), date:todayStr(), desc:'Apuesta: '+sel.pick, type:'bet', amount:sel.stake, balance:d.balance });
-    });
+    totalStake = items.reduce((a,s)=>a+(parseFloat(s.stake)||0),0);
   }
 
+  if (totalStake > currentBalance) {
+    showToast('❌ Saldo insuficiente. Recarga tu cuenta.');
+    openPayModal('deposit');
+    return;
+  }
+
+  const newBalance = +(currentBalance - totalStake).toFixed(2);
+
+  if (isCombo) {
+    const stake = parseFloat(items[0]?.comboStake)||10;
+    const comboOdd = items.reduce((a,s)=>a*s.odd,1);
+    const matchName = items.map(i=>i.match).join(' + ');
+    const pick = items.map(i=>i.pick).join(' / ');
+    bets.push({ id:'B'+Date.now(), date:todayStr(), match:matchName, pick, odd:+comboOdd.toFixed(3), stake, ret:0, status:'open', type:'combo' });
+    txs.push({ id:'TX'+Date.now(), date:todayStr(), desc:'Apuesta combinada', type:'bet', amount:stake, balance:newBalance });
+    // Save to Supabase
+    await _SB.from('bets').insert({ user_email:SESSION.email, match_name:matchName, pick, odd:+comboOdd.toFixed(3), stake, status:'open', type:'combo', created_at:new Date().toISOString() });
+    await _SB.from('transactions').insert({ user_email:SESSION.email, description:'Apuesta combinada', type:'bet', amount:stake, balance:newBalance, created_at:new Date().toISOString() });
+  } else {
+    let runningBalance = currentBalance;
+    for (const sel of items) {
+      const stake = Math.max(0.01, parseFloat(sel.stake) || 0.01);
+      if (stake > runningBalance) continue;
+      runningBalance = +(runningBalance - stake).toFixed(2);
+      bets.push({ id:'B'+Date.now()+Math.random(), date:todayStr(), match:sel.match, pick:sel.pick, odd:sel.odd, stake, ret:0, status:'open', type:'single' });
+      txs.push({ id:'TX'+Date.now()+Math.random(), date:todayStr(), desc:'Apuesta: '+sel.pick, type:'bet', amount:stake, balance:runningBalance });
+      await _SB.from('bets').insert({ user_email:SESSION.email, match_name:sel.match, pick:sel.pick, odd:sel.odd, stake, status:'open', type:'single', created_at:new Date().toISOString() });
+      await _SB.from('transactions').insert({ user_email:SESSION.email, description:'Apuesta: '+sel.pick, type:'bet', amount:stake, balance:runningBalance, created_at:new Date().toISOString() });
+    }
+  }
+
+  // ── Update balance in Supabase ──
+  await _SB.from('profiles').update({ balance: newBalance }).eq('email', SESSION.email);
+
+  // ── Update local cache ──
+  d.balance = newBalance;
   saveAdminData(d); saveBets(bets); saveTx(txs);
+
   Object.keys(SLIP).forEach(k=>delete SLIP[k]);
   document.querySelectorAll('.ev-odd-btn.in-slip,.odd-card').forEach(el=>{ el.classList.remove('in-slip','active'); });
   document.querySelectorAll('.xmkt-btn.active').forEach(el=>el.classList.remove('active'));
   renderSlip(); updateSlipCount(); closeBetslip();
-  setText('sc-balance','$'+d.balance.toFixed(2));
-  showToast('✅ Apuesta registrada · Saldo: $'+d.balance.toFixed(2));
+  setText('sc-balance','$'+newBalance.toFixed(2));
+  showToast('✅ Apuesta registrada · Saldo: $'+newBalance.toFixed(2));
   refreshAdminData();
 };
 
@@ -3097,10 +3130,12 @@ function openOwner() {
   if (vd) vd.style.display = 'none';
   if (va) va.style.display = 'none';
   if (vo) vo.style.display = 'block';
+  updateSidebarVisibility();
   showOwnerPage('dashboard', document.getElementById('own-nav-dashboard'));
 }
 function closeOwner() {
   showListView();
+  updateSidebarVisibility();
 }
 
 /* ── Sub-page switching (user panel) ── */
