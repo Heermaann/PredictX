@@ -494,7 +494,7 @@ function updateMeta() {
     tennis:'🎾 Tenis', golf:'⛳ Golf'
   };
   const navLabels = {
-    home:     '🔥 Tendencia',
+    home:     '⚡ Todos',
     
     upcoming: '📅 Próximos',
     best:     '📊 Mayor Volumen',
@@ -2023,8 +2023,8 @@ function updateAPIPill(on) {
   const pill = document.getElementById('api-pill');
   if (dot) dot.className = 'api-dot' + (on ? ' on' : '');
   if (txt) txt.textContent = on ? S.sport.replace(/_/g,' ') : 'Sin conexión';
-  // Only show API pill to admins
-  if (pill) pill.style.display = isOwner() ? '' : 'none';
+  // Only show API pill to admins - always hide for non-admins regardless of SESSION state
+  if (pill) pill.style.display = (SESSION && isOwner()) ? '' : 'none';
 }
 
 // Hide admin-only elements for non-admin users
@@ -2190,6 +2190,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const profile = await loadProfile(email);
     const name = profile?.name || email.split('@')[0];
     SESSION = { id: sbSession.user.id, email, name, role: profile?.role || 'user' };
+    setTimeout(applyAdminOnlyVisibility, 200);
     onLoginSuccess(false);
   } else {
     // Fallback: check localStorage session — only restore if Supabase has a live token
@@ -2545,6 +2546,7 @@ window.openAdmin = function() {
   if (vd) vd.style.display = 'none';
   if (va) va.style.display = 'block';
   if (vo) vo.style.display = 'none';
+  updateSidebarVisibility(); // ← Bug 1 fix
   refreshAdminData();
   showAdminPage('dashboard', document.getElementById('ap-nav-dashboard'));
   document.querySelectorAll('.bn-btn').forEach(b=>b.classList.remove('active'));
