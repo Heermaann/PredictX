@@ -2,6 +2,17 @@
 export default async function handler(req, res) {
   if (req.method !== 'GET' && req.method !== 'POST') return res.status(405).end();
 
+  // ── Auth: verify CRON_SECRET or Vercel cron header ──
+  const secret = process.env.CRON_SECRET;
+  if (secret) {
+    const authHeader = req.headers['authorization'] || '';
+    const isVercelCron = req.headers['x-vercel-cron'] === '1';
+    const hasValidToken = authHeader === `Bearer ${secret}`;
+    if (!isVercelCron && !hasValidToken) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+  }
+
   const ODDS_KEY = process.env.ODDS_API_KEY;
   const SB_URL   = 'https://ghgkvtdhuqfpigbtzefz.supabase.co';
   const SB_KEY   = process.env.SUPABASE_SERVICE_KEY;
