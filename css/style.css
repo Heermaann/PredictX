@@ -155,7 +155,9 @@ input,select,textarea{font-family:var(--font)}
   align-items:center;gap:6px;background:var(--bg3);
   border:1px solid var(--border);border-radius:8px;padding:6px 12px;
   cursor:pointer;transition:background .15s;
+  display:none!important;
 }
+.api-pill.admin-visible{display:flex!important;}
 .api-pill:hover{background:var(--bg4)}
 .api-dot{width:7px;height:7px;border-radius:50%;background:var(--text3);flex-shrink:0;transition:background .2s,box-shadow .2s}
 .api-dot.on{background:var(--green);box-shadow:0 0 0 2px var(--green-bd)}
