@@ -2769,6 +2769,21 @@ async function izipayRequestToken(amt) {
   return data; // { formToken, mode, shopId, publicKey }
 }
 
+/* ─── Load Izipay SDK dynamically only when card payment is needed ─── */
+let _izipaySDKLoaded = false;
+function loadIzipaySDK() {
+  return new Promise((resolve, reject) => {
+    if (_izipaySDKLoaded || typeof KR !== 'undefined') { _izipaySDKLoaded = true; resolve(); return; }
+    const script = document.createElement('script');
+    script.src = 'https://static.micuentaweb.pe/static/js/krypton-client/V4.0/stable/kr-payment-form.min.js';
+    script.setAttribute('kr-public-key', '38756342:testpublickey_Lt2sylPSfsBCVlmyIY2aLqB7fiS7hTuCNl4vZKSGtSq3i');
+    script.setAttribute('kr-language', 'es-PE');
+    script.onload = () => { _izipaySDKLoaded = true; resolve(); };
+    script.onerror = () => reject(new Error('No se pudo cargar el SDK de Izipay'));
+    document.head.appendChild(script);
+  });
+}
+
 /* ─── Init Izipay widget cuando se abre el paso de tarjeta ─── */
 async function initIzipayForm() {
   const amt   = parseFloat(document.getElementById('pay-amount').value) || 0;
@@ -2782,6 +2797,8 @@ async function initIzipayForm() {
   if (wrapper) wrapper.innerHTML = '<div class="kr-smart-form"></div>';
 
   try {
+    // Load SDK dynamically if not already loaded
+    await loadIzipaySDK();
     const { formToken, publicKey, mode } = await izipayRequestToken(amt);
 
     const badge = document.getElementById('iz-env-badge');
