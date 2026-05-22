@@ -2076,6 +2076,8 @@ function updateAPIPill(on) { /* api-pill removed from frontend */ }
 // Hide admin-only elements for non-admin users
 function applyAdminOnlyVisibility() {
   const admin = isOwner();
+  // Add/remove body class for CSS-based admin visibility
+  document.body.classList.toggle('is-admin', admin);
   // Hide Izipay test card info
   document.querySelectorAll('.admin-only-el').forEach(el => {
     el.style.display = admin ? '' : 'none';
