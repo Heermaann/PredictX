@@ -6,8 +6,10 @@ const RATE_LIMIT = 30;
 const RATE_WINDOW = 60000;
 
 export default async function handler(req, res) {
-  // CORS
-  res.setHeader('Access-Control-Allow-Origin', '*');
+  // CORS - restrict to our domain
+  const origin = req.headers.origin || '';
+  const allowed = ['https://predict-x-beta.vercel.app','https://predictx.com'];
+  res.setHeader('Access-Control-Allow-Origin', allowed.includes(origin) ? origin : allowed[0]);
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   if (req.method === 'OPTIONS') return res.status(204).end();
