@@ -29,14 +29,16 @@ function applyTheme(t) {
   S.theme = t;
   document.documentElement.setAttribute('data-theme', t);
   localStorage.setItem('px_theme', t);
-  if (S.filtered.length) requestAnimationFrame(redrawSparks);
-  if (S.probChart) { updateChartColors(S.probChart); S.probChart.update('none'); }
+  // Chart colors update deferred — no full re-render needed
+  if (S.probChart) requestAnimationFrame(() => { updateChartColors(S.probChart); S.probChart.update('none'); });
 }
 function toggleTheme() {
-  // Update bottom nav icon
   const bni = document.getElementById('bn-theme-ico');
   const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-  if (bni) bni.textContent = isDark ? '🌙' : '☀️'; applyTheme(S.theme === 'dark' ? 'light' : 'dark'); }
+  const next = isDark ? 'light' : 'dark';
+  if (bni) bni.textContent = next === 'dark' ? '☀️' : '🌙';
+  applyTheme(next);
+}
 const cGrid  = () => S.theme==='dark'?'rgba(255,255,255,0.04)':'rgba(0,0,0,0.05)';
 const cTick  = () => S.theme==='dark'?'#555870':'#9ea2b8';
 const cTipBg = () => S.theme==='dark'?'#262840':'#fff';
