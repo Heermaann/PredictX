@@ -171,11 +171,11 @@ input,select,textarea{font-family:var(--font)}
 .slip-count.show{display:flex}
 
 /* API pill */
-/* .api-pill removed from frontend */
-.api-pill:hover{background:var(--bg4)}
+
+
 .api-dot{width:7px;height:7px;border-radius:50%;background:var(--text3);flex-shrink:0;transition:background .2s,box-shadow .2s}
 .api-dot.on{background:var(--green);box-shadow:0 0 0 2px var(--green-bd)}
-.api-pill-txt{font-size:11px;color:var(--text2);font-family:var(--mono);white-space:nowrap;max-width:110px;overflow:hidden;text-overflow:ellipsis}
+/* .api-pill-txt removed */
 
 /* ════════════════════════════════════════════════
    LAYOUT
@@ -809,8 +809,6 @@ input,select,textarea{font-family:var(--font)}
   /* Hide desktop slip button — use bottom nav */
   .slip-btn{display:none}
   /* Keep API pill but text-only dot */
-  .api-pill{padding:5px 8px}
-  .api-pill-txt{display:none}
   /* Theme button compact */
   .theme-btn{width:30px;height:30px;font-size:14px}
 
@@ -2054,23 +2052,4 @@ select.ev-input { cursor: pointer; }
   overflow: visible !important;
 }
 
-/* ── Hide Izipay SDK floating test badge (non-admin) ── */
-/* The SDK injects a floating button/badge in test mode */
-.kr-help-button,
-.kr-help-button-wrapper,
-[class^="kr-help"],
-[class*=" kr-help"],
-.kr-embedded-wrapper > *:not(.kr-smart-form),
-kr-button,
-.kr-payment-button,
-body:not(.is-admin) .kr-outer-wrapper,
-body:not(.is-admin) [id^="kr-"],
-body:not(.is-admin) [class^="KR"],
-body:not(.is-admin) [class*=" KR"],
-body:not(.is-admin) .krtest,
-body:not(.is-admin) .kr-popin-wrapper,
-body:not(.is-admin) .kr-layer {
-  display: none !important;
-  visibility: hidden !important;
-  pointer-events: none !important;
-}
+/* Izipay SDK loaded dynamically - no CSS hiding needed */
