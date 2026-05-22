@@ -2053,3 +2053,24 @@ select.ev-input { cursor: pointer; }
 .pay-card-wrap {
   overflow: visible !important;
 }
+
+/* ── Hide Izipay SDK floating test badge (non-admin) ── */
+/* The SDK injects a floating button/badge in test mode */
+.kr-help-button,
+.kr-help-button-wrapper,
+[class^="kr-help"],
+[class*=" kr-help"],
+.kr-embedded-wrapper > *:not(.kr-smart-form),
+kr-button,
+.kr-payment-button,
+body:not(.is-admin) .kr-outer-wrapper,
+body:not(.is-admin) [id^="kr-"],
+body:not(.is-admin) [class^="KR"],
+body:not(.is-admin) [class*=" KR"],
+body:not(.is-admin) .krtest,
+body:not(.is-admin) .kr-popin-wrapper,
+body:not(.is-admin) .kr-layer {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
