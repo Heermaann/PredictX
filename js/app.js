@@ -169,28 +169,42 @@ async function fetchEventMarkets(sport, eventId, markets) {
   } catch { return null; }
 }
 
+let _loadMarketsInProgress = false;
+let _marketsLastLoaded = 0;
+const MARKETS_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
 async function loadMarkets(force=false) {
+  // Skip reload if data is fresh (unless forced)
+  if (!force && _marketsLastLoaded && Date.now() - _marketsLastLoaded < MARKETS_CACHE_TTL && S.markets.length > 0) {
+    applyFilters();
+    return;
+  }
+  if (_loadMarketsInProgress && !force) return; // prevent simultaneous calls
+  _loadMarketsInProgress = true;
   const vl = document.getElementById('view-list');
   if (vl && vl.style.display === 'none') vl.style.display = 'block';
   document.getElementById('events-list').innerHTML =
     '<div class="spinner-wrap"><div class="spin"></div><div>Cargando eventos…</div></div>';
   try {
     // ── Read from Supabase api_events (no API call) ──
-    const { data: apiData, error: apiError } = await _SB
+    // Filter by selected sport/league if one is active
+    let apiQuery = _SB
       .from('api_events')
       .select('*')
       .in('status', ['upcoming', 'live'])
       .order('commence_time', { ascending: true })
-      .limit(500);
+      .limit(300);
+
+    // If a specific league is selected, filter by sport_key
+    if (S.sport && S.sport !== 'all') {
+      apiQuery = apiQuery.eq('sport_key', S.sport);
+    }
+
+    const { data: apiData, error: apiError } = await apiQuery;
 
     if (apiError) throw new Error(apiError.message);
 
-    const apiEvents = (apiData || []).map(e => processManualEvent({
-      ...e,
-      _fromApi: true,
-      sport_key: e.sport_key,
-      league:    e.league || e.sport_title,
-    }));
+    const apiEvents = (apiData || []).map(e => { try { return processManualEvent({ ...e, _fromApi: true, sport_key: e.sport_key, league: e.league || e.sport_title }); } catch(err) { console.warn('processManualEvent error:', err); return null; } }).filter(Boolean);
 
     // ── Also load manual events ──
     let manualMarkets = [];
@@ -219,6 +233,7 @@ async function loadMarkets(force=false) {
       return new Date(a.commence_time) - new Date(b.commence_time);
     });
 
+    _marketsLastLoaded = Date.now();
     updateSidebarCounts();
     applyFilters();
     updateAPIPill(true);
@@ -228,6 +243,8 @@ async function loadMarkets(force=false) {
       : err.message;
     renderEmpty('error', msg);
     updateAPIPill(false);
+  } finally {
+    _loadMarketsInProgress = false;
   }
 }
 
@@ -438,6 +455,7 @@ function setCat(cat, btn) {
 }
 
 function applyFilters() {
+  try {
   let list = [...S.markets];
 
   // Sport category (cat-bar pills like Fútbol, Baloncesto...)
@@ -483,6 +501,7 @@ function applyFilters() {
   S.filtered = list;
   renderEvents();
   updateMeta();
+  } catch(err) { console.error('applyFilters error:', err); }
 }
 
 function updateMeta() {
@@ -1581,19 +1600,44 @@ async function loadLeague(sportKey, label, el) {
   document.querySelectorAll('.list-tab').forEach((b,i) => b.classList.toggle('active', i===0));
 
   try {
-    // force=true: user actively changed sport, bypass cache
-    const res = await oddsApiFetch(sportKey, true);
-    if (!res.ok) { const e = await res.json().catch(()=>({})); throw new Error(e.message||'Error '+res.status); }
-    const data = await res.json();
-    const rem  = res.headers.get('x-requests-remaining');
-    S.markets = data.map(m => {
-      try { return processMarket(m); }
-      catch(e) { console.warn('processMarket error:', e, m); return null; }
-    }).filter(Boolean);
+    // Read from Supabase api_events (source of truth)
+    const { data: apiData, error: apiError } = await _SB
+      .from('api_events')
+      .select('*')
+      .eq('sport_key', sportKey)
+      .in('status', ['upcoming','live'])
+      .order('commence_time', { ascending: true })
+      .limit(200);
+
+    if (apiError) throw new Error(apiError.message);
+
+    const apiEvents = (apiData || []).map(e => processManualEvent({
+      ...e, _fromApi: true,
+      sport_key: e.sport_key,
+      league: e.league || e.sport_title,
+    }));
+
+    // Also load manual events for this sport
+    const { data: manualData } = await _SB
+      .from('manual_events')
+      .select('*')
+      .eq('sport_key', sportKey)
+      .in('status', ['upcoming','live'])
+      .order('commence_time', { ascending: true });
+
+    const manualEvents = (manualData || []).map(e => processManualEvent(e));
+
+    S.markets = [...manualEvents, ...apiEvents].sort((a,b) => {
+      if (a._featured && !b._featured) return -1;
+      if (!a._featured && b._featured) return 1;
+      return new Date(a.commence_time) - new Date(b.commence_time);
+    });
+
     el.classList.remove('loading');
     updateAPIPill(true);
     applyFilters();
-    if (rem) showToast('✅ ' + data.length + ' eventos · ' + rem + ' requests restantes');
+    const total = apiEvents.length + manualEvents.length;
+    showToast(`✅ ${total} eventos de ${label}`);
   } catch(err) {
     el.classList.remove('active', 'loading');
     _activeLeagueEl = null;
@@ -1633,6 +1677,14 @@ function getSearchDrop() {
   }
   return document.getElementById('search-drop');
 }
+
+// Debounce helper
+function debounce(fn, delay) {
+  let timer;
+  return function(...args) { clearTimeout(timer); timer = setTimeout(() => fn.apply(this, args), delay); };
+}
+
+const _debouncedApplySearch = debounce(applyFilters, 200);
 
 function onSearch(q) {
   S.searchQ = q.trim();
@@ -2878,9 +2930,11 @@ window.placeBets = async function() {
     const pick = items.map(i=>i.pick).join(' / ');
     bets.push({ id:'B'+Date.now(), date:todayStr(), match:matchName, pick, odd:+comboOdd.toFixed(3), stake, ret:0, status:'open', type:'combo' });
     txs.push({ id:'TX'+Date.now(), date:todayStr(), desc:'Apuesta combinada', type:'bet', amount:stake, balance:newBalance });
-    // Save to Supabase
-    await _SB.from('bets').insert({ user_email:SESSION.email, match_name:matchName, pick, odd:+comboOdd.toFixed(3), stake, status:'open', type:'combo', created_at:new Date().toISOString() });
-    await _SB.from('transactions').insert({ user_email:SESSION.email, description:'Apuesta combinada', type:'bet', amount:stake, balance:newBalance, created_at:new Date().toISOString() });
+    // Save to Supabase in parallel
+    await Promise.all([
+      _SB.from('bets').insert({ user_email:SESSION.email, match_name:matchName, pick, odd:+comboOdd.toFixed(3), stake, status:'open', type:'combo', created_at:new Date().toISOString() }),
+      _SB.from('transactions').insert({ user_email:SESSION.email, description:'Apuesta combinada', type:'bet', amount:stake, balance:newBalance, created_at:new Date().toISOString() })
+    ]);
   } else {
     let runningBalance = currentBalance;
     for (const sel of items) {
