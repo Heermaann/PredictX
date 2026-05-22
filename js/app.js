@@ -143,6 +143,7 @@ function marketsForSport(sport) {
   }
 }
 
+/* oddsApiFetch kept for proxy compatibility but not called from UI */
 async function oddsApiFetch(sport, force=false) {
   // La API key vive en el servidor (Netlify env var ODDS_API_KEY).
   const markets = marketsForSport(sport);
@@ -216,7 +217,7 @@ async function loadMarkets(force=false) {
         .select('*')
         .in('status', ['upcoming','live'])
         .order('commence_time', { ascending: true });
-      manualMarkets = (manualData || []).map(e => processManualEvent(e));
+      manualMarkets = (manualData || []).map(e => { try { return processManualEvent(e); } catch(err) { return null; } }).filter(Boolean);
     } catch(e) {
       console.warn('Manual events fetch failed:', e.message);
     }
@@ -612,6 +613,7 @@ function buildCard(m, i) {
 }
 
 function renderEvents() {
+  try {
   const mainEl = document.getElementById('events-list');
   const liveEl = document.getElementById('live-grid');
   const liveSec = document.getElementById('live-section');
@@ -640,6 +642,7 @@ function renderEvents() {
     document.getElementById('main-section-hdr').style.display = 'flex';
     document.getElementById('main-count').textContent = S.filtered.length + ' eventos';
   }
+  } catch(err) { console.error('renderEvents:', err); }
 }
 
 /* ════════════════════════════════════════════════════
@@ -1613,11 +1616,7 @@ async function loadLeague(sportKey, label, el) {
 
     if (apiError) throw new Error(apiError.message);
 
-    const apiEvents = (apiData || []).map(e => processManualEvent({
-      ...e, _fromApi: true,
-      sport_key: e.sport_key,
-      league: e.league || e.sport_title,
-    }));
+    const apiEvents = (apiData || []).map(e => { try { return processManualEvent({ ...e, _fromApi: true, sport_key: e.sport_key, league: e.league || e.sport_title }); } catch(err) { return null; } }).filter(Boolean);
 
     // Also load manual events for this sport
     const { data: manualData } = await _SB
@@ -1627,7 +1626,7 @@ async function loadLeague(sportKey, label, el) {
       .in('status', ['upcoming','live'])
       .order('commence_time', { ascending: true });
 
-    const manualEvents = (manualData || []).map(e => processManualEvent(e));
+    const manualEvents = (manualData || []).map(e => { try { return processManualEvent(e); } catch(err) { return null; } }).filter(Boolean);
 
     S.markets = [...manualEvents, ...apiEvents].sort((a,b) => {
       if (a._featured && !b._featured) return -1;
@@ -2052,23 +2051,25 @@ async function connectAPI() {
   st.className='modal-status load'; st.textContent='⏳ Cargando eventos…';
   S.sport = sport;
   localStorage.setItem('px_sport', sport);
+  _marketsLastLoaded = 0; // invalidate cache
   try {
-    // force=true: user manually changed sport in modal
-    const res = await oddsApiFetch(sport, true);
-    if (!res.ok) { const e = await res.json().catch(()=>({})); throw new Error(e.message||'Error '+res.status); }
-    const data = await res.json();
-    const rem  = res.headers.get('x-requests-remaining');
-    st.className='modal-status ok'; st.textContent=`✅ ${data.length} eventos cargados · ${rem||'?'} requests restantes`;
-    S.markets = data.map(m => {
-      try { return processMarket(m); }
-      catch(e) { console.warn('processMarket error:', e, m); return null; }
-    }).filter(Boolean);
-    updateSidebarCounts(); applyFilters(); updateAPIPill(true);
+    // Read from Supabase (not API directly)
+    const { data, error } = await _SB
+      .from('api_events')
+      .select('*')
+      .eq('sport_key', sport)
+      .in('status', ['upcoming','live'])
+      .order('commence_time', { ascending: true })
+      .limit(200);
+    if (error) throw new Error(error.message);
+    const apiEvents = (data||[]).map(e => { try { return processManualEvent({...e, _fromApi:true, sport_key:e.sport_key, league:e.league||e.sport_title}); } catch(err){ return null; } }).filter(Boolean);
+    S.markets = apiEvents;
+    updateSidebarCounts(); applyFilters();
+    st.className='modal-status ok'; st.textContent=`✅ ${apiEvents.length} eventos cargados`;
     setTimeout(closeModal, 1200);
   } catch(err) {
     st.className='modal-status err';
-    st.textContent='❌ ' + (err.message.includes('Failed to fetch') ? 'Sin conexión a internet.' : err.message);
-    updateAPIPill(false);
+    st.textContent='❌ ' + err.message;
   }
 }
 function updateAPIPill(on) { /* api-pill removed from frontend */ }
@@ -3997,15 +3998,17 @@ async function resolveManualEvent(id, result) {
       const { data: prof } = await _SB.from('profiles').select('balance').eq('email', bet.user_email).single();
       if (prof) {
         const newBal = +(prof.balance + ret).toFixed(2);
-        await _SB.from('profiles').update({ balance: newBal }).eq('email', bet.user_email);
-        await _SB.from('transactions').insert({
-          user_email: bet.user_email,
-          description: `Premio: ${bet.pick} (${matchKey})`,
-          type: 'win',
-          amount: ret,
-          balance: newBal,
-          created_at: new Date().toISOString(),
-        });
+        await Promise.all([
+          _SB.from('profiles').update({ balance: newBal }).eq('email', bet.user_email),
+          _SB.from('transactions').insert({
+            user_email: bet.user_email,
+            description: `Premio: ${bet.pick} (${matchKey})`,
+            type: 'win',
+            amount: ret,
+            balance: newBal,
+            created_at: new Date().toISOString(),
+          })
+        ]);
       }
     }
     resolved++;
