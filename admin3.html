@@ -1272,7 +1272,7 @@ let admEvFilter = 'all';
 function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function fOdd(o){ return (!o||isNaN(o)) ? '—' : parseFloat(o).toFixed(2); }
 function fDate(d){ if(!d)return '—'; try{ return new Date(d).toLocaleDateString('es',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}); }catch(e){return d;} }
-function fMoney(n){ return 'S/'+Number(+n||0).toFixed(2); }
+function fMoney(n){ return '$'+Number(+n||0).toFixed(2); }
 function shortEmail(e){ if(!e)return '—'; const[u,d]=e.split('@'); return u.length>12?u.slice(0,12)+'…@'+d:e; }
 function avatarColor(s){ const colors=['#5F3DFF','#28a745','#fd7e14','#007bff','#dc3545','#6f42c1','#20c997']; let h=0; for(let c of String(s||''))h=(h*31+c.charCodeAt(0))%colors.length; return colors[h]; }
 
@@ -1470,7 +1470,7 @@ function renderDashChart(){
         {label:'Apuestas', data:betData, borderColor:'#5F3DFF',backgroundColor:'rgba(95,61,255,.08)',fill:true,tension:.4,pointRadius:2},
       ]
     },
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:11},boxWidth:12}}},scales:{x:{grid:{display:false},ticks:{font:{size:10},maxTicksLimit:8}},y:{grid:{color:'rgba(0,0,0,.05)'},ticks:{font:{size:10},callback:v=>'S/'+v}}}}
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:11},boxWidth:12}}},scales:{x:{grid:{display:false},ticks:{font:{size:10},maxTicksLimit:8}},y:{grid:{color:'rgba(0,0,0,.05)'},ticks:{font:{size:10},callback:v=>'$'+v}}}}
   });
 }
 
@@ -2185,8 +2185,7 @@ function exportCSV(type){
     data=_cache.tx.map(t=>[(t.id||'').slice(-8),t.user_email,t.description||'',t.type,t.amount||0,t.balance||0,t.created_at||'']);
   } else if(type==='events'){
     headers=['ID','Liga','Local','Visitante','Inicio','Estado','Cuota 1','Cuota X','Cuota 2'];
-    // Use _manualEvents if loaded
-    data=(_manualEvents||[]).map(e=>[e.id,e.league,e.home_team,e.away_team,e.commence_time,e.status,e.odd_1||'',e.odd_x||'',e.odd_2||'']);
+    data=_manualEvents.map(e=>[e.id,e.league,e.home_team,e.away_team,e.commence_time,e.status,e.odd_1||'',e.odd_x||'',e.odd_2||'']);
   }
   const csv=[headers,...data].map(r=>r.map(c=>'"'+String(c).replace(/"/g,'""')+'"').join(',')).join('\n');
   const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
@@ -2287,8 +2286,8 @@ async function renderWithdrawals(filter){
     const paid    = allData.filter(w=>w.status==='paid');
     const el = id => document.getElementById(id);
     if(el('wd-k-pending')) el('wd-k-pending').textContent = pending.length;
-    if(el('wd-k-total'))   el('wd-k-total').textContent   = 'S/'+allData.reduce((a,w)=>a+(+w.amount||0),0).toFixed(2);
-    if(el('wd-k-paid'))    el('wd-k-paid').textContent    = 'S/'+paid.reduce((a,w)=>a+(+w.amount||0),0).toFixed(2);
+    if(el('wd-k-total'))   el('wd-k-total').textContent   = '$'+allData.reduce((a,w)=>a+(+w.amount||0),0).toFixed(2);
+    if(el('wd-k-paid'))    el('wd-k-paid').textContent    = '$'+paid.reduce((a,w)=>a+(+w.amount||0),0).toFixed(2);
 
     // Badge
     const wb = document.getElementById('adm-badge-wd');
@@ -2307,7 +2306,7 @@ async function renderWithdrawals(filter){
       return `<tr>
         <td style="font-family:var(--mono);font-size:11px;color:var(--text2)">#${w.id}</td>
         <td style="font-size:12px;color:var(--blue)">@${esc((w.user_email||'').split('@')[0])}</td>
-        <td><div class="amount-cell"><span class="amount-icon">💎</span><strong>S/${(+w.amount||0).toFixed(2)}</strong></div></td>
+        <td><div class="amount-cell"><span class="amount-icon">💎</span><strong>$${(+w.amount||0).toFixed(2)}</strong></div></td>
         <td>${methodMap[w.method]||w.method}</td>
         <td style="font-size:11px;color:var(--text2);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${datos}</td>
         <td><span class="badge ${sCls}">${sLbl}</span></td>
@@ -2332,7 +2331,7 @@ function admFilterWd(filter, btn){
 
 async function admApproveWd(id){
   const w = _withdrawals.find(x=>x.id===id);
-  if(!w||!confirm(`¿Aprobar retiro de S/${(+w.amount||0).toFixed(2)} para @${(w.user_email||'').split('@')[0]}?`)) return;
+  if(!w||!confirm(`¿Aprobar retiro de $${(+w.amount||0).toFixed(2)} para @${(w.user_email||'').split('@')[0]}?`)) return;
   const { error } = await _SB.from('withdrawal_requests').update({ status:'approved', updated_at:new Date().toISOString() }).eq('id',id);
   if(error){ showToast('❌ '+error.message,'error'); return; }
   showToast('✅ Retiro aprobado — procede a realizar el pago','success');
