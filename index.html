@@ -866,7 +866,7 @@
             Escanea este código QR con <strong style="color:var(--text)">Google Authenticator</strong>, <strong style="color:var(--text)">Authy</strong> o cualquier app TOTP.
           </p>
           <div style="display:flex;justify-content:center;margin-bottom:16px;background:#fff;border-radius:10px;padding:12px">
-            <img id="totp-qr-img" src="" alt="QR Code" style="width:200px;height:200px;border-radius:6px" onerror="this.alt='Error cargando QR — usa la clave manual'">
+            <img id="totp-qr-img" src="" alt="QR Code" loading="lazy" style="width:200px;height:200px;border-radius:6px" onerror="this.alt='Error cargando QR — usa la clave manual'">
           </div>
           <div style="font-size:11px;color:var(--text2);text-align:center;margin-bottom:4px">Clave manual (si no puedes escanear):</div>
           <div id="totp-secret-display" style="font-size:12px;font-family:var(--mono);color:var(--green);text-align:center;background:var(--bg3);padding:8px;border-radius:8px;letter-spacing:2px;margin-bottom:20px;user-select:all"></div>
