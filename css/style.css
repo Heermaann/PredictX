@@ -173,8 +173,6 @@ input,select,textarea{font-family:var(--font)}
 /* API pill */
 
 
-.api-dot{width:7px;height:7px;border-radius:50%;background:var(--text3);flex-shrink:0;transition:background .2s,box-shadow .2s}
-.api-dot.on{background:var(--green);box-shadow:0 0 0 2px var(--green-bd)}
 /* .api-pill-txt removed */
 
 /* ════════════════════════════════════════════════
