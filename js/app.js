@@ -2965,8 +2965,10 @@ window.placeBets = async function() {
       runningBalance = +(runningBalance - stake).toFixed(2);
       bets.push({ id:'B'+Date.now()+Math.random(), date:todayStr(), match:sel.match, pick:sel.pick, odd:sel.odd, stake, ret:0, status:'open', type:'single' });
       txs.push({ id:'TX'+Date.now()+Math.random(), date:todayStr(), desc:'Apuesta: '+sel.pick, type:'bet', amount:stake, balance:runningBalance });
-      await _SB.from('bets').insert({ user_email:SESSION.email, match_name:sel.match, pick:sel.pick, odd:sel.odd, stake, status:'open', type:'single', created_at:new Date().toISOString() });
-      await _SB.from('transactions').insert({ user_email:SESSION.email, description:'Apuesta: '+sel.pick, type:'bet', amount:stake, balance:runningBalance, created_at:new Date().toISOString() });
+      await Promise.all([
+        _SB.from('bets').insert({ user_email:SESSION.email, match_name:sel.match, pick:sel.pick, odd:sel.odd, stake, status:'open', type:'single', created_at:new Date().toISOString() }),
+        _SB.from('transactions').insert({ user_email:SESSION.email, description:'Apuesta: '+sel.pick, type:'bet', amount:stake, balance:runningBalance, created_at:new Date().toISOString() })
+      ]);
     }
   }
 
@@ -3646,11 +3648,13 @@ async function resolveBet(betId, userEmail, stake, odd, result) {
     const { data: prof } = await _SB.from('profiles').select('balance').eq('email', userEmail).single();
     if (prof) {
       const newBal = (+prof.balance||0) + ret;
-      await _SB.from('profiles').update({ balance: newBal }).eq('email', userEmail);
-      await _SB.from('transactions').insert({
-        user_email: userEmail, description: 'Premio apuesta ganada',
-        type: 'win', amount: ret, balance: newBal
-      });
+      await Promise.all([
+        _SB.from('profiles').update({ balance: newBal }).eq('email', userEmail),
+        _SB.from('transactions').insert({
+          user_email: userEmail, description: 'Premio apuesta ganada',
+          type: 'win', amount: ret, balance: newBal
+        })
+      ]);
     }
     showToast(`✅ Apuesta resuelta como GANADA — ${ret.toFixed(2)} acreditados`);
   } else {
