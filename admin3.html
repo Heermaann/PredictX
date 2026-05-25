@@ -407,12 +407,69 @@ tbody td { padding: 12px 16px; font-size: 13px; color: var(--text1); vertical-al
 @media (max-width: 1200px) { .kpi-grid { grid-template-columns: repeat(3,1fr); } }
 @media (max-width: 900px)  { .kpi-grid { grid-template-columns: repeat(2,1fr); } }
 @media (max-width: 768px) {
-  .adm-sidebar { position: fixed; z-index: 300; transform: translateX(-100%); transition: transform .25s; }
+  /* Sidebar: off-canvas on mobile */
+  .adm-sidebar {
+    position: fixed; top: 0; left: 0; height: 100vh; width: 260px;
+    z-index: 500; transform: translateX(-100%);
+    transition: transform .25s cubic-bezier(.4,0,.2,1);
+    box-shadow: 4px 0 24px rgba(0,0,0,.4);
+  }
   .adm-sidebar.open { transform: translateX(0); }
-  .kpi-grid { grid-template-columns: 1fr 1fr; }
-  .form-row { grid-template-columns: 1fr; }
+  .adm-sidebar-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,.5); z-index: 499;
+  }
+  .adm-sidebar-overlay.show { display: block; }
+  .adm-hamburger {
+    display: flex; align-items: center; justify-content: center;
+    width: 38px; height: 38px; border: none; background: transparent;
+    color: var(--text1, #1a1d2e); font-size: 20px; cursor: pointer;
+    border-radius: 8px; flex-shrink: 0; margin-right: 6px;
+  }
+  .adm-hamburger:hover { background: var(--bg, #f4f6f9); }
+  /* Content area fills full width on mobile */
+  .adm-main { width: 100%; min-width: 0; }
+  .adm-content { padding: 12px; overflow-x: hidden; }
+  .adm-layout { overflow: hidden; }
+  /* KPIs */
+  .kpi-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+  .kpi-card { padding: 14px 12px; }
+  /* Forms */
+  .form-row { grid-template-columns: 1fr; gap: 10px; }
+  .form-row-3 { grid-template-columns: 1fr !important; }
+  /* Page header */
+  .page-hd { flex-direction: column; gap: 10px; align-items: flex-start; }
+  .page-hd-right { flex-wrap: wrap; gap: 6px; width: 100%; }
+  .page-hd-right .btn { font-size: 12px; padding: 6px 10px; }
+  /* Tables - scroll horizontally */
+  .table-card { border-radius: 10px; overflow: hidden; }
+  .table-card > div { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  table { font-size: 12px; min-width: 500px; }
+  th, td { padding: 8px 10px; white-space: nowrap; }
+  /* Topbar */
+  .topbar-search { display: none; }
+  .topbar-page-title { display: block; font-weight: 700; font-size: 15px; flex: 1; }
+  .adm-topbar { gap: 8px; padding: 0 12px; height: 56px; }
+  .topbar-btn { width: 34px; height: 34px; }
+  /* Modals */
+  .modal-box { margin: 8px; max-width: calc(100vw - 16px) !important; max-height: 90vh; overflow-y: auto; }
+  .modal-body { padding: 16px; }
+  /* Action buttons */
+  .action-group { flex-wrap: wrap; gap: 4px; }
+  /* Charts */
+  .chart-wrap { height: 160px !important; }
+  /* Info banners */
+  .info-banner { font-size: 12px; }
+  /* Section labels */
+  .page-title { font-size: 18px; }
+  .page-sub { font-size: 12px; }
 }
-@media (max-width: 480px) { .kpi-grid { grid-template-columns: 1fr; } }
+@media (max-width: 480px) {
+  .kpi-grid { grid-template-columns: 1fr; }
+  .adm-content { padding: 10px; }
+  .action-group .btn { font-size: 11px; padding: 5px 8px; }
+  table { min-width: 400px; }
+}
 </style>
 </head>
 <body>
@@ -443,6 +500,7 @@ tbody td { padding: 12px 16px; font-size: 13px; color: var(--text1); vertical-al
 <div class="adm-layout" id="admin-layout" style="display:none">
 
   <!-- Sidebar -->
+  <div class="adm-sidebar-overlay" id="adm-sidebar-overlay" onclick="admCloseSidebar()"></div>
   <aside class="adm-sidebar" id="adm-sidebar">
     <div class="sidebar-brand">
       <div class="brand-logo">P</div>
@@ -524,6 +582,7 @@ tbody td { padding: 12px 16px; font-size: 13px; color: var(--text1); vertical-al
   <div class="adm-main">
     <!-- Top navbar -->
     <div class="adm-topbar">
+      <button class="adm-hamburger" id="adm-hamburger" onclick="admToggleSidebar()" title="Menú">☰</button>
       <div class="topbar-search">
         <span>🔍</span>
         <input type="text" placeholder="Buscar aquí..." id="topbar-search-inp" oninput="admGlobalSearch(this.value)">
@@ -1377,6 +1436,7 @@ function updateBadges(){
 
 // ── Navigation ──
 function admShowPage(page, btn){
+  if (window.innerWidth <= 768) admCloseSidebar();
   document.querySelectorAll('.adm-page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(b=>b.classList.remove('active'));
   const el=document.getElementById('adm-'+page);
@@ -2818,6 +2878,25 @@ async function admRestoreApiEvent(){
   showToast('↩ Datos originales restaurados','success');
   admCloseApiEventEdit();
   await renderApiEvents();
+}
+
+
+// ── Mobile sidebar toggle ──
+function admToggleSidebar() {
+  const sb  = document.getElementById('adm-sidebar');
+  const ov  = document.getElementById('adm-sidebar-overlay');
+  const isOpen = sb.classList.contains('open');
+  if (isOpen) { admCloseSidebar(); } else { admOpenSidebar(); }
+}
+function admOpenSidebar() {
+  document.getElementById('adm-sidebar').classList.add('open');
+  document.getElementById('adm-sidebar-overlay').classList.add('show');
+  document.body.style.overflow = 'hidden';
+}
+function admCloseSidebar() {
+  document.getElementById('adm-sidebar').classList.remove('open');
+  document.getElementById('adm-sidebar-overlay').classList.remove('show');
+  document.body.style.overflow = '';
 }
 
 // ── Keyboard shortcut ──
