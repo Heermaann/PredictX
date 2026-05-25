@@ -191,10 +191,13 @@ async function loadMarkets(force=false) {
   try {
     // ── Read from Supabase api_events (no API call) ──
     // Filter by selected sport/league if one is active
+    // Only show events starting in future or up to 3h ago (in progress)
+    const _cutoff = new Date(Date.now() - 3*60*60*1000).toISOString();
     let apiQuery = _SB
       .from('api_events')
       .select('*')
       .in('status', ['upcoming', 'live'])
+      .gt('commence_time', _cutoff)
       .order('commence_time', { ascending: true })
       .limit(300);
 
@@ -432,34 +435,90 @@ function isLive(m) {
    FILTERS
 ════════════════════════════════════════════════════ */
 /* Category pill handler */
-function setCat(cat, btn) {
+async function setCat(cat, btn) {
   S.catMode = cat;
   document.querySelectorAll('.cat-pill').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
+  S.tab = 'all'; S.sort = 'date'; S.searchQ = '';
 
-  if (cat === 'live') {
-    S.tab = 'live';
+  if (cat === 'all') {
     S.sport_cat = 'all';
-  } else if (cat === 'new') {
-    S.tab = 'all';
-    S.sport_cat = 'all';
-    S.sort = 'date';
-  } else if (cat === 'all') {
-    S.tab = 'all';
-    S.sport_cat = 'all';
-    S.sort = 'vol';
+    S.sport = localStorage.getItem('px_sport') || 'soccer_epl';
+    _marketsLastLoaded = 0;
+    await loadMarkets(true);
   } else {
-    // sport category
-    S.tab = 'all';
     S.sport_cat = cat;
-    S.sort = 'date';
+    // First try filtering already-loaded events
+    const filtered = S.markets.filter(m => m.sportCat === cat || m._manual);
+    if (filtered.length > 0) {
+      // We have events for this category — just filter
+      applyFilters();
+      return;
+    }
+    // No events loaded for this category — load from Supabase
+    _marketsLastLoaded = 0;
+    await loadMarketsForCategory(cat);
   }
-  applyFilters();
+}
+
+// Load all events for a sport category (e.g. all soccer leagues)
+async function loadMarketsForCategory(cat) {
+  const vl = document.getElementById('view-list');
+  if (vl && vl.style.display === 'none') vl.style.display = 'block';
+  document.getElementById('events-list').innerHTML =
+    '<div class="spinner-wrap"><div class="spin"></div><div>Cargando eventos…</div></div>';
+  try {
+    // Load API events filtered by sport category prefix
+    const _cutoffC = new Date(Date.now() - 3*60*60*1000).toISOString();
+    const { data: apiData, error } = await _SB
+      .from('api_events')
+      .select('*')
+      .like('sport_key', cat + '%')
+      .in('status', ['upcoming','live'])
+      .gt('commence_time', _cutoffC)
+      .order('commence_time', { ascending: true })
+      .limit(200);
+    if (error) throw new Error(error.message);
+
+    const apiEvents = (apiData||[]).map(e => {
+      try { return processManualEvent({...e, _fromApi:true, sport_key:e.sport_key, league:e.league||e.sport_title}); }
+      catch(err) { return null; }
+    }).filter(Boolean);
+
+    // Also load manual events for this category
+    const { data: manualData } = await _SB
+      .from('manual_events')
+      .select('*')
+      .like('sport_key', cat + '%')
+      .in('status', ['upcoming','live'])
+      .order('commence_time', { ascending: true });
+    const manualEvents = (manualData||[]).map(e => {
+      try { return processManualEvent(e); } catch(err) { return null; }
+    }).filter(Boolean);
+
+    S.markets = [...manualEvents, ...apiEvents].sort((a,b) => {
+      if (a._featured && !b._featured) return -1;
+      if (!a._featured && b._featured) return 1;
+      return new Date(a.commence_time) - new Date(b.commence_time);
+    });
+
+    updateSidebarCounts();
+    applyFilters();
+    if (!S.markets.length) {
+      showToast('⚠️ Sin eventos para este deporte. Sincroniza desde el admin.');
+    }
+  } catch(err) {
+    renderEmpty('error', err.message);
+  }
 }
 
 function applyFilters() {
   try {
   let list = [...S.markets];
+
+  // Remove events that started more than 3 hours ago (client-side guard)
+  const cutoffMs = Date.now() - 3*60*60*1000;
+  list = list.filter(m => m._manual || new Date(m.commence_time).getTime() > cutoffMs);
 
   // Sport category (cat-bar pills like Fútbol, Baloncesto...)
   // Manual events always show regardless of sport filter (they have their own sportCat)
@@ -1606,11 +1665,13 @@ async function loadLeague(sportKey, label, el) {
 
   try {
     // Read from Supabase api_events (source of truth)
+    const _cutoffL = new Date(Date.now() - 3*60*60*1000).toISOString();
     const { data: apiData, error: apiError } = await _SB
       .from('api_events')
       .select('*')
       .eq('sport_key', sportKey)
       .in('status', ['upcoming','live'])
+      .gt('commence_time', _cutoffL)
       .order('commence_time', { ascending: true })
       .limit(200);
 
@@ -2054,11 +2115,13 @@ async function connectAPI() {
   _marketsLastLoaded = 0; // invalidate cache
   try {
     // Read from Supabase (not API directly)
+    const _cutoffM = new Date(Date.now() - 3*60*60*1000).toISOString();
     const { data, error } = await _SB
       .from('api_events')
       .select('*')
       .eq('sport_key', sport)
       .in('status', ['upcoming','live'])
+      .gt('commence_time', _cutoffM)
       .order('commence_time', { ascending: true })
       .limit(200);
     if (error) throw new Error(error.message);
@@ -4669,3 +4732,14 @@ async function doLoginWith2FA() {
   // doLogin runs normally — if user has 2FA, prompt for code after
   await (typeof _origDoLogin === 'function' ? _origDoLogin() : Promise.resolve());
 }
+
+// ── Welcome Banner ──
+function closeWelcomeBanner() {
+  const banner = document.getElementById('welcome-banner');
+  if (!banner) return;
+  banner.style.animation = 'fadeOut .25s ease forwards';
+  setTimeout(() => { banner.classList.add('hidden'); }, 250);
+}
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeWelcomeBanner();
+});
