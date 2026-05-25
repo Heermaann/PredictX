@@ -1592,5 +1592,19 @@
   </div>
 </div>
 
+
+<script>
+// Welcome banner - self-contained, no dependency on app.js
+function closeWelcomeBanner() {
+  var b = document.getElementById('welcome-banner');
+  if (!b) return;
+  b.style.opacity = '0';
+  b.style.transition = 'opacity .25s';
+  setTimeout(function() { b.style.display = 'none'; }, 260);
+}
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') closeWelcomeBanner();
+});
+</script>
 </body>
 </html>
