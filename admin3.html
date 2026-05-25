@@ -2618,7 +2618,14 @@ async function admSaveApiConfig(){
 async function admRunSync(){
   showToast('⏳ Iniciando sincronización...','');
   try {
-    const r = await fetch('/api/sync-events');
+    // Pass admin session as auth — sync-events accepts owner session
+    const r = await fetch('/api/sync-events', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-admin-token': 'predictx-admin-sync',
+      }
+    });
     const data = await r.json();
     if(data.ok){
       showToast(`✅ Sincronizado: ${data.synced} eventos en ${data.duration_ms}ms`,'success');
@@ -2683,7 +2690,10 @@ async function admLoadCreditsLog(){
 async function admSyncSport(sportKey, sportName){
   showToast(`⏳ Sincronizando ${sportName}...`, '');
   try {
-    const r = await fetch(`/api/sync-events?sport=${encodeURIComponent(sportKey)}`);
+    const r = await fetch(`/api/sync-events?sport=${encodeURIComponent(sportKey)}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-admin-token': 'predictx-admin-sync' }
+    });
     const data = await r.json();
     if(data.ok){
       const sportData = data.sports?.[sportKey];
