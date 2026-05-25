@@ -85,8 +85,6 @@
       <span class="sb-item-ico">⚡</span>Todos
       <span class="sb-badge" id="badge-total">—</span>
     </div>
-    <div class="sb-item" id="nav-live" onclick="navTo('live',this)">
-    </div>
     <div class="sb-item" id="nav-upcoming" onclick="navTo('upcoming',this)">
       <span class="sb-item-ico">📅</span>Próximos
     </div>
@@ -1545,20 +1543,20 @@
 
 
 <!-- ── Welcome Banner ── -->
-<div id="welcome-banner">
-  <div class="welcome-box">
-    <button class="welcome-close" onclick="closeWelcomeBanner()" title="Cerrar">✕</button>
-    <div class="welcome-logo">🎯</div>
-    <div class="welcome-title">Bienvenido a PredictX</div>
-    <div class="welcome-sub">La plataforma de apuestas deportivas más completa. Apuesta en los mejores eventos del mundo con las mejores cuotas.</div>
-    <div class="welcome-feats">
-      <div class="welcome-feat"><strong>⚽ Deportes</strong>Fútbol, NBA, NFL, MLB, NHL y MMA</div>
-      <div class="welcome-feat"><strong>💰 Cuotas</strong>Decimales en tiempo real</div>
-      <div class="welcome-feat"><strong>🎟 Apuestas</strong>Simple y combinada</div>
-      <div class="welcome-feat"><strong>🔒 Seguro</strong>Pagos protegidos</div>
+<div id="welcome-banner" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.7);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px">
+  <div class="welcome-box" style="background:var(--card,#fff);border-radius:20px;padding:40px 36px;max-width:480px;width:100%;position:relative;box-shadow:0 24px 60px rgba(0,0,0,.4);text-align:center">
+    <button class="welcome-close" onclick="closeWelcomeBanner()" title="Cerrar" style="position:absolute;top:14px;right:16px;background:none;border:none;font-size:22px;color:#888;cursor:pointer;width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center">✕</button>
+    <div class="welcome-logo" style="font-size:48px;margin-bottom:12px">🎯</div>
+    <div class="welcome-title" style="font-size:26px;font-weight:800;color:var(--accent,#5f3dff);margin-bottom:8px">Bienvenido a PredictX</div>
+    <div class="welcome-sub" style="font-size:14px;color:var(--text2,#666);line-height:1.6;margin-bottom:24px">La plataforma de apuestas deportivas más completa. Apuesta en los mejores eventos del mundo con las mejores cuotas.</div>
+    <div class="welcome-feats" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:28px;text-align:left">
+      <div class="welcome-feat" style="background:var(--bg3,#f5f7fa);border-radius:10px;padding:10px 14px;font-size:13px;color:var(--text2,#666)"><strong>⚽ Deportes</strong>Fútbol, NBA, NFL, MLB, NHL y MMA</div>
+      <div class="welcome-feat" style="background:var(--bg3,#f5f7fa);border-radius:10px;padding:10px 14px;font-size:13px;color:var(--text2,#666)"><strong>💰 Cuotas</strong>Decimales en tiempo real</div>
+      <div class="welcome-feat" style="background:var(--bg3,#f5f7fa);border-radius:10px;padding:10px 14px;font-size:13px;color:var(--text2,#666)"><strong>🎟 Apuestas</strong>Simple y combinada</div>
+      <div class="welcome-feat" style="background:var(--bg3,#f5f7fa);border-radius:10px;padding:10px 14px;font-size:13px;color:var(--text2,#666)"><strong>🔒 Seguro</strong>Pagos protegidos</div>
     </div>
-    <button class="welcome-btn" onclick="closeWelcomeBanner()">¡Empezar a apostar! →</button>
-    <div class="welcome-disclaimer">+18 · El juego debe ser responsable · Las apuestas conllevan riesgo de pérdida</div>
+    <button class="welcome-btn" style="width:100%;padding:14px;border-radius:12px;background:var(--accent,#5f3dff);color:#fff;font-size:15px;font-weight:700;border:none;cursor:pointer" onclick="closeWelcomeBanner()">¡Empezar a apostar! →</button>
+    <div class="welcome-disclaimer" style="font-size:11px;color:var(--text3,#aaa);margin-top:14px;line-height:1.5">+18 · El juego debe ser responsable · Las apuestas conllevan riesgo de pérdida</div>
   </div>
 </div>
 </body>
