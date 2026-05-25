@@ -196,6 +196,14 @@ export default async function handler(req, res) {
   const duration = Date.now() - startTime;
   const status = errors.length === 0 ? 'success' : errors.length < sports.length ? 'partial' : 'error';
 
+  // ── Mark finished events: started more than 3 hours ago ──
+  const cutoff = new Date(Date.now() - 3*60*60*1000).toISOString();
+  await fetch(`${SB_URL}/rest/v1/api_events?status=in.(upcoming,live)&commence_time=lt.${cutoff}&result=is.null`, {
+    method: 'PATCH',
+    headers: { ...sbHeaders, 'Prefer': 'return=minimal' },
+    body: JSON.stringify({ status: 'finished', last_updated_at: new Date().toISOString() }),
+  });
+
   // ── Write sync log ──
   await fetch(`${SB_URL}/rest/v1/api_sync_logs`, {
     method: 'POST',
