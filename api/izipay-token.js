@@ -29,10 +29,10 @@ export default async function handler(req, res) {
   }
 
   const body = req.body;
-  const { amount, currency = 'PEN', email, orderId } = body;
+  const { amount, currency = 'USD', email, orderId } = body;
   const parsedAmount = parseFloat(amount);
   if (!parsedAmount || isNaN(parsedAmount) || parsedAmount < 1 || parsedAmount > 50000) {
-    return res.status(400).json({ error: 'Monto inválido (1–50000 soles)' });
+    return res.status(400).json({ error: 'Monto inválido (1–50000)' });
   }
 
   const amountInCents = Math.round(parsedAmount * 100);
