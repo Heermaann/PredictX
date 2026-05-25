@@ -192,11 +192,11 @@ async function loadMarkets(force=false) {
     // ── Read from Supabase api_events (no API call) ──
     // Filter by selected sport/league if one is active
     // Only show events starting in future or up to 3h ago (in progress)
-    const _cutoff = new Date(Date.now() - 3*60*60*1000).toISOString();
+    const _cutoff = new Date(Date.now() - 2*60*60*1000).toISOString();
     let apiQuery = _SB
       .from('api_events')
       .select('*')
-      .in('status', ['upcoming', 'live'])
+      .not('status', 'eq', 'finished')
       .gt('commence_time', _cutoff)
       .order('commence_time', { ascending: true })
       .limit(300);
@@ -436,6 +436,12 @@ function isLive(m) {
 ════════════════════════════════════════════════════ */
 /* Category pill handler */
 async function setCat(cat, btn) {
+  // ── Navigate to home view first ──
+  showListView();
+  updateSidebarVisibility();
+  document.querySelectorAll('.bn-btn').forEach(b => b.classList.remove('active'));
+  const bh = document.getElementById('bn-home'); if (bh) bh.classList.add('active');
+
   S.catMode = cat;
   document.querySelectorAll('.cat-pill').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
@@ -469,12 +475,12 @@ async function loadMarketsForCategory(cat) {
     '<div class="spinner-wrap"><div class="spin"></div><div>Cargando eventos…</div></div>';
   try {
     // Load API events filtered by sport category prefix
-    const _cutoffC = new Date(Date.now() - 3*60*60*1000).toISOString();
+    const _cutoffC = new Date(Date.now() - 2*60*60*1000).toISOString();
     const { data: apiData, error } = await _SB
       .from('api_events')
       .select('*')
       .like('sport_key', cat + '%')
-      .in('status', ['upcoming','live'])
+      .not('status', 'eq', 'finished')
       .gt('commence_time', _cutoffC)
       .order('commence_time', { ascending: true })
       .limit(200);
@@ -516,9 +522,13 @@ function applyFilters() {
   try {
   let list = [...S.markets];
 
-  // Remove events that started more than 3 hours ago (client-side guard)
-  const cutoffMs = Date.now() - 3*60*60*1000;
-  list = list.filter(m => m._manual || new Date(m.commence_time).getTime() > cutoffMs);
+  // Remove finished events and events that started more than 2 hours ago (client-side guard)
+  const cutoffMs = Date.now() - 2*60*60*1000;
+  list = list.filter(m => {
+    if (m._manual) return m._status !== 'finished'; // manual events respect explicit status
+    if (m.status === 'finished') return false;       // API events marked finished are hidden
+    return new Date(m.commence_time).getTime() > cutoffMs; // hide if started > 2h ago
+  });
 
   // Sport category (cat-bar pills like Fútbol, Baloncesto...)
   // Manual events always show regardless of sport filter (they have their own sportCat)
@@ -1618,6 +1628,12 @@ function redrawSparks() {
    NAV / FILTER CALLBACKS
 ════════════════════════════════════════════════════ */
 function navTo(mode, btn) {
+  // ── Always navigate to home view first ──
+  showListView();
+  updateSidebarVisibility();
+  document.querySelectorAll('.bn-btn').forEach(b => b.classList.remove('active'));
+  const bh = document.getElementById('bn-home'); if (bh) bh.classList.add('active');
+
   S.catMode = 'all'; S.sport_cat = 'all'; S.searchQ = '';
   S.sort = (mode === 'best') ? 'vol' : 'date';
   document.querySelectorAll('.cat-pill').forEach(b => b.classList.remove('active'));
@@ -1640,6 +1656,13 @@ function toggleGroup(id) {
 let _activeLeagueEl = null;
 
 async function loadLeague(sportKey, label, el) {
+  // ── Always navigate to home view first ──
+  showListView();
+  updateSidebarVisibility();
+  // Update bottom nav active state
+  document.querySelectorAll('.bn-btn').forEach(b => b.classList.remove('active'));
+  const bh = document.getElementById('bn-home'); if (bh) bh.classList.add('active');
+
   // Mark active
   if (_activeLeagueEl) _activeLeagueEl.classList.remove('active', 'loading');
   _activeLeagueEl = el;
@@ -1665,12 +1688,12 @@ async function loadLeague(sportKey, label, el) {
 
   try {
     // Read from Supabase api_events (source of truth)
-    const _cutoffL = new Date(Date.now() - 3*60*60*1000).toISOString();
+    const _cutoffL = new Date(Date.now() - 2*60*60*1000).toISOString();
     const { data: apiData, error: apiError } = await _SB
       .from('api_events')
       .select('*')
       .eq('sport_key', sportKey)
-      .in('status', ['upcoming','live'])
+      .not('status', 'eq', 'finished')
       .gt('commence_time', _cutoffL)
       .order('commence_time', { ascending: true })
       .limit(200);
@@ -2115,12 +2138,12 @@ async function connectAPI() {
   _marketsLastLoaded = 0; // invalidate cache
   try {
     // Read from Supabase (not API directly)
-    const _cutoffM = new Date(Date.now() - 3*60*60*1000).toISOString();
+    const _cutoffM = new Date(Date.now() - 2*60*60*1000).toISOString();
     const { data, error } = await _SB
       .from('api_events')
       .select('*')
       .eq('sport_key', sport)
-      .in('status', ['upcoming','live'])
+      .not('status', 'eq', 'finished')
       .gt('commence_time', _cutoffM)
       .order('commence_time', { ascending: true })
       .limit(200);
