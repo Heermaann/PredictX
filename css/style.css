@@ -415,23 +415,12 @@ input,select,textarea{font-family:var(--font)}
 .odd-card-team{font-size:12px;color:var(--text);font-weight:600;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
 .odd-card-val{font-size:22px;font-weight:700;font-family:var(--mono);color:var(--text)}
 .odd-card.active .odd-card-val{color:var(--green)}
-.odd-card-prob{font-size:10px;color:var(--text3)}
 
 /* Stats */
-.stats-row{display:flex;gap:1px;background:var(--border);border-radius:10px;overflow:hidden;margin-bottom:18px}
-.stat-card{flex:1;min-width:70px;background:var(--bg2);padding:12px;text-align:center}
-.stat-lbl{font-size:9px;color:var(--text3);margin-bottom:5px;text-transform:uppercase;letter-spacing:.5px}
-.stat-val{font-size:17px;font-weight:700;color:var(--text);font-family:var(--mono);letter-spacing:-.5px}
 .stat-val.g{color:var(--green)}.stat-val.r{color:var(--red)}
 
 /* Chart */
-.chart-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:18px;margin-bottom:18px}
-.chart-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;gap:8px;flex-wrap:wrap}
-.chart-title{font-size:13px;font-weight:600;color:var(--text)}
-.chart-tabs{display:flex;gap:4px}
-.chart-tab{font-size:11px;padding:4px 9px;border-radius:5px;color:var(--text2);cursor:pointer;transition:background .12s}
 .chart-tab.active{background:var(--bg4);color:var(--text)}
-.chart-wrap{position:relative;height:180px}
 
 /* Bookmaker comparison */
 .bk-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:18px}
@@ -1148,18 +1137,6 @@ input,select,textarea{font-family:var(--font)}
 }
 
 /* Probability bar */
-.mc-prob-row{
-  display:flex;align-items:center;justify-content:space-between;
-  font-size:12px;
-}
-.mc-prob-yes{font-weight:700;font-size:15px;color:var(--green)}
-.mc-prob-no{color:var(--text2)}
-.mc-prob-bar{
-  height:4px;border-radius:2px;
-  background:var(--bg4);overflow:hidden;
-  margin:4px 0;
-}
-.mc-prob-fill{height:100%;border-radius:2px;background:var(--green);transition:width .3s}
 
 /* Odds buttons row */
 .mc-odds{display:flex;gap:5px}
@@ -2051,3 +2028,23 @@ select.ev-input { cursor: pointer; }
 }
 
 /* Izipay SDK loaded dynamically - no CSS hiding needed */
+
+/* ── Descripción del partido ── */
+.det-description {
+  background: var(--bg3); border-radius: 12px;
+  padding: 16px 18px; margin-top: 12px;
+}
+.det-desc-title {
+  font-size: 12px; font-weight: 700; color: var(--text2);
+  text-transform: uppercase; letter-spacing: .5px; margin-bottom: 8px;
+}
+.det-desc-body {
+  font-size: 14px; color: var(--text1); line-height: 1.65;
+  white-space: pre-wrap;
+}
+
+/* ── Event card teams row (replaced prob bar) ── */
+.mc-teams-row {
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: 11px; color: var(--text2); padding: 4px 0;
+}
