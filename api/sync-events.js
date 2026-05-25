@@ -2,13 +2,15 @@
 export default async function handler(req, res) {
   if (req.method !== 'GET' && req.method !== 'POST') return res.status(405).end();
 
-  // ── Auth: verify CRON_SECRET or Vercel cron header ──
+  // ── Auth: verify CRON_SECRET or Vercel cron header or admin panel token ──
   const secret = process.env.CRON_SECRET;
   if (secret) {
     const authHeader = req.headers['authorization'] || '';
+    const adminToken = req.headers['x-admin-token'] || '';
     const isVercelCron = req.headers['x-vercel-cron'] === '1';
     const hasValidToken = authHeader === `Bearer ${secret}`;
-    if (!isVercelCron && !hasValidToken) {
+    const isAdminPanel = adminToken === 'predictx-admin-sync';
+    if (!isVercelCron && !hasValidToken && !isAdminPanel) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
   }
