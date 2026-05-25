@@ -1731,32 +1731,6 @@ input,select,textarea{font-family:var(--font)}
 /* ════════════════════════════════════════════════════
    MARKET TABS (Resultado / Más Mercados)
 ════════════════════════════════════════════════════ */
-.mkt-tabs {
-  display: flex;
-  gap: 6px;
-  margin: 16px 0 12px;
-  padding: 4px;
-  background: var(--bg3);
-  border-radius: 10px;
-  border: 1px solid var(--border);
-}
-.mkt-tab {
-  flex: 1;
-  padding: 8px 12px;
-  border: none;
-  border-radius: 7px;
-  background: transparent;
-  color: var(--text2);
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background .15s, color .15s;
-}
-.mkt-tab.active {
-  background: var(--accent);
-  color: #fff;
-}
-.mkt-tab:hover:not(.active) { background: var(--bg4); color: var(--text1); }
 
 /* ════════════════════════════════════════════════════
    EXTRA MARKETS CONTAINER
