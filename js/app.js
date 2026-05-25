@@ -2929,8 +2929,17 @@ window.placeBets = async function() {
     totalStake = items.reduce((a,s)=>a+(parseFloat(s.stake)||0),0);
   }
 
+  if (totalStake <= 0) {
+    showToast('❌ Introduce un importe para apostar.');
+    return;
+  }
+  if (currentBalance <= 0) {
+    showToast('❌ No tienes saldo. Recarga tu cuenta primero.');
+    openPayModal('deposit');
+    return;
+  }
   if (totalStake > currentBalance) {
-    showToast('❌ Saldo insuficiente. Recarga tu cuenta.');
+    showToast('❌ Saldo insuficiente. Tu saldo: $' + currentBalance.toFixed(2));
     openPayModal('deposit');
     return;
   }
@@ -3026,53 +3035,9 @@ window.refreshAdminData = function() {
   renderSecurityBadges();
 };
 
-/* ── Fix renderBets/renderTx to use session data ── */
-window.renderBets = function(filter) {
-  _betFilter = filter;
-  if (!SESSION) return;
-  const bets  = betHistory();
-  const shown = (filter==='all'?bets:bets.filter(b=>b.status===filter)).slice().reverse();
-  const ts=shown.reduce((a,b)=>a+(b.stake||0),0);
-  const tr=shown.reduce((a,b)=>a+(b.ret||0),0);
-  const pnl=tr-ts;
-  setText('bets-total-stake','$'+ts.toFixed(2));
-  setText('bets-total-ret','$'+tr.toFixed(2));
-  const pEl=document.getElementById('bets-pnl');
-  if(pEl){pEl.textContent=(pnl>=0?'+':'')+'$'+pnl.toFixed(2);pEl.className='sc-val '+(pnl>=0?'g':'r');}
-  const tb=document.getElementById('bets-body');
-  if(!tb) return;
-  if(!shown.length){tb.innerHTML='<tr><td colspan="8" style="text-align:center;color:var(--text2);padding:36px;font-size:13px">No hay apuestas '+( filter==='all'?'':'con este estado')+'</td></tr>';return;}
-  tb.innerHTML=shown.map(b=>`<tr>
-    <td style="white-space:nowrap;color:var(--text2)">${b.date||'—'}</td>
-    <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(b.match)}</td>
-    <td style="font-weight:600">${esc(b.pick)}</td>
-    <td><span class="tx-type ${b.type==='combo'?'bet':'bet'}">${b.type==='combo'?'Combinada':'Simple'}</span></td>
-    <td style="font-family:var(--mono)">${parseFloat(b.odd).toFixed(2)}</td>
-    <td style="font-family:var(--mono)">${parseFloat(b.stake).toFixed(2)}</td>
-    <td style="font-family:var(--mono);color:${b.status==='win'?'var(--green)':'var(--text2)'}">${parseFloat(b.ret||0).toFixed(2)}</td>
-    <td>${badgeHtml(b.status)}</td>
-  </tr>`).join('');
-};
+/* window.renderBets removed — using async function renderBets below */
 
-window.renderTx = function(filter) {
-  _txFilter = filter;
-  if (!SESSION) return;
-  const txs   = txHistory();
-  const shown = (filter==='all'?txs:txs.filter(t=>t.type===filter)).slice().reverse();
-  const tb=document.getElementById('tx-body');
-  if(!tb)return;
-  if(!shown.length){tb.innerHTML='<tr><td colspan="5" style="text-align:center;color:var(--text2);padding:36px;font-size:13px">No hay transacciones</td></tr>';return;}
-  tb.innerHTML=shown.map(t=>`<tr>
-    <td style="white-space:nowrap;color:var(--text2)">${t.date||'—'}</td>
-    <td>${esc(t.desc)}</td>
-    <td><span class="tx-type ${t.type}">${txTypeLabel(t.type)}</span></td>
-    <td style="font-family:var(--mono);font-weight:600;color:${t.type==='dep'||t.type==='win'?'var(--green)':'var(--red)'}">
-      ${t.type==='dep'||t.type==='win'?'+':'−'}${Math.abs(t.amount).toFixed(2)}
-    </td>
-    <td style="font-family:var(--mono)">${parseFloat(t.balance||0).toFixed(2)}</td>
-  </tr>`).join('');
-};
-
+/* window.renderTx removed — using async version below */
 window.renderProfile = function() {
   if (!SESSION) return;
   const d=adminData();
@@ -4217,20 +4182,29 @@ function renderDashboard() {
   renderDashQuick();
 }
 
-function renderDashBets() {
-  const bets = betHistory().slice(-5).reverse();
+async function renderDashBets() {
   const tb = document.getElementById('dash-bets-body');
   if (!tb) return;
+  let bets = [];
+  if (SESSION) {
+    try {
+      const { data } = await _SB.from('bets')
+        .select('*').eq('user_email', SESSION.email)
+        .order('created_at', { ascending: false }).limit(5);
+      bets = data || [];
+    } catch(_) { bets = betHistory().slice(-5).reverse(); }
+  } else { bets = betHistory().slice(-5).reverse(); }
+
   if (!bets.length) {
     tb.innerHTML='<tr><td colspan="5" style="text-align:center;color:var(--text2);padding:28px;font-size:13px">Aún no hay apuestas</td></tr>';
     return;
   }
   tb.innerHTML = bets.map(b=>`
     <tr>
-      <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(b.match)}</td>
-      <td style="font-weight:600">${esc(b.pick)}</td>
-      <td><span style="font-family:var(--mono);color:var(--green)">${parseFloat(b.odd).toFixed(2)}</span></td>
-      <td style="font-family:var(--mono)">${parseFloat(b.stake).toFixed(2)}</td>
+      <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(b.match_name||b.match||'—')}</td>
+      <td style="font-weight:600">${esc(b.pick||'—')}</td>
+      <td><span style="font-family:var(--mono);color:var(--green)">${parseFloat(b.odd||b.odds||0).toFixed(2)}</span></td>
+      <td style="font-family:var(--mono)">${parseFloat(b.stake||0).toFixed(2)}</td>
       <td>${badgeHtml(b.status)}</td>
     </tr>`).join('');
 }
@@ -4296,11 +4270,26 @@ function quickAddBet(mId, pick, team, match, odd, el) {
 
 /* ── My Bets ── */
 let _betFilter = 'all';
-function renderBets(filter) {
+window.renderBets = async function renderBets(filter) {
   _betFilter = filter;
-  const bets = betHistory();
+  // Load from Supabase (source of truth)
+  let bets = [];
+  if (SESSION) {
+    try {
+      const { data } = await _SB.from('bets')
+        .select('*')
+        .eq('user_email', SESSION.email)
+        .order('created_at', { ascending: false });
+      bets = data || [];
+      // Also update local cache
+      saveBets(bets);
+    } catch(_) {
+      bets = betHistory(); // fallback to cache
+    }
+  } else {
+    bets = betHistory();
+  }
   const shown = filter==='all' ? bets : bets.filter(b=>b.status===filter);
-  shown.reverse();
 
   const totalStake = shown.reduce((a,b)=>a+(b.stake||0),0);
   const totalRet   = shown.reduce((a,b)=>a+(b.ret||0),0);
@@ -4323,12 +4312,12 @@ function renderBets(filter) {
   tb.innerHTML = shown.map(b=>`
     <tr>
       <td style="white-space:nowrap;color:var(--text2)">${b.date||'—'}</td>
-      <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(b.match)}</td>
-      <td style="font-weight:600">${esc(b.pick)}</td>
-      <td><span class="tx-type ${b.type==='combo'?'bet':b.type||'bet'}">${b.type==='combo'?'Combinada':'Simple'}</span></td>
-      <td style="font-family:var(--mono)">${parseFloat(b.odd).toFixed(2)}</td>
-      <td style="font-family:var(--mono)">${parseFloat(b.stake).toFixed(2)}</td>
-      <td style="font-family:var(--mono);color:${b.status==='win'?'var(--green)':'var(--text2)'}">${parseFloat(b.ret||0).toFixed(2)}</td>
+      <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(b.match_name||b.match||'—')}</td>
+      <td style="font-weight:600">${esc(b.pick||'—')}</td>
+      <td><span class="tx-type bet">${b.type==='combo'?'Combinada':'Simple'}</span></td>
+      <td style="font-family:var(--mono)">${parseFloat(b.odd||b.odds||0).toFixed(2)}</td>
+      <td style="font-family:var(--mono)">${parseFloat(b.stake||0).toFixed(2)}</td>
+      <td style="font-family:var(--mono);color:${b.status==='win'?'var(--green)':'var(--text2)'}">${parseFloat(b.payout||b.ret||0).toFixed(2)}</td>
       <td>${badgeHtml(b.status)}</td>
     </tr>`).join('');
 }
@@ -4340,31 +4329,38 @@ function filterBets(filter, btn) {
 
 /* ── Transactions ── */
 let _txFilter = 'all';
-function renderTx(filter) {
+window.renderTx = async function renderTx(filter) {
   _txFilter = filter;
-  const txs = txHistory();
-  const shown = filter==='all' ? txs : txs.filter(t=>t.type===filter);
-  shown.slice().reverse();
+  let txs = [];
+  if (SESSION) {
+    try {
+      const { data } = await _SB.from('transactions')
+        .select('*').eq('user_email', SESSION.email)
+        .order('created_at', { ascending: false });
+      txs = data || [];
+    } catch(_) { txs = txHistory(); }
+  } else { txs = txHistory(); }
 
+  const shown = filter==='all' ? txs : txs.filter(t=>t.type===filter);
   const tb = document.getElementById('tx-body');
   if (!tb) return;
   if (!shown.length) {
     tb.innerHTML=`<tr><td colspan="5" style="text-align:center;color:var(--text2);padding:36px;font-size:13px">No hay transacciones</td></tr>`;
     return;
   }
-  tb.innerHTML = [...shown].reverse().map(t=>`
+  tb.innerHTML = shown.map(t=>`
     <tr>
-      <td style="white-space:nowrap;color:var(--text2)">${t.date||'—'}</td>
-      <td>${esc(t.desc)}</td>
+      <td style="white-space:nowrap;color:var(--text2)">${(t.created_at||t.date||'').slice(0,10)||'—'}</td>
+      <td>${esc(t.description||t.desc||'—')}</td>
       <td><span class="tx-type ${t.type}">${txTypeLabel(t.type)}</span></td>
-      <td style="font-family:var(--mono);font-weight:600;color:${t.type==='dep'||t.type==='win'?'var(--green)':'var(--red)'}">
-        ${t.type==='dep'||t.type==='win'?'+':'−'}${Math.abs(t.amount).toFixed(2)}
+      <td style="font-family:var(--mono);font-weight:600;color:${t.type==='deposit'||t.type==='win'||t.type==='dep'?'var(--green)':'var(--red)'}">
+        ${t.type==='deposit'||t.type==='win'||t.type==='dep'?'+':'−'}$${Math.abs(t.amount||0).toFixed(2)}
       </td>
-      <td style="font-family:var(--mono)">${parseFloat(t.balance||0).toFixed(2)}</td>
+      <td style="font-family:var(--mono)">$${parseFloat(t.balance||0).toFixed(2)}</td>
     </tr>`).join('');
-}
+};
 function filterTx(v){ renderTx(v); }
-function txTypeLabel(t){ return {dep:'Depósito',wit:'Retirada',bet:'Apuesta',win:'Ganancia'}[t]||t; }
+function txTypeLabel(t){ return {dep:'Depósito',deposit:'Depósito',wit:'Retirada',withdraw:'Retirada',bet:'Apuesta',win:'Ganancia',bonus:'Bono'}[t]||t; }
 
 /* ── Profile ── */
 function renderProfile() {
