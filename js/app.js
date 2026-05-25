@@ -450,20 +450,16 @@ async function setCat(cat, btn) {
 
   if (cat === 'all') {
     S.sport_cat = 'all';
-    S.sport = localStorage.getItem('px_sport') || 'soccer_epl';
+    S.sport = 'all'; // load all sports, not just the last selected league
     _marketsLastLoaded = 0;
+    if (_activeLeagueEl) { _activeLeagueEl.classList.remove('active','loading'); _activeLeagueEl = null; }
     await loadMarkets(true);
   } else {
     S.sport_cat = cat;
-    // First try filtering already-loaded events
-    const filtered = S.markets.filter(m => m.sportCat === cat || m._manual);
-    if (filtered.length > 0) {
-      // We have events for this category — just filter
-      applyFilters();
-      return;
-    }
-    // No events loaded for this category — load from Supabase
+    S.sport = cat;
     _marketsLastLoaded = 0;
+    if (_activeLeagueEl) { _activeLeagueEl.classList.remove('active','loading'); _activeLeagueEl = null; }
+    // Always reload from Supabase for the selected sport category
     await loadMarketsForCategory(cat);
   }
 }
@@ -1531,7 +1527,7 @@ function redrawSparks() {
 /* ════════════════════════════════════════════════════
    NAV / FILTER CALLBACKS
 ════════════════════════════════════════════════════ */
-function navTo(mode, btn) {
+async function navTo(mode, btn) {
   // ── Always navigate to home view first ──
   showListView();
   updateSidebarVisibility();
@@ -1547,7 +1543,13 @@ function navTo(mode, btn) {
   document.querySelectorAll('[id^="nav-"]').forEach(b=>b.classList.remove('active'));
   if (btn) btn.classList.add('active');
   closeSidebar();
-  applyFilters();
+
+  // Always reload all events when switching sidebar tabs
+  // (S.markets may only have events from a specific league)
+  S.sport = 'all';
+  _marketsLastLoaded = 0;
+  if (_activeLeagueEl) { _activeLeagueEl.classList.remove('active','loading'); _activeLeagueEl = null; }
+  await loadMarkets(true);
 }
 function toggleGroup(id) {
   const panel = document.getElementById(id);
