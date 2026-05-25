@@ -43,7 +43,7 @@ button      { transition: background 0.15s, opacity 0.15s !important; }
   --blue-bg:   rgba(91,141,255,0.10);
   --yellow:    #f4b942;
   --accent:    #06d6a0;
-  --font:      'Inter', sans-serif;
+  --font:      'Urbanist', sans-serif;
   --mono:      'JetBrains Mono', monospace;
   --sidebar-w: 228px;
   --nav-h:     58px;
