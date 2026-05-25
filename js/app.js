@@ -294,6 +294,7 @@ function processManualEvent(e) {
       home: { price:e.spread_home, point:e.spread_home_pt },
       away: { price:e.spread_away, point:e.spread_away_pt }, raw:{}
     } : null,
+    description: e.description || null,
     spark: genSpark(imp1||50, 24),
     vol: Math.round(Math.random()*500000+50000),
     sportCat: (e.sport_key||'').split('_')[0],
@@ -636,26 +637,11 @@ function buildCard(m, i) {
       </div>
     </div>
 
-    ${isBinary ? `
-    <div>
-      <div class="mc-prob-row">
-        <span class="mc-prob-yes">${imp1}%</span>
-        <span class="mc-prob-no">${imp2}%</span>
-      </div>
-      <div class="mc-prob-bar"><div class="mc-prob-fill" style="width:${imp1}%"></div></div>
-      <div class="mc-prob-row" style="font-size:11px;color:var(--text2)">
-        <span>${esc(m.home_team.split(' ').pop())}</span>
-        <span>${esc(m.away_team.split(' ').pop())}</span>
-      </div>
-    </div>` : `
-    <div>
-      <div class="mc-prob-bar"><div class="mc-prob-fill" style="width:${imp1}%"></div></div>
-      <div class="mc-prob-row" style="font-size:11px;color:var(--text2);margin-top:3px">
-        <span>${esc(m.home_team.split(' ').pop())} ${imp1}%</span>
-        ${m.impX ? `<span>X ${m.impX}%</span>` : ''}
-        <span>${esc(m.away_team.split(' ').pop())} ${imp2}%</span>
-      </div>
-    </div>`}
+    <div class="mc-teams-row">
+      <span>${esc(m.home_team.split(' ').pop())}</span>
+      <span style="color:var(--text3);font-size:11px">vs</span>
+      <span>${esc(m.away_team.split(' ').pop())}</span>
+    </div>
 
     <div class="mc-odds">
       <div class="mc-odd-btn ${SLIP[k1]?'in-slip':''}" id="btn-${k1}"
@@ -1472,7 +1458,6 @@ function renderDetail(m) {
           <span class="det-tag league">${esc(m.sport_title)}</span>
           <span class="det-tag">📅 ${fDate(m.commence_time)}</span>
           
-          <span class="det-tag">Margen: ${m.margin||'—'}%</span>
         </div>
       </div>
     </div>
@@ -1492,42 +1477,27 @@ function renderDetail(m) {
             <div class="odd-card-lbl">1 — Local</div>
             <div class="odd-card-team">${esc(m.home_team.split(' ').slice(-2).join(' '))}</div>
             <div class="odd-card-val">${fOdd(m.best1)}</div>
-            <div class="odd-card-prob">${m.imp1||'—'}% prob.</div>
           </div>
           <div class="odd-card ${SLIP[kX]?'active':''}" id="det-btn-${kX}" onclick="detAddToSlip('${m.id||m.home_team}','X','${esc(m.home_team)}','${esc(m.away_team)}',${m.bestX||0})">
             <div class="odd-card-lbl">X — Empate</div>
             <div class="odd-card-team">Empate</div>
             <div class="odd-card-val">${fOdd(m.bestX)}</div>
-            <div class="odd-card-prob">${m.impX||'—'}% prob.</div>
           </div>
           <div class="odd-card ${SLIP[k2]?'active':''}" id="det-btn-${k2}" onclick="detAddToSlip('${m.id||m.home_team}','2','${esc(m.home_team)}','${esc(m.away_team)}',${m.best2||0})">
             <div class="odd-card-lbl">2 — Visitante</div>
             <div class="odd-card-team">${esc(m.away_team.split(' ').slice(-2).join(' '))}</div>
             <div class="odd-card-val">${fOdd(m.best2)}</div>
-            <div class="odd-card-prob">${m.imp2||'—'}% prob.</div>
           </div>
         </div>
       </div>
 
-      <!-- Stats -->
-      <div class="stats-row">
-        <div class="stat-card"><div class="stat-lbl">Mejor 1</div><div class="stat-val g">${fOdd(m.best1)}</div></div>
-        <div class="stat-card"><div class="stat-lbl">Mejor X</div><div class="stat-val">${fOdd(m.bestX)}</div></div>
-        <div class="stat-card"><div class="stat-lbl">Mejor 2</div><div class="stat-val r">${fOdd(m.best2)}</div></div>
-        <div class="stat-card"><div class="stat-lbl">Margen</div><div class="stat-val">${m.margin?m.margin+'%':'—'}</div></div>
-      </div>
 
-      <!-- Chart -->
-      <div class="chart-card">
-        <div class="chart-hd">
-          <div class="chart-title">Probabilidad implícita — ${esc(m.home_team)}</div>
-          <div class="chart-tabs">
-            <div class="chart-tab active">24h</div>
-            <div class="chart-tab">7d</div>
-          </div>
-        </div>
-        <div class="chart-wrap"><canvas id="prob-chart"></canvas></div>
-      </div>
+
+      <!-- Descripción/contexto del partido -->
+      ${m.description ? `<div class="det-description">
+        <div class="det-desc-title">📋 Contexto del partido</div>
+        <div class="det-desc-body">\${esc(m.description)}</div>
+      </div>` : ''}
     </div>
 
     <!-- Panel mercados adicionales -->
@@ -1538,7 +1508,6 @@ function renderDetail(m) {
     </div>
   `;
 
-  requestAnimationFrame(() => drawProbChart(m));
 }
 
 function switchMktTab(panel, btn) {
@@ -1591,30 +1560,7 @@ function detAddToSlip(marketId, pick, home, away, odd) {
 /* ════════════════════════════════════════════════════
    CHART
 ════════════════════════════════════════════════════ */
-function drawProbChart(m) {
-  if (S.probChart) { S.probChart.destroy(); S.probChart=null; }
-  const ctx = document.getElementById('prob-chart');
-  if (!ctx) return;
-  const data = m.spark;
-  const labels = data.map((_,i)=>i===data.length-1?'Ahora':`-${data.length-1-i}h`);
-  const col  = m.imp1>50?'#06d6a0':'#ff5c5c';
-  const alph = m.imp1>50?'rgba(6,214,160,0.12)':'rgba(255,92,92,0.12)';
-  S.probChart = new Chart(ctx, {
-    type:'line',
-    data:{ labels, datasets:[{ data, borderColor:col, borderWidth:2, pointRadius:0, pointHoverRadius:4, pointHoverBackgroundColor:col, fill:true,
-      backgroundColor:c2=>{ const g=c2.chart.ctx.createLinearGradient(0,0,0,180); g.addColorStop(0,alph); g.addColorStop(1,'transparent'); return g; },
-      tension:.4 }] },
-    options:{ responsive:true, maintainAspectRatio:false,
-      plugins:{ legend:{display:false}, tooltip:{ backgroundColor:cTipBg(), borderColor:cTipBd(), borderWidth:1, titleColor:cTipTx(), bodyColor:cTipBo(),
-        bodyFont:{family:'JetBrains Mono'}, callbacks:{label:c=>' '+c.raw+'%'} } },
-      scales:{
-        x:{grid:{color:cGrid()},ticks:{color:cTick(),font:{size:10},maxTicksLimit:8}},
-        y:{grid:{color:cGrid()},ticks:{color:cTick(),font:{size:10},callback:v=>v+'%'},min:0,max:100}
-      }
-    }
-  });
-}
-
+/* drawProbChart removed */
 /* ════════════════════════════════════════════════════
    SPARKLINES
 ════════════════════════════════════════════════════ */
