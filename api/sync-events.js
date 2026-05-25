@@ -74,7 +74,7 @@ export default async function handler(req, res) {
 
     try {
       const r = await fetch(
-        `https://api.the-odds-api.com/v4/sports/${sport}/odds/?apiKey=${apiKey}&regions=${regions}&markets=h2h,totals&oddsFormat=decimal${bookmakers ? '&bookmakers=' + bookmakers : ''}`,
+        `https://api.the-odds-api.com/v4/sports/${sport}/odds/?apiKey=${apiKey}&regions=${regions}&markets=h2h,spreads,totals,btts&oddsFormat=decimal${bookmakers ? '&bookmakers=' + bookmakers : ''}`,
         { signal: AbortSignal.timeout(10000) }
       );
 
@@ -106,12 +106,37 @@ export default async function handler(req, res) {
             });
           });
         });
+        // Extract spreads (handicap)
+        let spreadHomePt=null, spreadHome=null, spreadAwayPt=null, spreadAway=null;
+        bks.forEach(bk => {
+          bk.markets?.filter(m=>m.key==='spreads').forEach(mkt => {
+            mkt.outcomes?.forEach(o => {
+              if (o.name===e.home_team && !spreadHome) { spreadHome=o.price; spreadHomePt=o.point; }
+              if (o.name===e.away_team && !spreadAway) { spreadAway=o.price; spreadAwayPt=o.point; }
+            });
+          });
+        });
+
+        // Extract BTTS
+        let bttsYes=null, bttsNo=null;
+        bks.forEach(bk => {
+          bk.markets?.filter(m=>m.key==='btts').forEach(mkt => {
+            mkt.outcomes?.forEach(o => {
+              if (o.name==='Yes' && !bttsYes) bttsYes=o.price;
+              if (o.name==='No'  && !bttsNo)  bttsNo=o.price;
+            });
+          });
+        });
+
         return {
           id: e.id, sport_key: sport, sport_title: e.sport_title||sport,
           league: e.sport_title||sport, home_team: e.home_team, away_team: e.away_team,
           commence_time: e.commence_time, status: 'upcoming',
           odd_1: best1, odd_x: bestX, odd_2: best2,
           total_line: totalLine, total_over: bestOver, total_under: bestUnder,
+          spread_home: spreadHome, spread_home_pt: spreadHomePt,
+          spread_away: spreadAway, spread_away_pt: spreadAwayPt,
+          btts_yes: bttsYes, btts_no: bttsNo,
           last_updated_at: new Date().toISOString(),
         };
       });
