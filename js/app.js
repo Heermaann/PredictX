@@ -1193,33 +1193,6 @@ function renderExtraMarkets(m) {
       }
     }
 
-    // Corners (cuotas simuladas — API de corners requiere plan premium)
-    {
-      const corners = estimateCornersMarket(m);
-      sections += renderMktSection('corners', 'Corners (Total del Partido)', '🚩',
-        `<div class="xmkt-line-label">Línea estimada: ${corners.line} córners</div>` +
-        `<div class="xmkt-note">⚡ Cuotas simuladas basadas en probabilidades del partido</div>` +
-        renderTwoBtnRow(
-          mkId(eventId,'corners',`Over_${corners.line}`),  `Más de ${corners.line}`,  corners.over,
-          mkId(eventId,'corners',`Under_${corners.line}`), `Menos de ${corners.line}`, corners.under,
-          matchLabel
-        )
-      );
-    }
-
-    // Tarjetas (cuotas simuladas)
-    {
-      const cards = estimateCardsMarket(m);
-      sections += renderMktSection('cards', 'Tarjetas (Total del Partido)', '🟨',
-        `<div class="xmkt-line-label">Línea estimada: ${cards.line} tarjetas</div>` +
-        `<div class="xmkt-note">⚡ Cuotas simuladas basadas en probabilidades del partido</div>` +
-        renderTwoBtnRow(
-          mkId(eventId,'cards',`Over_${cards.line}`),  `Más de ${cards.line}`,  cards.over,
-          mkId(eventId,'cards',`Under_${cards.line}`), `Menos de ${cards.line}`, cards.under,
-          matchLabel
-        )
-      );
-    }
   }
 
   /* ══════════════════════════════════════════════
@@ -1462,13 +1435,7 @@ function renderDetail(m) {
       </div>
     </div>
 
-    <!-- Pestañas de mercado -->
-    <div class="mkt-tabs">
-      <button class="mkt-tab active" onclick="switchMktTab('main',this)">Resultado</button>
-      <button class="mkt-tab" onclick="switchMktTab('extra',this)">Más Mercados</button>
-    </div>
-
-    <!-- Panel principal: 1X2 -->
+    <!-- Mercados de apuesta -->
     <div id="mkt-panel-main">
       <div class="odds-panel">
         <div class="odds-panel-title">Resultado Final · 1X2</div>
@@ -1500,22 +1467,13 @@ function renderDetail(m) {
       </div>` : ''}
     </div>
 
-    <!-- Panel mercados adicionales -->
-    <div id="mkt-panel-extra" style="display:none">
-      <div class="xmkt-container">
-        ${extraMkts}
-      </div>
-    </div>
+    <!-- Mercados adicionales -->
+    ${extraMkts ? `<div class="xmkt-container">${extraMkts}</div>` : ''}
   `;
 
 }
 
-function switchMktTab(panel, btn) {
-  document.querySelectorAll('.mkt-tab').forEach(t => t.classList.remove('active'));
-  btn.classList.add('active');
-  document.getElementById('mkt-panel-main').style.display  = panel === 'main'  ? '' : 'none';
-  document.getElementById('mkt-panel-extra').style.display = panel === 'extra' ? '' : 'none';
-}
+/* switchMktTab removed — markets now shown inline */
 
 function detAddToSlip(marketId, pick, home, away, odd) {
   if (!odd) { showToast('⚠️ Cuota no disponible'); return; }
