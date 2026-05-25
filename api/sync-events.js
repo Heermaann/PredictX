@@ -76,7 +76,7 @@ export default async function handler(req, res) {
 
     try {
       const r = await fetch(
-        `https://api.the-odds-api.com/v4/sports/${sport}/odds/?apiKey=${apiKey}&regions=${regions}&markets=h2h,spreads,totals,btts&oddsFormat=decimal${bookmakers ? '&bookmakers=' + bookmakers : ''}`,
+        `https://api.the-odds-api.com/v4/sports/${sport}/odds/?apiKey=${apiKey}&regions=${regions}&markets=h2h,totals&oddsFormat=decimal${bookmakers ? '&bookmakers=' + bookmakers : ''}`,
         { signal: AbortSignal.timeout(10000) }
       );
 
