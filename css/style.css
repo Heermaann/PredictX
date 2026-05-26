@@ -417,10 +417,8 @@ input,select,textarea{font-family:var(--font)}
 .odd-card.active .odd-card-val{color:var(--green)}
 
 /* Stats */
-.stat-val.g{color:var(--green)}.stat-val.r{color:var(--red)}
 
 /* Chart */
-.chart-tab.active{background:var(--bg4);color:var(--text)}
 
 /* Bookmaker comparison */
 .bk-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:18px}
@@ -539,7 +537,6 @@ input,select,textarea{font-family:var(--font)}
 .ap-sub{font-size:12px;color:var(--text2);margin-bottom:24px}
 
 /* ── Stats cards row ── */
-.stat-cards{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px}
 .sc{
   background:var(--bg2);border:1px solid var(--border);border-radius:12px;
   padding:16px;display:flex;flex-direction:column;gap:6px;
@@ -656,11 +653,11 @@ input,select,textarea{font-family:var(--font)}
   .admin-sidebar{display:none}
   .admin-wrap{flex-direction:column}
   .admin-main{padding:14px}
-  .stat-cards{grid-template-columns:repeat(2,1fr)}
+  
 }
 @media (max-width:600px){
   .admin-main{padding:12px}
-  .stat-cards{grid-template-columns:repeat(2,1fr);gap:8px}
+  
   .sc{padding:12px}
   .sc-val{font-size:20px}
   .adm-table th,.adm-table td{padding:9px 12px;font-size:12px}
@@ -942,21 +939,18 @@ input,select,textarea{font-family:var(--font)}
   .odd-card-lbl{font-size:9px}
   .odd-card-team{font-size:10px;max-width:100%}
   .odd-card-val{font-size:19px}
-  .odd-card-prob{font-size:9px}
+  
 
   /* Stats: 3 per row */
-  .stats-row{flex-wrap:wrap;border-radius:8px}
-  .stat-card{
-    min-width:calc(33.33% - 1px);
-    padding:10px 8px;
-  }
-  .stat-val{font-size:15px}
-  .stat-lbl{font-size:8px}
+  
+  
+  
+  
 
   /* Chart */
-  .chart-card{padding:14px;margin-bottom:14px}
-  .chart-wrap{height:140px}
-  .chart-title{font-size:12px}
+  
+  
+  
 
   /* Bookmaker table: simplified */
   .bk-card{padding:12px;margin-bottom:14px}
@@ -1876,7 +1870,7 @@ input,select,textarea{font-family:var(--font)}
 
 /* Mobile tweaks */
 @media (max-width: 600px) {
-  .mkt-tabs { margin: 12px 0 10px; }
+  
   .xmkt-row-3 { grid-template-columns: 1fr; }
   .xmkt-btn { padding: 10px 6px; }
   .xmkt-odd { font-size: 14px; }
