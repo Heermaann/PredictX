@@ -1121,7 +1121,7 @@ function renderExtraMarkets(m) {
   let sections = '';
 
   /* ══════════════════════════════════════════════
-     FÚTBOL — Totales · BTTS · Hándicap · DC · Corners · Tarjetas
+     FÚTBOL — Totales · BTTS · Hándicap · DC
   ══════════════════════════════════════════════ */
   if (cat === 'soccer') {
     // Totales de goles
@@ -1354,28 +1354,6 @@ function renderExtraMarkets(m) {
 }
 
 /* ── Generadores de mercados simulados coherentes ── */
-function estimateCornersMarket(m) {
-  // Línea base: ~9-11 corners por partido en Europa
-  const imp1 = m.imp1 || 33, imp2 = m.imp2 || 33;
-  const intensity = Math.abs(imp1 - imp2); // partidos más disputados = más corners
-  const baseLine = 9.5 + (intensity > 20 ? 0.5 : 0);
-  const line = +(baseLine).toFixed(1);
-  const margin = 1.04;
-  const pOver = 0.52 + (Math.random() - 0.5) * 0.06;
-  const over  = +(1 / (pOver * margin)).toFixed(2);
-  const under = +(1 / ((1 - pOver) * margin)).toFixed(2);
-  return { line, over: Math.max(1.5, over), under: Math.max(1.5, under) };
-}
-
-function estimateCardsMarket(m) {
-  const line = 3.5;
-  const margin = 1.04;
-  const pOver = 0.54 + (Math.random() - 0.5) * 0.08;
-  const over  = +(1 / (pOver * margin)).toFixed(2);
-  const under = +(1 / ((1 - pOver) * margin)).toFixed(2);
-  return { line, over: Math.max(1.5, over), under: Math.max(1.5, under) };
-}
-
 function estimateBasketballProps(m) {
   // Generar props ficticios pero coherentes con cuotas NBA típicas
   const playerSuffixes = ['James', 'Durant', 'Curry', 'Antetokounmpo', 'Doncic'];
@@ -4468,10 +4446,19 @@ function wdStep2() {
 
 async function submitWithdraw() {
   const amt = parseFloat(document.getElementById('wd-amount').value) || 0;
-  const d   = adminData();
   const statusEl = document.getElementById('withdraw-status');
 
-  if (amt > (+d.balance||0)) { statusEl.className='auth-status error'; statusEl.textContent='❌ Saldo insuficiente'; return; }
+  if (amt <= 0) { statusEl.className='auth-status error'; statusEl.textContent='❌ Introduce un monto válido'; return; }
+
+  // Read balance from Supabase (source of truth)
+  const { data: balProf, error: balErr } = await _SB.from('profiles').select('balance').eq('email', SESSION.email).single();
+  if (balErr || !balProf) { statusEl.className='auth-status error'; statusEl.textContent='❌ Error al verificar saldo'; return; }
+  const currentBal = +(balProf.balance || 0);
+
+  if (currentBal <= 0) { statusEl.className='auth-status error'; statusEl.textContent='❌ No tienes saldo disponible'; return; }
+  if (amt > currentBal) { statusEl.className='auth-status error'; statusEl.textContent=`❌ Saldo insuficiente. Tienes $${currentBal.toFixed(2)}`; return; }
+
+  const d = adminData();
 
   // Build payload
   const payload = {
