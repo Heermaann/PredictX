@@ -1387,7 +1387,7 @@ async function initAdmin(){
 }
 
 async function admEnterWithSession(session){
-  const { data: prof } = await _SB.from('profiles').select('role,name,email').eq('email', session.user.email).single();
+  const { data: prof } = await _SB.from('profiles').select('role,name,email').eq('email', session.user.email).maybeSingle();
   if(!prof || (prof.role !== 'owner' && session.user.email !== OWNER_EMAIL)){
     document.getElementById('adm-gate-loading').style.display='none';
     document.getElementById('adm-gate-err').textContent='No tienes permisos de administrador.';
@@ -1684,7 +1684,7 @@ async function admResolveBet(betId,userEmail,stake,odd,result){
   const {error}=await _SB.from('bets').update({status:result,ret}).eq('id',betId);
   if(error){showToast('❌ '+error.message,'error');return;}
   if(result==='win'&&ret>0){
-    const {data:prof}=await _SB.from('profiles').select('balance').eq('email',userEmail).single();
+    const {data:prof}=await _SB.from('profiles').select('balance').eq('email',userEmail).maybeSingle();
     if(prof){
       const newBal=+(prof.balance+ret).toFixed(2);
       await _SB.from('profiles').update({balance:newBal}).eq('email',userEmail);
@@ -1961,7 +1961,7 @@ async function admResolveEvent(id,result){
     const newStatus=won?'win':'loss'; const ret=won?+(bet.odd*bet.stake).toFixed(2):0;
     await _SB.from('bets').update({status:newStatus,ret}).eq('id',bet.id);
     if(won&&ret>0){
-      const {data:prof}=await _SB.from('profiles').select('balance').eq('email',bet.user_email).single();
+      const {data:prof}=await _SB.from('profiles').select('balance').eq('email',bet.user_email).maybeSingle();
       if(prof){ const newBal=+(prof.balance+ret).toFixed(2); await _SB.from('profiles').update({balance:newBal}).eq('email',bet.user_email); await _SB.from('transactions').insert({user_email:bet.user_email,description:`Premio: ${bet.pick}`,type:'win',amount:ret,balance:newBal,created_at:new Date().toISOString()}); }
     }
     resolved++;
@@ -1974,7 +1974,7 @@ async function admResolveEvent(id,result){
 // ── Configuración ──
 async function loadAdmConfig(){
   try {
-    const {data} = await _SB.from('site_config').select('*').eq('id',1).single();
+    const {data} = await _SB.from('site_config').select('*').eq('id',1).maybeSingle();
     if(!data) return;
     const sv=(id,v)=>{const e=document.getElementById(id);if(e&&v!=null)e.value=v;};
     const sc=(id,v)=>{const e=document.getElementById(id);if(e)e.checked=!!v;};
@@ -2202,7 +2202,7 @@ async function admDeclareOutcome(id, source, result, homeTeam, awayTeam){
     const ret = won?+(bet.odd*bet.stake).toFixed(2):0;
     await _SB.from('bets').update({status:newStatus,ret}).eq('id',bet.id);
     if(won&&ret>0){
-      const {data:prof}=await _SB.from('profiles').select('balance').eq('email',bet.user_email).single();
+      const {data:prof}=await _SB.from('profiles').select('balance').eq('email',bet.user_email).maybeSingle();
       if(prof){
         const newBal=+(prof.balance+ret).toFixed(2);
         await _SB.from('profiles').update({balance:newBal}).eq('email',bet.user_email);
@@ -2532,7 +2532,7 @@ async function admRejectWd(id){
   if(!w) return;
   const reason = prompt('Motivo del rechazo (opcional):') ?? '';
   // Refund balance
-  const { data:prof } = await _SB.from('profiles').select('balance,withdrawn').eq('email',w.user_email).single();
+  const { data:prof } = await _SB.from('profiles').select('balance,withdrawn').eq('email',w.user_email).maybeSingle();
   if(prof){
     const newBal  = +(prof.balance + (+w.amount||0)).toFixed(2);
     const newWith = Math.max(0, +((prof.withdrawn||0) - (+w.amount||0)).toFixed(2));
@@ -2660,7 +2660,7 @@ let _apiConfig = null;
 async function admLoadApiConfig(){
   try {
     // Load config
-    const { data, error } = await _SB.from('api_config').select('*').eq('id',1).single();
+    const { data, error } = await _SB.from('api_config').select('*').eq('id',1).maybeSingle();
     if(error) throw error;
     _apiConfig = data;
 
@@ -2847,7 +2847,7 @@ function admMarkOverride(field, tagId){
 }
 
 async function admOpenApiEventEdit(eventId){
-  const { data, error } = await _SB.from('api_events').select('*').eq('id', eventId).single();
+  const { data, error } = await _SB.from('api_events').select('*').eq('id', eventId).maybeSingle();
   if(error || !data){ showToast('❌ No se pudo cargar el evento','error'); return; }
 
   _editingApiEvent = data;
