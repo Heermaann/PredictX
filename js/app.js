@@ -2745,6 +2745,16 @@ let _izipaySDKLoaded = false;
 function loadIzipaySDK() {
   return new Promise((resolve, reject) => {
     if (_izipaySDKLoaded || typeof KR !== 'undefined') { _izipaySDKLoaded = true; resolve(); return; }
+    // Load CSS first
+    const css1 = document.createElement('link');
+    css1.rel = 'stylesheet';
+    css1.href = 'https://static.micuentaweb.pe/static/js/krypton-client/V4.0/stable/classic-reset.css';
+    document.head.appendChild(css1);
+    const css2 = document.createElement('link');
+    css2.rel = 'stylesheet';
+    css2.href = 'https://static.micuentaweb.pe/static/js/krypton-client/V4.0/stable/classic.css';
+    document.head.appendChild(css2);
+    // Load JS
     const script = document.createElement('script');
     script.src = 'https://static.micuentaweb.pe/static/js/krypton-client/V4.0/stable/kr-payment-form.min.js';
     script.setAttribute('kr-public-key', '38756342:testpublickey_Lt2sylPSfsBCVlmyIY2aLqB7fiS7hTuCNl4vZKSGtSq3i');
