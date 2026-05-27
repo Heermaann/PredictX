@@ -4045,8 +4045,8 @@ async function saveOwnerConfig() {
 async function loadSiteConfig() {
   try {
     const [siteRes, apiRes] = await Promise.all([
-      _SB.from('site_config').select('*').eq('id', 1).single(),
-      _SB.from('api_config').select('odds_margin').eq('id', 1).single(),
+      _SB.from('site_config').select('*').eq('id', 1).maybeSingle(),
+      _SB.from('api_config').select('odds_margin').eq('id', 1).maybeSingle(),
     ]);
     const data = siteRes.data;
     const apiData = apiRes.data;
@@ -4085,7 +4085,7 @@ function checkOwnerAccess() {
   if (btn) btn.classList.toggle('show', isOwner());
   if (SESSION) {
     // Also check role from Supabase profile
-    _SB.from('profiles').select('role').eq('email', SESSION.email).single()
+    _SB.from('profiles').select('role').eq('email', SESSION.email).maybeSingle()
       .then(({ data }) => {
         if (data?.role === 'owner') {
           SESSION.role = 'owner';
