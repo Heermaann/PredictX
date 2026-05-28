@@ -973,16 +973,7 @@ function updateComboStake(val, doRender) {
   }
 }
 
-function placeBets() {
-  const items = Object.values(SLIP);
-  if (!items.length) return;
-  const total = S.slipMode==='combo'
-    ? (items[0]?.comboStake||10)
-    : items.reduce((a,s)=>a+s.stake,0);
-  showToast(`✅ Apuesta de ${total.toFixed(2)} registrada (simulación)`);
-  clearSlip();
-  closeBetslip();
-}
+/* placeBets fake removed — real version at window.placeBets below */
 
 /* ════════════════════════════════════════════════════
    DETAIL VIEW
