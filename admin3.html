@@ -585,7 +585,7 @@ tbody td { padding: 12px 16px; font-size: 13px; color: var(--text1); vertical-al
       <button class="adm-hamburger" id="adm-hamburger" onclick="admToggleSidebar()" title="Menú">☰</button>
       <div class="topbar-search">
         <span>🔍</span>
-        <input type="text" placeholder="Buscar aquí..." id="topbar-search-inp" oninput="admGlobalSearch(this.value)">
+        <input type="text" placeholder="Buscar aquí..." id="topbar-search-inp" id="topbar-search" name="topbar-search" oninput="admGlobalSearch(this.value)">
         <span class="topbar-search-kbd">Ctrl+K</span>
       </div>
       <span class="topbar-page-title" id="topbar-page-title">Dashboard</span>
@@ -687,7 +687,7 @@ tbody td { padding: 12px 16px; font-size: 13px; color: var(--text1); vertical-al
         <div class="table-card">
           <div class="table-card-hd">
             <div class="table-card-title">Todos los apostadores</div>
-            <div class="table-search"><span>🔍</span><input type="text" placeholder="Search..." oninput="admFilterUsers(this.value)"></div>
+            <div class="table-search"><span>🔍</span><input type="text" placeholder="Search..." id="search-users" name="search-users" oninput="admFilterUsers(this.value)"></div>
           </div>
           <div style="overflow-x:auto">
             <table>
@@ -776,7 +776,7 @@ tbody td { padding: 12px 16px; font-size: 13px; color: var(--text1); vertical-al
         <div class="page-hd">
           <div class="page-hd-left"><div class="page-title">Ligas</div><div class="page-sub">Crea y gestiona ligas personalizadas</div></div>
           <div class="page-hd-right">
-            <div class="table-search"><span>🔍</span><input type="text" placeholder="Search..." oninput="admSearchLeagues(this.value)"></div>
+            <div class="table-search"><span>🔍</span><input type="text" placeholder="Search..." id="search-leagues" name="search-leagues" oninput="admSearchLeagues(this.value)"></div>
             <button class="btn btn-ghost" onclick="renderLeagues()">🔄 Actualizar</button>
             <button class="btn btn-primary" onclick="admOpenLeagueModal()">+ Nueva liga</button>
           </div>
@@ -863,7 +863,7 @@ tbody td { padding: 12px 16px; font-size: 13px; color: var(--text1); vertical-al
         <div class="page-hd">
           <div class="page-hd-left"><div class="page-title">Equipos</div><div class="page-sub">Gestión de equipos deportivos</div></div>
           <div class="page-hd-right">
-            <div class="table-search"><span>🔍</span><input type="text" placeholder="Search..." oninput="admSearchTeams(this.value)"></div>
+            <div class="table-search"><span>🔍</span><input type="text" placeholder="Search..." id="search-teams" name="search-teams" oninput="admSearchTeams(this.value)"></div>
             <button class="btn btn-outline" onclick="admSyncTeamsFromEvents()">⚡ Importar desde eventos</button>
             <button class="btn btn-primary" onclick="admOpenTeamModal()">+ Añadir equipo</button>
           </div>
@@ -891,7 +891,7 @@ tbody td { padding: 12px 16px; font-size: 13px; color: var(--text1); vertical-al
         <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;align-items:center">
           <div class="table-search" style="flex:1;min-width:200px;max-width:300px">
             <span>🔍</span>
-            <input type="text" placeholder="Buscar equipo o liga..." id="api-events-search" oninput="admSearchApiEvents(this.value)">
+            <input type="text" placeholder="Buscar equipo o liga..." id="api-events-search" id="search-api-events" name="search-api-events" oninput="admSearchApiEvents(this.value)">
           </div>
           <select id="api-events-sport" class="form-select" style="width:160px" onchange="renderApiEvents()">
             <option value="">Todos los deportes</option>
@@ -1067,29 +1067,29 @@ tbody td { padding: 12px 16px; font-size: 13px; color: var(--text1); vertical-al
           <div class="table-card" style="padding:20px">
             <div style="font-size:15px;font-weight:700;margin-bottom:16px">🌍 Regiones</div>
             <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:20px" id="cfg-regions-list">
-              <label class="form-check"><input type="checkbox" class="cfg-region" value="eu" checked> 🇪🇺 Europa (EU)</label>
-              <label class="form-check"><input type="checkbox" class="cfg-region" value="uk"> 🇬🇧 Reino Unido (UK)</label>
-              <label class="form-check"><input type="checkbox" class="cfg-region" value="us"> 🇺🇸 Estados Unidos (US)</label>
-              <label class="form-check"><input type="checkbox" class="cfg-region" value="au"> 🇦🇺 Australia (AU)</label>
+              <label class="form-check"><input type="checkbox" id="region-eu" name="region-eu" class="cfg-region" value="eu" checked> 🇪🇺 Europa (EU)</label>
+              <label class="form-check"><input type="checkbox" id="region-uk" name="region-uk" class="cfg-region" value="uk"> 🇬🇧 Reino Unido (UK)</label>
+              <label class="form-check"><input type="checkbox" id="region-us" name="region-us" class="cfg-region" value="us"> 🇺🇸 Estados Unidos (US)</label>
+              <label class="form-check"><input type="checkbox" id="region-au" name="region-au" class="cfg-region" value="au"> 🇦🇺 Australia (AU)</label>
             </div>
             <div style="font-size:15px;font-weight:700;margin-bottom:12px">📚 Bookmakers permitidos</div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px" id="cfg-bookmakers-list">
-              <label class="form-check"><input type="checkbox" class="cfg-bk" value="bet365" checked> Bet365</label>
-              <label class="form-check"><input type="checkbox" class="cfg-bk" value="pinnacle" checked> Pinnacle</label>
-              <label class="form-check"><input type="checkbox" class="cfg-bk" value="draftkings" checked> DraftKings</label>
-              <label class="form-check"><input type="checkbox" class="cfg-bk" value="fanduel" checked> FanDuel</label>
-              <label class="form-check"><input type="checkbox" class="cfg-bk" value="betway" checked> Betway</label>
-              <label class="form-check"><input type="checkbox" class="cfg-bk" value="williamhill" checked> William Hill</label>
-              <label class="form-check"><input type="checkbox" class="cfg-bk" value="unibet" checked> Unibet</label>
-              <label class="form-check"><input type="checkbox" class="cfg-bk" value="bwin" checked> Bwin</label>
-              <label class="form-check"><input type="checkbox" class="cfg-bk" value="bovada"> Bovada</label>
-              <label class="form-check"><input type="checkbox" class="cfg-bk" value="mybookieag"> MyBookie</label>
-              <label class="form-check"><input type="checkbox" class="cfg-bk" value="betonlineag"> BetOnline</label>
-              <label class="form-check"><input type="checkbox" class="cfg-bk" value="lowvig"> LowVig</label>
-              <label class="form-check"><input type="checkbox" class="cfg-bk" value="superbook"> SuperBook</label>
-              <label class="form-check"><input type="checkbox" class="cfg-bk" value="betrivers"> BetRivers</label>
-              <label class="form-check"><input type="checkbox" class="cfg-bk" value="pointsbetus"> PointsBet</label>
-              <label class="form-check"><input type="checkbox" class="cfg-bk" value="barstool"> Barstool</label>
+              <label class="form-check"><input type="checkbox" id="bk-bet365" name="bk-bet365" class="cfg-bk" value="bet365" checked> Bet365</label>
+              <label class="form-check"><input type="checkbox" id="bk-pinnacle" name="bk-pinnacle" class="cfg-bk" value="pinnacle" checked> Pinnacle</label>
+              <label class="form-check"><input type="checkbox" id="bk-draftkings" name="bk-draftkings" class="cfg-bk" value="draftkings" checked> DraftKings</label>
+              <label class="form-check"><input type="checkbox" id="bk-fanduel" name="bk-fanduel" class="cfg-bk" value="fanduel" checked> FanDuel</label>
+              <label class="form-check"><input type="checkbox" id="bk-betway" name="bk-betway" class="cfg-bk" value="betway" checked> Betway</label>
+              <label class="form-check"><input type="checkbox" id="bk-williamhill" name="bk-williamhill" class="cfg-bk" value="williamhill" checked> William Hill</label>
+              <label class="form-check"><input type="checkbox" id="bk-unibet" name="bk-unibet" class="cfg-bk" value="unibet" checked> Unibet</label>
+              <label class="form-check"><input type="checkbox" id="bk-bwin" name="bk-bwin" class="cfg-bk" value="bwin" checked> Bwin</label>
+              <label class="form-check"><input type="checkbox" id="bk-bovada" name="bk-bovada" class="cfg-bk" value="bovada"> Bovada</label>
+              <label class="form-check"><input type="checkbox" id="bk-mybookieag" name="bk-mybookieag" class="cfg-bk" value="mybookieag"> MyBookie</label>
+              <label class="form-check"><input type="checkbox" id="bk-betonlineag" name="bk-betonlineag" class="cfg-bk" value="betonlineag"> BetOnline</label>
+              <label class="form-check"><input type="checkbox" id="bk-lowvig" name="bk-lowvig" class="cfg-bk" value="lowvig"> LowVig</label>
+              <label class="form-check"><input type="checkbox" id="bk-superbook" name="bk-superbook" class="cfg-bk" value="superbook"> SuperBook</label>
+              <label class="form-check"><input type="checkbox" id="bk-betrivers" name="bk-betrivers" class="cfg-bk" value="betrivers"> BetRivers</label>
+              <label class="form-check"><input type="checkbox" id="bk-pointsbetus" name="bk-pointsbetus" class="cfg-bk" value="pointsbetus"> PointsBet</label>
+              <label class="form-check"><input type="checkbox" id="bk-barstool" name="bk-barstool" class="cfg-bk" value="barstool"> Barstool</label>
             </div>
           </div>
         </div>
@@ -1098,21 +1098,21 @@ tbody td { padding: 12px 16px; font-size: 13px; color: var(--text1); vertical-al
         <div class="table-card" style="padding:20px;margin-bottom:16px">
           <div style="font-size:15px;font-weight:700;margin-bottom:12px">⚽ Deportes activos en sincronización</div>
           <div style="display:flex;flex-direction:column;gap:4px" id="cfg-sports-list">
-            <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)"><label class="form-check"><input type="checkbox" class="cfg-sport" value="soccer_epl" checked> ⚽ Premier League</label><button class="btn btn-ghost btn-sm" onclick="admSyncSport('soccer_epl','⚽ Premier League')" title="Refrescar ⚽ Premier League">🔄</button></div>
-            <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)"><label class="form-check"><input type="checkbox" class="cfg-sport" value="soccer_spain_la_liga" checked> ⚽ La Liga</label><button class="btn btn-ghost btn-sm" onclick="admSyncSport('soccer_spain_la_liga','⚽ La Liga')" title="Refrescar ⚽ La Liga">🔄</button></div>
-            <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)"><label class="form-check"><input type="checkbox" class="cfg-sport" value="soccer_uefa_champs_league" checked> ⚽ Champions League</label><button class="btn btn-ghost btn-sm" onclick="admSyncSport('soccer_uefa_champs_league','⚽ Champions League')" title="Refrescar ⚽ Champions League">🔄</button></div>
-            <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)"><label class="form-check"><input type="checkbox" class="cfg-sport" value="soccer_germany_bundesliga" checked> ⚽ Bundesliga</label><button class="btn btn-ghost btn-sm" onclick="admSyncSport('soccer_germany_bundesliga','⚽ Bundesliga')" title="Refrescar ⚽ Bundesliga">🔄</button></div>
-            <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)"><label class="form-check"><input type="checkbox" class="cfg-sport" value="soccer_italy_serie_a" checked> ⚽ Serie A</label><button class="btn btn-ghost btn-sm" onclick="admSyncSport('soccer_italy_serie_a','⚽ Serie A')" title="Refrescar ⚽ Serie A">🔄</button></div>
-            <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)"><label class="form-check"><input type="checkbox" class="cfg-sport" value="soccer_france_ligue_one" checked> ⚽ Ligue 1</label><button class="btn btn-ghost btn-sm" onclick="admSyncSport('soccer_france_ligue_one','⚽ Ligue 1')" title="Refrescar ⚽ Ligue 1">🔄</button></div>
-            <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)"><label class="form-check"><input type="checkbox" class="cfg-sport" value="soccer_usa_mls" checked> ⚽ MLS</label><button class="btn btn-ghost btn-sm" onclick="admSyncSport('soccer_usa_mls','⚽ MLS')" title="Refrescar ⚽ MLS">🔄</button></div>
-            <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)"><label class="form-check"><input type="checkbox" class="cfg-sport" value="soccer_brazil_campeonato" checked> ⚽ Brasileirão</label><button class="btn btn-ghost btn-sm" onclick="admSyncSport('soccer_brazil_campeonato','⚽ Brasileirão')" title="Refrescar ⚽ Brasileirão">🔄</button></div>
-            <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)"><label class="form-check"><input type="checkbox" class="cfg-sport" value="soccer_conmebol_copa_libertadores" checked> ⚽ Copa Libertadores</label><button class="btn btn-ghost btn-sm" onclick="admSyncSport('soccer_conmebol_copa_libertadores','⚽ Copa Libertadores')" title="Refrescar ⚽ Copa Libertadores">🔄</button></div>
-            <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)"><label class="form-check"><input type="checkbox" class="cfg-sport" value="basketball_nba" checked> 🏀 NBA</label><button class="btn btn-ghost btn-sm" onclick="admSyncSport('basketball_nba','🏀 NBA')" title="Refrescar 🏀 NBA">🔄</button></div>
-            <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)"><label class="form-check"><input type="checkbox" class="cfg-sport" value="basketball_euroleague" checked> 🏀 EuroLeague</label><button class="btn btn-ghost btn-sm" onclick="admSyncSport('basketball_euroleague','🏀 EuroLeague')" title="Refrescar 🏀 EuroLeague">🔄</button></div>
-            <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)"><label class="form-check"><input type="checkbox" class="cfg-sport" value="americanfootball_nfl" checked> 🏈 NFL</label><button class="btn btn-ghost btn-sm" onclick="admSyncSport('americanfootball_nfl','🏈 NFL')" title="Refrescar 🏈 NFL">🔄</button></div>
-            <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)"><label class="form-check"><input type="checkbox" class="cfg-sport" value="baseball_mlb" checked> ⚾ MLB</label><button class="btn btn-ghost btn-sm" onclick="admSyncSport('baseball_mlb','⚾ MLB')" title="Refrescar ⚾ MLB">🔄</button></div>
-            <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)"><label class="form-check"><input type="checkbox" class="cfg-sport" value="icehockey_nhl" checked> 🏒 NHL</label><button class="btn btn-ghost btn-sm" onclick="admSyncSport('icehockey_nhl','🏒 NHL')" title="Refrescar 🏒 NHL">🔄</button></div>
-            <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0"><label class="form-check"><input type="checkbox" class="cfg-sport" value="mma_mixed_martial_arts" checked> 🥊 MMA/UFC</label><button class="btn btn-ghost btn-sm" onclick="admSyncSport('mma_mixed_martial_arts','🥊 MMA/UFC')" title="Refrescar 🥊 MMA/UFC">🔄</button></div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)"><label class="form-check"><input type="checkbox" id="sport-soccer_epl" name="sport-soccer_epl" class="cfg-sport" value="soccer_epl" checked> ⚽ Premier League</label><button class="btn btn-ghost btn-sm" onclick="admSyncSport('soccer_epl','⚽ Premier League')" title="Refrescar ⚽ Premier League">🔄</button></div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)"><label class="form-check"><input type="checkbox" id="sport-soccer_spain_la_liga" name="sport-soccer_spain_la_liga" class="cfg-sport" value="soccer_spain_la_liga" checked> ⚽ La Liga</label><button class="btn btn-ghost btn-sm" onclick="admSyncSport('soccer_spain_la_liga','⚽ La Liga')" title="Refrescar ⚽ La Liga">🔄</button></div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)"><label class="form-check"><input type="checkbox" id="sport-soccer_uefa_champs_l" name="sport-soccer_uefa_champs_l" class="cfg-sport" value="soccer_uefa_champs_league" checked> ⚽ Champions League</label><button class="btn btn-ghost btn-sm" onclick="admSyncSport('soccer_uefa_champs_league','⚽ Champions League')" title="Refrescar ⚽ Champions League">🔄</button></div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)"><label class="form-check"><input type="checkbox" id="sport-soccer_germany_bunde" name="sport-soccer_germany_bunde" class="cfg-sport" value="soccer_germany_bundesliga" checked> ⚽ Bundesliga</label><button class="btn btn-ghost btn-sm" onclick="admSyncSport('soccer_germany_bundesliga','⚽ Bundesliga')" title="Refrescar ⚽ Bundesliga">🔄</button></div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)"><label class="form-check"><input type="checkbox" id="sport-soccer_italy_serie_a" name="sport-soccer_italy_serie_a" class="cfg-sport" value="soccer_italy_serie_a" checked> ⚽ Serie A</label><button class="btn btn-ghost btn-sm" onclick="admSyncSport('soccer_italy_serie_a','⚽ Serie A')" title="Refrescar ⚽ Serie A">🔄</button></div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)"><label class="form-check"><input type="checkbox" id="sport-soccer_france_ligue_" name="sport-soccer_france_ligue_" class="cfg-sport" value="soccer_france_ligue_one" checked> ⚽ Ligue 1</label><button class="btn btn-ghost btn-sm" onclick="admSyncSport('soccer_france_ligue_one','⚽ Ligue 1')" title="Refrescar ⚽ Ligue 1">🔄</button></div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)"><label class="form-check"><input type="checkbox" id="sport-soccer_usa_mls" name="sport-soccer_usa_mls" class="cfg-sport" value="soccer_usa_mls" checked> ⚽ MLS</label><button class="btn btn-ghost btn-sm" onclick="admSyncSport('soccer_usa_mls','⚽ MLS')" title="Refrescar ⚽ MLS">🔄</button></div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)"><label class="form-check"><input type="checkbox" id="sport-soccer_brazil_campeo" name="sport-soccer_brazil_campeo" class="cfg-sport" value="soccer_brazil_campeonato" checked> ⚽ Brasileirão</label><button class="btn btn-ghost btn-sm" onclick="admSyncSport('soccer_brazil_campeonato','⚽ Brasileirão')" title="Refrescar ⚽ Brasileirão">🔄</button></div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)"><label class="form-check"><input type="checkbox" id="sport-soccer_conmebol_copa" name="sport-soccer_conmebol_copa" class="cfg-sport" value="soccer_conmebol_copa_libertadores" checked> ⚽ Copa Libertadores</label><button class="btn btn-ghost btn-sm" onclick="admSyncSport('soccer_conmebol_copa_libertadores','⚽ Copa Libertadores')" title="Refrescar ⚽ Copa Libertadores">🔄</button></div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)"><label class="form-check"><input type="checkbox" id="sport-basketball_nba" name="sport-basketball_nba" class="cfg-sport" value="basketball_nba" checked> 🏀 NBA</label><button class="btn btn-ghost btn-sm" onclick="admSyncSport('basketball_nba','🏀 NBA')" title="Refrescar 🏀 NBA">🔄</button></div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)"><label class="form-check"><input type="checkbox" id="sport-basketball_euroleagu" name="sport-basketball_euroleagu" class="cfg-sport" value="basketball_euroleague" checked> 🏀 EuroLeague</label><button class="btn btn-ghost btn-sm" onclick="admSyncSport('basketball_euroleague','🏀 EuroLeague')" title="Refrescar 🏀 EuroLeague">🔄</button></div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)"><label class="form-check"><input type="checkbox" id="sport-americanfootball_nfl" name="sport-americanfootball_nfl" class="cfg-sport" value="americanfootball_nfl" checked> 🏈 NFL</label><button class="btn btn-ghost btn-sm" onclick="admSyncSport('americanfootball_nfl','🏈 NFL')" title="Refrescar 🏈 NFL">🔄</button></div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)"><label class="form-check"><input type="checkbox" id="sport-baseball_mlb" name="sport-baseball_mlb" class="cfg-sport" value="baseball_mlb" checked> ⚾ MLB</label><button class="btn btn-ghost btn-sm" onclick="admSyncSport('baseball_mlb','⚾ MLB')" title="Refrescar ⚾ MLB">🔄</button></div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)"><label class="form-check"><input type="checkbox" id="sport-icehockey_nhl" name="sport-icehockey_nhl" class="cfg-sport" value="icehockey_nhl" checked> 🏒 NHL</label><button class="btn btn-ghost btn-sm" onclick="admSyncSport('icehockey_nhl','🏒 NHL')" title="Refrescar 🏒 NHL">🔄</button></div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0"><label class="form-check"><input type="checkbox" id="sport-mma_mixed_martial_ar" name="sport-mma_mixed_martial_ar" class="cfg-sport" value="mma_mixed_martial_arts" checked> 🥊 MMA/UFC</label><button class="btn btn-ghost btn-sm" onclick="admSyncSport('mma_mixed_martial_arts','🥊 MMA/UFC')" title="Refrescar 🥊 MMA/UFC">🔄</button></div>
           </div>
         </div>
 
