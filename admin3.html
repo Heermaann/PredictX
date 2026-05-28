@@ -1901,7 +1901,11 @@ async function admSaveEvent(){
   const away=document.getElementById('ev-away').value.trim();
   const dt=document.getElementById('ev-datetime').value;
   if(!league||!home||!away||!dt){showToast('❌ Completa todos los campos obligatorios','error');return;}
-  const sportTitles={soccer_epl:'Fútbol',basketball_nba:'Baloncesto',americanfootball_nfl:'NFL',baseball_mlb:'Béisbol',icehockey_nhl:'Hockey',mma_mixed_martial_arts:'MMA'};
+  // Build sport title from _sports cache (includes custom categories)
+  const sportTitles = {};
+  (_sports||[]).forEach(s => { sportTitles[s.key] = s.name; });
+  // Fallback defaults
+  Object.assign(sportTitles, {soccer_epl:'Fútbol',basketball_nba:'Baloncesto',americanfootball_nfl:'NFL',baseball_mlb:'Béisbol',icehockey_nhl:'Hockey',mma_mixed_martial_arts:'MMA'});
   const isLiveChk=document.getElementById('ev-live').checked;
   const payload={ sport_key:sport, sport_title:sportTitles[sport]||'Deporte', league, home_team:home, away_team:away, commence_time:new Date(dt).toISOString(), featured:document.getElementById('ev-featured').checked, status:isLiveChk?'live':(new Date(dt)<=new Date()?'live':'upcoming'), odd_1:parseFloat(document.getElementById('ev-odd1').value)||null, odd_x:parseFloat(document.getElementById('ev-oddx').value)||null, odd_2:parseFloat(document.getElementById('ev-odd2').value)||null, total_line:parseFloat(document.getElementById('ev-total-line').value)||null, total_over:parseFloat(document.getElementById('ev-total-over').value)||null, total_under:parseFloat(document.getElementById('ev-total-under').value)||null, btts_yes:parseFloat(document.getElementById('ev-btts-yes').value)||null, btts_no:parseFloat(document.getElementById('ev-btts-no').value)||null, spread_home_pt:parseFloat(document.getElementById('ev-spread-home-pt').value)||null, spread_home:parseFloat(document.getElementById('ev-spread-home').value)||null, spread_away_pt:parseFloat(document.getElementById('ev-spread-away-pt').value)||null, spread_away:parseFloat(document.getElementById('ev-spread-away').value)||null, description:document.getElementById('ev-description')?.value?.trim()||null, created_by:SESSION?.email||'', updated_at:new Date().toISOString() };
   let error;
