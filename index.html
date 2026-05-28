@@ -1414,7 +1414,7 @@
                 <!-- Deporte y Liga -->
                 <div class="ev-form-row">
                   <div class="ev-form-group">
-                    <label class="ev-label">Deporte</label>
+                    <label class="ev-label" for="ev-sport">Deporte</label>
                     <select id="ev-sport" class="ev-input" onchange="onEvSportChange()">
                       <option value="soccer_epl">⚽ Fútbol</option>
                       <option value="basketball_nba">🏀 Baloncesto</option>
@@ -1425,7 +1425,7 @@
                     </select>
                   </div>
                   <div class="ev-form-group">
-                    <label class="ev-label">Liga</label>
+                    <label class="ev-label" for="ev-league">Liga</label>
                     <input type="text" id="ev-league" class="ev-input" placeholder="Ej: Premier League">
                   </div>
                 </div>
@@ -1433,11 +1433,11 @@
                 <!-- Equipos -->
                 <div class="ev-form-row">
                   <div class="ev-form-group">
-                    <label class="ev-label">Equipo Local</label>
+                    <label class="ev-label" for="ev-home">Equipo Local</label>
                     <input type="text" id="ev-home" class="ev-input" placeholder="Nombre del equipo local">
                   </div>
                   <div class="ev-form-group">
-                    <label class="ev-label">Equipo Visitante</label>
+                    <label class="ev-label" for="ev-away">Equipo Visitante</label>
                     <input type="text" id="ev-away" class="ev-input" placeholder="Nombre del equipo visitante">
                   </div>
                 </div>
@@ -1445,7 +1445,7 @@
                 <!-- Fecha y hora -->
                 <div class="ev-form-row">
                   <div class="ev-form-group">
-                    <label class="ev-label">Fecha y Hora</label>
+                    <label class="ev-label" for="ev-datetime">Fecha y Hora</label>
                     <input type="datetime-local" id="ev-datetime" class="ev-input">
                   </div>
                   <div class="ev-form-group" style="display:flex;align-items:flex-end;gap:12px">
@@ -1461,15 +1461,15 @@
                 <div class="ev-form-section">Cuotas 1X2</div>
                 <div class="ev-form-row ev-form-row-3">
                   <div class="ev-form-group">
-                    <label class="ev-label">1 — Local</label>
+                    <label class="ev-label" for="ev-odd1">1 — Local</label>
                     <input type="number" id="ev-odd1" class="ev-input" placeholder="2.10" step="0.01" min="1.01">
                   </div>
                   <div class="ev-form-group" id="ev-oddx-wrap">
-                    <label class="ev-label">X — Empate</label>
+                    <label class="ev-label" for="ev-oddx">X — Empate</label>
                     <input type="number" id="ev-oddx" class="ev-input" placeholder="3.40" step="0.01" min="1.01">
                   </div>
                   <div class="ev-form-group">
-                    <label class="ev-label">2 — Visitante</label>
+                    <label class="ev-label" for="ev-odd2">2 — Visitante</label>
                     <input type="number" id="ev-odd2" class="ev-input" placeholder="3.50" step="0.01" min="1.01">
                   </div>
                 </div>
@@ -1478,15 +1478,15 @@
                 <div class="ev-form-section">Total de Puntos/Goles</div>
                 <div class="ev-form-row ev-form-row-3">
                   <div class="ev-form-group">
-                    <label class="ev-label">Línea</label>
+                    <label class="ev-label" for="ev-total-line">Línea</label>
                     <input type="number" id="ev-total-line" class="ev-input" placeholder="2.5" step="0.5" min="0">
                   </div>
                   <div class="ev-form-group">
-                    <label class="ev-label">Over</label>
+                    <label class="ev-label" for="ev-total-over">Over</label>
                     <input type="number" id="ev-total-over" class="ev-input" placeholder="1.85" step="0.01" min="1.01">
                   </div>
                   <div class="ev-form-group">
-                    <label class="ev-label">Under</label>
+                    <label class="ev-label" for="ev-total-under">Under</label>
                     <input type="number" id="ev-total-under" class="ev-input" placeholder="1.95" step="0.01" min="1.01">
                   </div>
                 </div>
