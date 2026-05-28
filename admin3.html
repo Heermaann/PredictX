@@ -483,11 +483,11 @@ tbody td { padding: 12px 16px; font-size: 13px; color: var(--text1); vertical-al
     <div id="adm-gate-loading" class="gate-loading">Verificando sesión...</div>
     <div id="adm-login-form" style="display:none;text-align:left">
       <div class="gate-input-group">
-        <label class="gate-label" for="adm-email">Email</label>
+        <label class="gate-label" for="adm-login-email">Email</label>
         <input type="email" id="adm-login-email" class="gate-input" placeholder="admin@predictx.com">
       </div>
       <div class="gate-input-group">
-        <label class="gate-label" for="adm-pass">Contraseña</label>
+        <label class="gate-label" for="adm-login-pass">Contraseña</label>
         <input type="password" id="adm-login-pass" class="gate-input" placeholder="••••••••" onkeydown="if(event.key==='Enter')admLogin()">
       </div>
       <button class="gate-btn" onclick="admLogin()">Entrar al panel →</button>
@@ -824,12 +824,12 @@ tbody td { padding: 12px 16px; font-size: 13px; color: var(--text1); vertical-al
           <div class="table-card" style="padding:20px">
             <div style="font-size:15px;font-weight:700;margin-bottom:16px">🏦 Finanzas</div>
             <div class="form-row">
-              <div class="form-group"><label class="form-label" for="cfg-bonus-max">Bono bienvenida (%)</label><input type="number" id="cfg-bonus-pct" class="form-input" value="100"></div>
-              <div class="form-group"><label class="form-label" for="cfg-dep-min">Bono máximo (€)</label><input type="number" id="cfg-bonus-max" class="form-input" value="100"></div>
+              <div class="form-group"><label class="form-label" for="cfg-bonus-pct">Bono bienvenida (%)</label><input type="number" id="cfg-bonus-pct" class="form-input" value="100"></div>
+              <div class="form-group"><label class="form-label" for="cfg-bonus-max">Bono máximo (€)</label><input type="number" id="cfg-bonus-max" class="form-input" value="100"></div>
             </div>
             <div class="form-row">
-              <div class="form-group"><label class="form-label" for="cfg-wit-min">Depósito mínimo (€)</label><input type="number" id="cfg-dep-min" class="form-input" value="10"></div>
-              <div class="form-group"><label class="form-label" for="cfg-house-margin">Retirada mínima (€)</label><input type="number" id="cfg-wit-min" class="form-input" value="20"></div>
+              <div class="form-group"><label class="form-label" for="cfg-dep-min">Depósito mínimo (€)</label><input type="number" id="cfg-dep-min" class="form-input" value="10"></div>
+              <div class="form-group"><label class="form-label" for="cfg-wit-min">Retirada mínima (€)</label><input type="number" id="cfg-wit-min" class="form-input" value="20"></div>
             </div>
             <div class="form-row form-row-1">
               <div class="form-group"><label class="form-label" for="cfg-house-margin">Comisión de la casa (%)</label><input type="number" id="cfg-house-margin" class="form-input" value="5"></div>
@@ -849,7 +849,7 @@ tbody td { padding: 12px 16px; font-size: 13px; color: var(--text1); vertical-al
           <div class="table-card" style="padding:20px;grid-column:1/-1">
             <div style="font-size:15px;font-weight:700;margin-bottom:16px">👤 Gestión de roles</div>
             <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">
-              <div class="form-group" style="flex:1;min-width:200px"><label class="form-label" for="cfg-user-email">Email del usuario</label><input type="email" id="cfg-promote-email" class="form-input" placeholder="usuario@email.com"></div>
+              <div class="form-group" style="flex:1;min-width:200px"><label class="form-label" for="cfg-promote-email">Email del usuario</label><input type="email" id="cfg-promote-email" class="form-input" placeholder="usuario@email.com"></div>
               <button class="btn btn-primary" onclick="admPromoteUser()">⬆ Hacer Owner</button>
               <button class="btn btn-danger" onclick="admDemoteUser()">⬇ Hacer Usuario</button>
             </div>
@@ -1192,8 +1192,8 @@ tbody td { padding: 12px 16px; font-size: 13px; color: var(--text1); vertical-al
     <div class="modal-hd"><span class="modal-title" id="sport-modal-title">Nueva Categoría</span><button class="modal-close" onclick="admCloseSportModal()">✕</button></div>
     <div class="modal-body">
       <div class="form-row">
-        <div class="form-group"><label class="form-label" for="sport-title">Clave (key)</label><input type="text" id="sport-key" class="form-input" placeholder="ej: soccer"></div>
-        <div class="form-group"><label class="form-label" for="team-name">Nombre</label><input type="text" id="sport-title" class="form-input" placeholder="ej: Fútbol"></div>
+        <div class="form-group"><label class="form-label" for="sport-key">Clave (key)</label><input type="text" id="sport-key" class="form-input" placeholder="ej: soccer"></div>
+        <div class="form-group"><label class="form-label" for="sport-title">Nombre</label><input type="text" id="sport-title" class="form-input" placeholder="ej: Fútbol"></div>
       </div>
       <div class="form-row">
         <div class="form-group">
@@ -1205,7 +1205,7 @@ tbody td { padding: 12px 16px; font-size: 13px; color: var(--text1); vertical-al
     </div>
   </div>
 </div>
-        <div class="form-group"><label class="form-label" for="sport-active">Orden</label><input type="number" id="sport-order" class="form-input" value="0" min="0"></div>
+        <div class="form-group"><label class="form-label" for="sport-order">Orden</label><input type="number" id="sport-order" class="form-input" value="0" min="0"></div>
       </div>
       <label class="form-check"><input type="checkbox" id="sport-active" checked><span style="font-size:13px">✅ Activo (visible en la app)</span></label>
     </div>
@@ -1222,8 +1222,8 @@ tbody td { padding: 12px 16px; font-size: 13px; color: var(--text1); vertical-al
     <div class="modal-hd"><span class="modal-title" id="league-modal-title">Nueva Liga</span><button class="modal-close" onclick="admCloseLeagueModal()">✕</button></div>
     <div class="modal-body">
       <div class="form-row">
-        <div class="form-group"><label class="form-label" for="league-country">Nombre</label><input type="text" id="league-name" class="form-input" placeholder="ej: Premier League"></div>
-        <div class="form-group"><label class="form-label" for="league-sport">País</label><input type="text" id="league-country" class="form-input" placeholder="ej: England"></div>
+        <div class="form-group"><label class="form-label" for="league-name">Nombre</label><input type="text" id="league-name" class="form-input" placeholder="ej: Premier League"></div>
+        <div class="form-group"><label class="form-label" for="league-country">País</label><input type="text" id="league-country" class="form-input" placeholder="ej: England"></div>
       </div>
       <div class="form-row">
         <div class="form-group"><label class="form-label" for="league-sport">Categoría</label>
@@ -1247,8 +1247,8 @@ tbody td { padding: 12px 16px; font-size: 13px; color: var(--text1); vertical-al
 </div>
       </div>
       <div class="form-row">
-        <div class="form-group"><label class="form-label" for="league-order">API Key (opcional)</label><input type="text" id="league-api-key" class="form-input" placeholder="ej: soccer_epl"></div>
-        <div class="form-group"><label class="form-label" for="league-active">Orden</label><input type="number" id="league-order" class="form-input" value="0" min="0"></div>
+        <div class="form-group"><label class="form-label" for="league-api-key">API Key (opcional)</label><input type="text" id="league-api-key" class="form-input" placeholder="ej: soccer_epl"></div>
+        <div class="form-group"><label class="form-label" for="league-order">Orden</label><input type="number" id="league-order" class="form-input" value="0" min="0"></div>
       </div>
       <label class="form-check"><input type="checkbox" id="league-active" checked><span style="font-size:13px">✅ Activa (visible en la app)</span></label>
     </div>
@@ -1275,14 +1275,14 @@ tbody td { padding: 12px 16px; font-size: 13px; color: var(--text1); vertical-al
             <option value="mma_mixed_martial_arts">🥊 MMA</option>
           </select>
         </div>
-        <div class="form-group"><label class="form-label" for="ev-home">Liga</label><input type="text" id="ev-league" class="form-input" placeholder="ej: Premier League"></div>
+        <div class="form-group"><label class="form-label" for="ev-league">Liga</label><input type="text" id="ev-league" class="form-input" placeholder="ej: Premier League"></div>
       </div>
       <div class="form-row">
-        <div class="form-group"><label class="form-label" for="ev-away">Equipo Local</label><input type="text" id="ev-home" class="form-input" placeholder="Nombre del equipo local"></div>
-        <div class="form-group"><label class="form-label" for="ev-datetime">Equipo Visitante</label><input type="text" id="ev-away" class="form-input" placeholder="Nombre del equipo visitante"></div>
+        <div class="form-group"><label class="form-label" for="ev-home">Equipo Local</label><input type="text" id="ev-home" class="form-input" placeholder="Nombre del equipo local"></div>
+        <div class="form-group"><label class="form-label" for="ev-away">Equipo Visitante</label><input type="text" id="ev-away" class="form-input" placeholder="Nombre del equipo visitante"></div>
       </div>
       <div class="form-row">
-        <div class="form-group"><label class="form-label" for="ev-featured">Fecha y Hora</label><input type="datetime-local" id="ev-datetime" class="form-input"></div>
+        <div class="form-group"><label class="form-label" for="ev-datetime">Fecha y Hora</label><input type="datetime-local" id="ev-datetime" class="form-input"></div>
         <div class="form-group" style="display:flex;align-items:flex-end;gap:16px">
           <label class="form-check"><input type="checkbox" id="ev-featured"><span style="font-size:13px">⭐ Destacado</span></label>
           <label class="form-check"><input type="checkbox" id="ev-live"><span style="font-size:13px">🔴 En Vivo</span></label>
@@ -1294,28 +1294,28 @@ tbody td { padding: 12px 16px; font-size: 13px; color: var(--text1); vertical-al
       </div>
       <div class="form-section">Cuotas 1X2</div>
       <div class="form-row form-row-3">
-        <div class="form-group"><label class="form-label" for="ev-oddx">1 — Local</label><input type="number" id="ev-odd1" class="form-input" placeholder="2.10" step="0.01" min="1.01"></div>
+        <div class="form-group"><label class="form-label" for="ev-odd1">1 — Local</label><input type="number" id="ev-odd1" class="form-input" placeholder="2.10" step="0.01" min="1.01"></div>
         <div class="form-group" id="ev-oddx-wrap"><label class="form-label" for="ev-odd2">X — Empate</label><input type="number" id="ev-oddx" class="form-input" placeholder="3.40" step="0.01" min="1.01"></div>
-        <div class="form-group"><label class="form-label" for="ev-total-line">2 — Visitante</label><input type="number" id="ev-odd2" class="form-input" placeholder="3.50" step="0.01" min="1.01"></div>
+        <div class="form-group"><label class="form-label" for="ev-odd2">2 — Visitante</label><input type="number" id="ev-odd2" class="form-input" placeholder="3.50" step="0.01" min="1.01"></div>
       </div>
       <div class="form-section">Totales</div>
       <div class="form-row form-row-3">
-        <div class="form-group"><label class="form-label" for="ev-total-over">Línea</label><input type="number" id="ev-total-line" class="form-input" placeholder="2.5" step="0.5"></div>
-        <div class="form-group"><label class="form-label" for="ev-total-under">Over</label><input type="number" id="ev-total-over" class="form-input" placeholder="1.85" step="0.01" min="1.01"></div>
-        <div class="form-group"><label class="form-label" for="ev-btts-yes">Under</label><input type="number" id="ev-total-under" class="form-input" placeholder="1.95" step="0.01" min="1.01"></div>
+        <div class="form-group"><label class="form-label" for="ev-total-line">Línea</label><input type="number" id="ev-total-line" class="form-input" placeholder="2.5" step="0.5"></div>
+        <div class="form-group"><label class="form-label" for="ev-total-over">Over</label><input type="number" id="ev-total-over" class="form-input" placeholder="1.85" step="0.01" min="1.01"></div>
+        <div class="form-group"><label class="form-label" for="ev-total-under">Under</label><input type="number" id="ev-total-under" class="form-input" placeholder="1.95" step="0.01" min="1.01"></div>
       </div>
       <div id="ev-soccer-markets">
         <div class="form-section">Ambos Equipos Marcan</div>
         <div class="form-row">
-          <div class="form-group"><label class="form-label" for="ev-btts-no">Sí</label><input type="number" id="ev-btts-yes" class="form-input" placeholder="1.75" step="0.01" min="1.01"></div>
-          <div class="form-group"><label class="form-label" for="ev-spread-home-pt">No</label><input type="number" id="ev-btts-no" class="form-input" placeholder="2.00" step="0.01" min="1.01"></div>
+          <div class="form-group"><label class="form-label" for="ev-btts-yes">Sí</label><input type="number" id="ev-btts-yes" class="form-input" placeholder="1.75" step="0.01" min="1.01"></div>
+          <div class="form-group"><label class="form-label" for="ev-btts-no">No</label><input type="number" id="ev-btts-no" class="form-input" placeholder="2.00" step="0.01" min="1.01"></div>
         </div>
       </div>
       <div class="form-section">Hándicap / Spread</div>
       <div class="form-row">
-        <div class="form-group"><label class="form-label" for="ev-spread-home">Local (línea)</label><input type="number" id="ev-spread-home-pt" class="form-input" placeholder="-1.5" step="0.5"></div>
-        <div class="form-group"><label class="form-label" for="ev-spread-away-pt">Local (cuota)</label><input type="number" id="ev-spread-home" class="form-input" placeholder="1.90" step="0.01" min="1.01"></div>
-        <div class="form-group"><label class="form-label" for="ev-spread-away">Visitante (línea)</label><input type="number" id="ev-spread-away-pt" class="form-input" placeholder="+1.5" step="0.5"></div>
+        <div class="form-group"><label class="form-label" for="ev-spread-home-pt">Local (línea)</label><input type="number" id="ev-spread-home-pt" class="form-input" placeholder="-1.5" step="0.5"></div>
+        <div class="form-group"><label class="form-label" for="ev-spread-home">Local (cuota)</label><input type="number" id="ev-spread-home" class="form-input" placeholder="1.90" step="0.01" min="1.01"></div>
+        <div class="form-group"><label class="form-label" for="ev-spread-away-pt">Visitante (línea)</label><input type="number" id="ev-spread-away-pt" class="form-input" placeholder="+1.5" step="0.5"></div>
         <div class="form-group"><label class="form-label" for="ev-spread-away">Visitante (cuota)</label><input type="number" id="ev-spread-away" class="form-input" placeholder="1.90" step="0.01" min="1.01"></div>
       </div>
     </div>
@@ -3051,8 +3051,8 @@ document.addEventListener('DOMContentLoaded', () => initAdmin());
     <div class="modal-hd"><span class="modal-title" id="team-modal-title">Nuevo Equipo</span><button class="modal-close" onclick="admCloseTeamModal()">✕</button></div>
     <div class="modal-body">
       <div class="form-row">
-        <div class="form-group"><label class="form-label" for="team-short">Nombre completo</label><input type="text" id="team-name" class="form-input" placeholder="ej: Real Madrid"></div>
-        <div class="form-group"><label class="form-label" for="team-sport">Nombre corto</label><input type="text" id="team-short" class="form-input" placeholder="ej: RMA" maxlength="10"></div>
+        <div class="form-group"><label class="form-label" for="team-name">Nombre completo</label><input type="text" id="team-name" class="form-input" placeholder="ej: Real Madrid"></div>
+        <div class="form-group"><label class="form-label" for="team-short">Nombre corto</label><input type="text" id="team-short" class="form-input" placeholder="ej: RMA" maxlength="10"></div>
       </div>
       <div class="form-row">
         <div class="form-group"><label class="form-label" for="team-sport">Categoría</label>
@@ -3065,7 +3065,7 @@ document.addEventListener('DOMContentLoaded', () => initAdmin());
             <option value="mma">🥊 MMA</option>
           </select>
         </div>
-        <div class="form-group"><label class="form-label" for="team-active">País</label><input type="text" id="team-country" class="form-input" placeholder="ej: España"></div>
+        <div class="form-group"><label class="form-label" for="team-country">País</label><input type="text" id="team-country" class="form-input" placeholder="ej: España"></div>
       </div>
       <label class="form-check"><input type="checkbox" id="team-active" checked><span style="font-size:13px">✅ Activo</span></label>
     </div>
@@ -3166,7 +3166,7 @@ document.addEventListener('DOMContentLoaded', () => initAdmin());
           <input type="text" id="ae-league" class="form-input" oninput="admMarkOverride('league','ae-league-tag')">
         </div>
         <div class="form-group">
-          <label class="form-label" for="ae-datetime">Fecha y hora <span id="ae-time-tag" class="badge badge-orange" style="display:none;margin-left:4px">override</span></label>
+          <label class="form-label" for="ae-commence">Fecha y hora <span id="ae-time-tag" class="badge badge-orange" style="display:none;margin-left:4px">override</span></label>
           <input type="datetime-local" id="ae-commence" class="form-input" oninput="admMarkOverride('commence_time','ae-time-tag')">
         </div>
       </div>
@@ -3192,15 +3192,15 @@ document.addEventListener('DOMContentLoaded', () => initAdmin());
       </div>
       <div class="form-row form-row-3">
         <div class="form-group">
-          <label class="form-label" for="ae-total-line">Línea total <span id="ae-tline-tag" class="badge badge-orange" style="display:none;margin-left:4px">override</span></label>
+          <label class="form-label" for="ae-tline">Línea total <span id="ae-tline-tag" class="badge badge-orange" style="display:none;margin-left:4px">override</span></label>
           <input type="number" id="ae-tline" class="form-input" step="0.5" oninput="admMarkOverride('total_line','ae-tline-tag')">
         </div>
         <div class="form-group">
-          <label class="form-label" for="ae-total-over">Over <span id="ae-tover-tag" class="badge badge-orange" style="display:none;margin-left:4px">override</span></label>
+          <label class="form-label" for="ae-tover">Over <span id="ae-tover-tag" class="badge badge-orange" style="display:none;margin-left:4px">override</span></label>
           <input type="number" id="ae-tover" class="form-input" step="0.01" min="1.01" oninput="admMarkOverride('total_over','ae-tover-tag')">
         </div>
         <div class="form-group">
-          <label class="form-label" for="ae-total-under">Under <span id="ae-tunder-tag" class="badge badge-orange" style="display:none;margin-left:4px">override</span></label>
+          <label class="form-label" for="ae-tunder">Under <span id="ae-tunder-tag" class="badge badge-orange" style="display:none;margin-left:4px">override</span></label>
           <input type="number" id="ae-tunder" class="form-input" step="0.01" min="1.01" oninput="admMarkOverride('total_under','ae-tunder-tag')">
         </div>
       </div>
