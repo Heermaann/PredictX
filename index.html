@@ -187,7 +187,7 @@
           <span class="home-count" id="list-sub">Cargando…</span>
         </div>
         <div class="home-bar-right">
-          <select class="sort-sel" onchange="sortBy(this.value)">
+          <select id="sort-events" name="sort-events" class="sort-sel" onchange="sortBy(this.value)">
             <option value="vol">Mayor volumen</option>
             <option value="date">Por hora</option>
             <option value="odd">Por cuota</option>
@@ -416,7 +416,7 @@
             <div class="admin-card">
               <div class="admin-card-hd">
                 <div class="admin-card-title">Historial</div>
-                <select class="sort-sel" style="font-size:11px;padding:4px 8px" onchange="filterTx(this.value)">
+                <select id="filter-tx" name="filter-tx" class="sort-sel" style="font-size:11px;padding:4px 8px" onchange="filterTx(this.value)">
                   <option value="all">Todos</option>
                   <option value="dep">Depósitos</option>
                   <option value="wit">Retiradas</option>
@@ -709,7 +709,7 @@
             <div class="admin-card">
               <div class="admin-card-hd">
                 <div class="admin-card-title">Historial completo</div>
-                <select style="background:var(--bg3);border:1px solid var(--border);border-radius:7px;color:var(--text2);font-size:12px;padding:5px 8px;outline:none" onchange="filterOwnerTx(this.value)">
+                <select id="filter-owner-tx" name="filter-owner-tx" style="background:var(--bg3);border:1px solid var(--border);border-radius:7px;color:var(--text2);font-size:12px;padding:5px 8px;outline:none" onchange="filterOwnerTx(this.value)">
                   <option value="all">Todos los tipos</option>
                   <option value="dep">Depósitos</option>
                   <option value="wit">Retiradas</option>
@@ -1453,8 +1453,7 @@
                       <input type="checkbox" id="ev-featured">
                       <span class="ev-toggle-lbl">⭐ Destacado</span>
                     </label>
-                    <label class="ev-toggle-wrap">
-                    </label>
+
                   </div>
                 </div>
 
