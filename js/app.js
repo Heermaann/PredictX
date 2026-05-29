@@ -77,15 +77,84 @@ function closeSidebar() {
 /* ════════════════════════════════════════════════════
    BETSLIP PANEL
 ════════════════════════════════════════════════════ */
+
+// ── Apuestas activas en el boleto ──
+async function renderActiveBets() {
+  const body = document.getElementById('slip-body');
+  const foot = document.getElementById('slip-foot');
+  if (!body) return;
+  if (foot) foot.style.display = 'none';
+
+  if (!SESSION) {
+    body.innerHTML = '<div class="slip-empty"><div class="slip-empty-ico">🔒</div><div class="slip-empty-txt">Inicia sesión para ver tus apuestas activas</div></div>';
+    return;
+  }
+
+  body.innerHTML = '<div class="slip-empty"><div class="slip-empty-ico">⏳</div><div class="slip-empty-txt">Cargando...</div></div>';
+
+  try {
+    const { data: bets } = await _SB.from('bets')
+      .select('*')
+      .eq('user_email', SESSION.email)
+      .eq('status', 'open')
+      .order('created_at', { ascending: false })
+      .limit(20);
+
+    // Update badge count
+    const countBadge = document.getElementById('slip-active-count');
+    if (countBadge) {
+      countBadge.textContent = (bets||[]).length;
+      countBadge.style.display = (bets||[]).length ? '' : 'none';
+    }
+
+    if (!bets || !bets.length) {
+      body.innerHTML = '<div class="slip-empty"><div class="slip-empty-ico">🎯</div><div class="slip-empty-txt">No tienes apuestas en juego</div></div>';
+      return;
+    }
+
+    body.innerHTML = bets.map(b => `
+      <div style="background:var(--bg3);border-radius:10px;padding:12px 14px;margin-bottom:8px;border:1px solid var(--border)">
+        <div style="font-size:12px;color:var(--text2);margin-bottom:4px;display:flex;justify-content:space-between">
+          <span>${(b.created_at||'').slice(0,10)}</span>
+          <span class="badge badge-blue" style="font-size:10px;padding:2px 7px">En juego</span>
+        </div>
+        <div style="font-size:13px;font-weight:700;color:var(--text1);margin-bottom:6px">${esc(b.match_name||b.match||'—')}</div>
+        <div style="font-size:12px;color:var(--text2);margin-bottom:4px">Selección: <strong style="color:var(--accent)">${esc(b.pick||'—')}</strong></div>
+        <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text2)">
+          <span>Cuota: <strong>${parseFloat(b.odd||b.odds||0).toFixed(2)}</strong></span>
+          <span>Apostado: <strong>$${parseFloat(b.stake||0).toFixed(2)}</strong></span>
+          <span>Retorno: <strong style="color:var(--green)">$${(parseFloat(b.stake||0)*parseFloat(b.odd||b.odds||1)).toFixed(2)}</strong></span>
+        </div>
+      </div>`).join('');
+  } catch(err) {
+    body.innerHTML = '<div class="slip-empty"><div class="slip-empty-txt">Error al cargar apuestas</div></div>';
+  }
+}
+
+// Update active bets count badge when betslip opens
+const _origToggleBetslip = window.toggleBetslip || toggleBetslip;
 function toggleBetslip() {
   const bs = document.getElementById('betslip');
   const ov = document.getElementById('overlay-slip');
   const isOpen = bs.classList.toggle('open');
   ov.classList.toggle('show', isOpen);
+  // Update active bets count when opening
+  if (isOpen && SESSION) { updateActiveBetsCount(); }
   // Prevent background scroll on mobile
   document.body.classList.toggle('panel-open', isOpen);
   document.getElementById('sidebar').classList.remove('open');
   document.getElementById('overlay').classList.remove('show');
+}
+
+async function updateActiveBetsCount() {
+  try {
+    const { count } = await _SB.from('bets')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_email', SESSION.email)
+      .eq('status', 'open');
+    const badge = document.getElementById('slip-active-count');
+    if (badge) { badge.textContent = count||0; badge.style.display = count ? '' : 'none'; }
+  } catch(_) {}
 }
 function closeBetslip() {
   document.getElementById('betslip').classList.remove('open');
@@ -833,7 +902,11 @@ function setSlipMode(mode, btn) {
   S.slipMode = mode;
   btn.closest('.slip-mode').querySelectorAll('.slip-mode-btn').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
-  renderSlip();
+  if (mode === 'active') {
+    renderActiveBets();
+  } else {
+    renderSlip();
+  }
 }
 
 function renderSlip() {
