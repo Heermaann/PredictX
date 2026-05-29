@@ -2167,6 +2167,15 @@ function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;')
 const _SB = supabase.createClient('https://ghgkvtdhuqfpigbtzefz.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdoZ2t2dGRodXFmcGlnYnR6ZWZ6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg0MTQ4NDYsImV4cCI6MjA5Mzk5MDg0Nn0.guFwC8DFo1Wt_TB_D2fv4JifQK-r0lo2hlsuxl4umtU');
 
 // localStorage sigue usándose solo para preferencias de UI (tema, deporte)
+// Safe profile read - handles RLS errors gracefully
+async function safeGetProfile(email) {
+  try {
+    const { data, error } = await _SB.from('profiles').select('*').eq('email', email).maybeSingle();
+    if (error) { console.warn('Profile read error:', error.code, error.message); return null; }
+    return data;
+  } catch(e) { return null; }
+}
+
 const DB = {
   get:    k => { try { return JSON.parse(localStorage.getItem('px_'+k)||'null'); } catch(e){ return null; } },
   set:    (k,v) => localStorage.setItem('px_'+k, JSON.stringify(v)),
@@ -4201,7 +4210,7 @@ async function refreshAdminData() {
   if (!SESSION) return;
   try {
     // Read balance from Supabase (source of truth)
-    const { data: prof } = await _SB.from('profiles').select('balance,deposited,withdrawn').eq('email', SESSION.email).single();
+    const { data: prof } = await _SB.from('profiles').select('balance,deposited,withdrawn').eq('email', SESSION.email).maybeSingle();
     if (prof) {
       const d = adminData();
       d.balance   = +(prof.balance   || 0);
