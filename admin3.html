@@ -1891,6 +1891,7 @@ async function renderEvents(){
       <td>${e.status==='live'?'<span class="badge badge-red">🔴 En Vivo</span>':e.status==='finished'?'<span class="badge badge-blue">✅ Finalizado</span>':'<span class="badge badge-green">📅 Próximo</span>'}</td>
       <td><div class="action-group">
         <button class="btn btn-outline btn-sm" onclick="admOpenEditEvent('${e.id}')">✏️ Editar</button>
+        ${e.status !== 'finished' ? `<button class="btn btn-success btn-sm" onclick="admShowDeclareForEvent('${e.id}','${esc(e.home_team)}','${esc(e.away_team)}','manual')">🏁 Declarar</button>` : `<span style="font-size:11px;color:var(--text3)">✅ Finalizado</span>`}
         ${e.status!=='finished'?`<button class="btn ${e.status==='live'?'btn-ghost':'btn-danger'} btn-sm" onclick="admToggleEventLive('${e.id}','${e.status}')">${e.status==='live'?'⏸ Pausar':'▶ En Vivo'}</button>`:''}
         ${e.status==='live'?`<button class="btn btn-success btn-sm" onclick="admOpenResolveEvent('${e.id}')">🏁 Resolver</button>`:''}
         <button class="btn btn-danger btn-sm" onclick="admDeleteEvent('${e.id}')">🗑</button>
@@ -2028,13 +2029,52 @@ async function admDemoteUser(){  const email=document.getElementById('cfg-promot
 let _teams = [], _editingTeamId = null, _teamSearch = '';
 
 
+
+async function admShowDeclareForEvent(id, home, away, source) {
+  if (!confirm(`Declarar resultado para:\n${home} vs ${away}\n\nEsta acción pagará las apuestas ganadoras automáticamente.`)) return;
+  const result = await new Promise(resolve => {
+    const modal = document.createElement('div');
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;display:flex;align-items:center;justify-content:center';
+    modal.innerHTML = `
+      <div style="background:var(--bg,#fff);border-radius:16px;padding:28px;max-width:380px;width:90%;text-align:center;font-family:var(--font)">
+        <div style="font-size:18px;font-weight:700;margin-bottom:6px;color:var(--text1,#1a1d2e)">¿Quién ganó?</div>
+        <div style="font-size:13px;color:var(--text2,#666);margin-bottom:20px">${home} vs ${away}</div>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <button onclick="this.closest('[style*=fixed]').dataset.result='1';this.closest('[style*=fixed]').remove()" 
+            style="padding:12px;border-radius:10px;border:none;background:#22c55e;color:#fff;font-weight:700;font-size:14px;cursor:pointer">
+            🏆 ${home}
+          </button>
+          <button onclick="this.closest('[style*=fixed]').dataset.result='X';this.closest('[style*=fixed]').remove()"
+            style="padding:12px;border-radius:10px;border:none;background:#6b7280;color:#fff;font-weight:700;font-size:14px;cursor:pointer">
+            🤝 Empate
+          </button>
+          <button onclick="this.closest('[style*=fixed]').dataset.result='2';this.closest('[style*=fixed]').remove()"
+            style="padding:12px;border-radius:10px;border:none;background:#ef4444;color:#fff;font-weight:700;font-size:14px;cursor:pointer">
+            🏆 ${away}
+          </button>
+          <button onclick="this.closest('[style*=fixed]').dataset.result='cancel';this.closest('[style*=fixed]').remove()"
+            style="padding:10px;border-radius:10px;border:1px solid var(--border,#e5e7eb);background:transparent;color:var(--text2,#666);cursor:pointer">
+            Cancelar
+          </button>
+        </div>
+      </div>`;
+    document.body.appendChild(modal);
+    const observer = new MutationObserver(() => {
+      if (!document.body.contains(modal)) { observer.disconnect(); resolve(modal.dataset.result||'cancel'); }
+    });
+    observer.observe(document.body, { childList: true });
+  });
+  if (!result || result === 'cancel') return;
+  await admDeclareOutcome(id, source, result, home, away);
+}
+
 async function admSyncTeamsFromEvents() {
-  showToast('⏳ Importando equipos desde eventos...', '');
+  showToast('⏳ Importando equipos/peleadores desde todos los eventos...', '');
   try {
     // Load all teams from both manual and API events
     const [manualRes, apiRes] = await Promise.all([
       _SB.from('manual_events').select('home_team,away_team,sport_key'),
-      _SB.from('api_events').select('home_team,away_team,sport_key'),
+      _SB.from('api_events').select('home_team,away_team,sport_key').limit(500),
     ]);
     const allEvents = [...(manualRes.data||[]), ...(apiRes.data||[])];
 
@@ -2656,6 +2696,7 @@ function admApplyApiEventFilters(){
       <td>${e.result?`<span class="badge badge-orange">${e.result==='1'?'🏆 Local':e.result==='2'?'🏆 Visit.':'🤝 Empate'}</span>`:'<span style="color:var(--text3);font-size:12px">Pendiente</span>'}</td>
       <td><div class="action-group">
         <button class="btn btn-outline btn-sm" onclick="admOpenApiEventEdit('${esc(e.id)}')">✏️ Editar</button>
+        ${e.status !== 'finished' ? `<button class="btn btn-success btn-sm" onclick="admShowDeclareForEvent('${esc(e.id)}','${esc(e.home_team)}','${esc(e.away_team)}','api')" title="Declarar resultado">🏁 Declarar</button>` : `<span style="font-size:11px;color:var(--text3)">✅ Finalizado</span>`}
         ${e.sync_paused?'<span class="badge badge-orange">⏸ Pausado</span>':''}
         ${e.odds_frozen?'<span class="badge badge-blue">🧊 Cuotas fijas</span>':''}
       </div></td>
