@@ -139,6 +139,7 @@ function toggleBetslip() {
   const ov = document.getElementById('overlay-slip');
   const isOpen = bs.classList.toggle('open');
   ov.classList.toggle('show', isOpen);
+  document.body.classList.toggle('slip-open', isOpen);
   // Update active bets count when opening
   if (isOpen && SESSION) { updateActiveBetsCount(); }
   // Prevent background scroll on mobile
@@ -160,7 +161,7 @@ async function updateActiveBetsCount() {
 function closeBetslip() {
   document.getElementById('betslip').classList.remove('open');
   document.getElementById('overlay-slip').classList.remove('show');
-  document.body.classList.remove('panel-open');
+  document.body.classList.remove('panel-open', 'slip-open');
 }
 function closeAll() {
   document.getElementById('sidebar').classList.remove('open');
@@ -4332,14 +4333,16 @@ window.renderBets = async function renderBets(filter) {
   let bets = [];
   if (SESSION) {
     try {
-      const { data } = await _SB.from('bets')
+      const { data, error } = await _SB.from('bets')
         .select('*')
         .eq('user_email', SESSION.email)
         .order('created_at', { ascending: false });
+      if (error) { console.error('renderBets error:', error); }
       bets = data || [];
       // Also update local cache
       saveBets(bets);
-    } catch(_) {
+    } catch(e) {
+      console.error('renderBets exception:', e);
       bets = betHistory(); // fallback to cache
     }
   } else {
