@@ -4646,13 +4646,4 @@ async function doLoginWith2FA() {
   await (typeof _origDoLogin === 'function' ? _origDoLogin() : Promise.resolve());
 }
 
-// ── Welcome Banner ──
-function closeWelcomeBanner() {
-  const banner = document.getElementById('welcome-banner');
-  if (!banner) return;
-  banner.style.animation = 'fadeOut .25s ease forwards';
-  setTimeout(() => { banner.classList.add('hidden'); }, 250);
-}
-document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') closeWelcomeBanner();
-});
+
