@@ -122,9 +122,9 @@ async function renderActiveBets() {
         <div style="font-size:13px;font-weight:700;color:var(--text1);margin-bottom:6px">${esc(b.match_name||b.match||'—')}</div>
         <div style="font-size:12px;color:var(--text2);margin-bottom:4px">Selección: <strong style="color:var(--accent)">${esc(b.pick||'—')}</strong></div>
         <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text2)">
-          <span>Cuota: <strong>${parseFloat(b.odd||b.odds||0).toFixed(2)}</strong></span>
+          <span>Cuota: <strong>${parseFloat(b.odds||b.odd||0).toFixed(2)}</strong></span>
           <span>Apostado: <strong>$${parseFloat(b.stake||0).toFixed(2)}</strong></span>
-          <span>Retorno: <strong style="color:var(--green)">$${(parseFloat(b.stake||0)*parseFloat(b.odd||b.odds||1)).toFixed(2)}</strong></span>
+          <span>Retorno: <strong style="color:var(--green)">$${parseFloat(b.payout||0).toFixed(2)}</strong></span>
         </div>
       </div>`).join('');
   } catch(err) {
@@ -3021,7 +3021,7 @@ window.placeBets = async function() {
     txs.push({ id:'TX'+Date.now(), date:todayStr(), desc:'Apuesta combinada', type:'bet', amount:stake, balance:newBalance });
     // Save to Supabase in parallel
     await Promise.all([
-      _SB.from('bets').insert({ user_email:SESSION.email, match_name:matchName, pick, odd:+comboOdd.toFixed(3), stake, status:'open', type:'combo', created_at:new Date().toISOString() }),
+      _SB.from('bets').insert({ user_email:SESSION.email, match_name:matchName, event:matchName, pick, odds:+comboOdd.toFixed(3), stake, payout:+(comboOdd*stake).toFixed(2), status:'open', sport:'combo', created_at:new Date().toISOString() }),
       _SB.from('transactions').insert({ user_email:SESSION.email, description:'Apuesta combinada', type:'bet', amount:stake, balance:newBalance, created_at:new Date().toISOString() })
     ]);
   } else {
@@ -3033,7 +3033,7 @@ window.placeBets = async function() {
       bets.push({ id:'B'+Date.now()+Math.random(), date:todayStr(), match:sel.match, pick:sel.pick, odd:sel.odd, stake, ret:0, status:'open', type:'single' });
       txs.push({ id:'TX'+Date.now()+Math.random(), date:todayStr(), desc:'Apuesta: '+sel.pick, type:'bet', amount:stake, balance:runningBalance });
       await Promise.all([
-        _SB.from('bets').insert({ user_email:SESSION.email, match_name:sel.match, pick:sel.pick, odd:sel.odd, stake, status:'open', type:'single', created_at:new Date().toISOString() }),
+        _SB.from('bets').insert({ user_email:SESSION.email, match_name:sel.match, event:sel.match, pick:sel.pick, odds:+sel.odd.toFixed(3), stake, payout:+(sel.odd*stake).toFixed(2), status:'open', sport:'single', created_at:new Date().toISOString() }),
         _SB.from('transactions').insert({ user_email:SESSION.email, description:'Apuesta: '+sel.pick, type:'bet', amount:stake, balance:runningBalance, created_at:new Date().toISOString() })
       ]);
     }
@@ -4269,7 +4269,7 @@ async function renderDashBets() {
     <tr>
       <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(b.match_name||b.match||'—')}</td>
       <td style="font-weight:600">${esc(b.pick||'—')}</td>
-      <td><span style="font-family:var(--mono);color:var(--green)">${parseFloat(b.odd||b.odds||0).toFixed(2)}</span></td>
+      <td><span style="font-family:var(--mono);color:var(--green)">${parseFloat(b.odds||b.odd||0).toFixed(2)}</span></td>
       <td style="font-family:var(--mono)">${parseFloat(b.stake||0).toFixed(2)}</td>
       <td>${badgeHtml(b.status)}</td>
     </tr>`).join('');
@@ -4383,7 +4383,7 @@ window.renderBets = async function renderBets(filter) {
       <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(b.match_name||b.match||'—')}</td>
       <td style="font-weight:600">${esc(b.pick||'—')}</td>
       <td><span class="tx-type bet">${b.type==='combo'?'Combinada':'Simple'}</span></td>
-      <td style="font-family:var(--mono)">${parseFloat(b.odd||b.odds||0).toFixed(2)}</td>
+      <td style="font-family:var(--mono)">${parseFloat(b.odds||b.odd||0).toFixed(2)}</td>
       <td style="font-family:var(--mono)">${parseFloat(b.stake||0).toFixed(2)}</td>
       <td style="font-family:var(--mono);color:${b.status==='win'?'var(--green)':'var(--text2)'}">${parseFloat(b.payout||b.ret||0).toFixed(2)}</td>
       <td>${badgeHtml(b.status)}</td>
