@@ -1013,7 +1013,7 @@
       <div class="auth-sub">Accede a tu cuenta para ver tus apuestas y saldo</div>
       <div class="auth-field">
         <div class="auth-label">Email o usuario</div>
-        <input class="auth-input" id="l-email" type="email" placeholder="tu@email.com" autocomplete="email">
+        <input class="auth-input" id="l-email" type="email" placeholder="tu@email.com" autocomplete="email" onkeydown="if(event.key==='Enter')doLogin()">
       </div>
       <div class="auth-field">
         <div class="auth-label">
@@ -1021,7 +1021,7 @@
           <a onclick="authTab('forgot')">¿Olvidaste tu contraseña?</a>
         </div>
         <div class="auth-input-wrap">
-          <input class="auth-input" id="l-pass" type="password" placeholder="••••••••" autocomplete="current-password">
+          <input class="auth-input" id="l-pass" type="password" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
           <span class="auth-eye" onclick="togglePw('l-pass',this)">👁</span>
         </div>
       </div>
@@ -1047,7 +1047,7 @@
       <div class="auth-field">
         <div class="auth-label">Contraseña</div>
         <div class="auth-input-wrap">
-          <input class="auth-input" id="r-pass" type="password" autocomplete="new-password" placeholder="Mínimo 8 caracteres" oninput="checkPwStrength(this.value)" autocomplete="new-password">
+          <input class="auth-input" id="r-pass" type="password" autocomplete="new-password" placeholder="Mínimo 8 caracteres" oninput="checkPwStrength(this.value)" onkeydown="if(event.key==='Enter')doRegister()">
           <span class="auth-eye" onclick="togglePw('r-pass',this)">👁</span>
         </div>
         <div class="pw-strength" id="pw-bars">
@@ -1540,68 +1540,5 @@
 
 
 <!-- ── Welcome Banner ── -->
-<div id="welcome-banner" style="position:fixed;inset:0;background:rgba(10,10,20,.82);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(6px)">
-
-  <div style="background:#fff;border-radius:22px;padding:36px 28px 28px;max-width:440px;width:100%;position:relative;box-shadow:0 24px 64px rgba(0,0,0,.4);font-family:system-ui,-apple-system,sans-serif;text-align:center;color:#1a1d2e">
-
-    <!-- Botón cerrar -->
-    <button onclick="closeWelcomeBanner()" title="Cerrar" style="position:absolute;top:12px;right:12px;background:#ececec;border:none;border-radius:50%;width:30px;height:30px;font-size:14px;cursor:pointer;color:#333;display:flex;align-items:center;justify-content:center;flex-shrink:0">✕</button>
-
-    <!-- Icono -->
-    <div style="font-size:50px;line-height:1;margin-bottom:12px">🎯</div>
-
-    <!-- Título -->
-    <h2 style="margin:0 0 10px;font-size:22px;font-weight:800;color:#1a1d2e;letter-spacing:-.2px">Bienvenido a PredictX</h2>
-
-    <!-- Subtítulo -->
-    <p style="margin:0 0 22px;font-size:13.5px;color:#444;line-height:1.7">La plataforma de apuestas deportivas más completa. Apuesta en los mejores eventos del mundo con las mejores cuotas.</p>
-
-    <!-- Features -->
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:24px;text-align:left">
-      <div style="background:#f4f5fb;border-radius:12px;padding:11px 13px">
-        <div style="font-size:20px;margin-bottom:5px">⚽</div>
-        <div style="font-size:12.5px;font-weight:700;color:#1a1d2e;margin-bottom:2px">Deportes</div>
-        <div style="font-size:11.5px;color:#555;line-height:1.4">Fútbol, NBA, NFL, MLB, NHL y MMA</div>
-      </div>
-      <div style="background:#f4f5fb;border-radius:12px;padding:11px 13px">
-        <div style="font-size:20px;margin-bottom:5px">💰</div>
-        <div style="font-size:12.5px;font-weight:700;color:#1a1d2e;margin-bottom:2px">Cuotas reales</div>
-        <div style="font-size:11.5px;color:#555;line-height:1.4">Decimales actualizados en tiempo real</div>
-      </div>
-      <div style="background:#f4f5fb;border-radius:12px;padding:11px 13px">
-        <div style="font-size:20px;margin-bottom:5px">🎟</div>
-        <div style="font-size:12.5px;font-weight:700;color:#1a1d2e;margin-bottom:2px">Apuestas</div>
-        <div style="font-size:11.5px;color:#555;line-height:1.4">Simple y combinada</div>
-      </div>
-      <div style="background:#f4f5fb;border-radius:12px;padding:11px 13px">
-        <div style="font-size:20px;margin-bottom:5px">🔒</div>
-        <div style="font-size:12.5px;font-weight:700;color:#1a1d2e;margin-bottom:2px">Pagos seguros</div>
-        <div style="font-size:11.5px;color:#555;line-height:1.4">Yape, transferencia y tarjeta</div>
-      </div>
-    </div>
-
-    <!-- CTA -->
-    <button onclick="closeWelcomeBanner()" style="display:block;width:100%;padding:14px;border-radius:12px;background:#5f3dff;color:#fff;font-size:15px;font-weight:700;border:none;cursor:pointer;letter-spacing:.1px;box-shadow:0 4px 18px rgba(95,61,255,.4)">¡Empezar a apostar! →</button>
-
-    <!-- Disclaimer -->
-    <p style="margin:12px 0 0;font-size:10.5px;color:#999;line-height:1.5">+18 · Juega responsablemente · Las apuestas implican riesgo de pérdida económica</p>
-
-  </div>
-</div>
-
-
-<script>
-// Welcome banner - self-contained, no dependency on app.js
-function closeWelcomeBanner() {
-  var b = document.getElementById('welcome-banner');
-  if (!b) return;
-  b.style.opacity = '0';
-  b.style.transition = 'opacity .25s';
-  setTimeout(function() { b.style.display = 'none'; }, 260);
-}
-document.addEventListener('keydown', function(e) {
-  if (e.key === 'Escape') closeWelcomeBanner();
-});
-</script>
 </body>
 </html>
