@@ -3105,8 +3105,24 @@ function renderSecurityBadges() {
 
 /* ── Fix refreshAdminData to use session-scoped data ── */
 const _origRefresh = window.refreshAdminData;
-window.refreshAdminData = function() {
+window.refreshAdminData = async function() {
   if (!SESSION) return;
+  // Read balance from Supabase (source of truth)
+  try {
+    const { data: prof } = await _SB.from('profiles').select('balance,deposited,withdrawn').eq('email', SESSION.email).maybeSingle();
+    if (prof) {
+      const d = adminData();
+      d.balance = +(prof.balance||0);
+      d.deposited = +(prof.deposited||0);
+      d.withdrawn = +(prof.withdrawn||0);
+      saveAdminData(d);
+      // Update nav badge too
+      const navVal = document.getElementById('nav-balance-val');
+      if (navVal) navVal.textContent = '$' + d.balance.toFixed(2);
+      const navEl = document.getElementById('nav-balance-display');
+      if (navEl) navEl.style.display = 'flex';
+    }
+  } catch(_) {}
   const d    = adminData();
   const bets = betHistory();
   const open = bets.filter(b=>b.status==='open').length;
