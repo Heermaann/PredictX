@@ -1039,11 +1039,11 @@
       <div class="auth-sub">Empieza a apostar en menos de 2 minutos</div>
       <div class="auth-field">
         <div class="auth-label">Nombre completo</div>
-        <input class="auth-input" id="r-name" type="text" placeholder="Tu nombre y apellido" autocomplete="name">
+        <input class="auth-input" id="r-name" type="text" placeholder="Tu nombre y apellido" autocomplete="name" onkeydown="if(event.key==='Enter')doRegister()">
       </div>
       <div class="auth-field">
         <div class="auth-label">Email</div>
-        <input class="auth-input" id="r-email" type="email" placeholder="tu@email.com" autocomplete="email">
+        <input class="auth-input" id="r-email" type="email" placeholder="tu@email.com" autocomplete="email" onkeydown="if(event.key==='Enter')doRegister()">
       </div>
       <div class="auth-field">
         <div class="auth-label">Contraseña</div>
