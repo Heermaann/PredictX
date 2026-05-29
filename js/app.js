@@ -2164,7 +2164,9 @@ function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;')
 /* ══════════════════════════════════════════════════════════════
    SUPABASE — base de datos real entre dispositivos
 ══════════════════════════════════════════════════════════════ */
+window._SB = null; // will be set below
 const _SB = supabase.createClient('https://ghgkvtdhuqfpigbtzefz.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdoZ2t2dGRodXFmcGlnYnR6ZWZ6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg0MTQ4NDYsImV4cCI6MjA5Mzk5MDg0Nn0.guFwC8DFo1Wt_TB_D2fv4JifQK-r0lo2hlsuxl4umtU');
+window._SB = _SB; // expose for debugging
 
 // localStorage sigue usándose solo para preferencias de UI (tema, deporte)
 // Safe profile read - handles RLS errors gracefully
