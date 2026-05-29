@@ -725,9 +725,11 @@ function buildCard(m, i) {
         <div class="mc-title">${esc(m.home_team)} vs ${esc(m.away_team)}</div>
         <div class="mc-meta">
           ${live ? '<span class="mc-live-badge">EN VIVO</span>' : ''}
-          <span>${esc(m.sport_title||m.sport_key)}</span>
+          <span>${esc(m.league||m.sport_title||m.sport_key)}</span>
           <span class="mc-dot"></span>
           <span>${fDate(m.commence_time)}</span>
+          <span class="mc-dot"></span>
+          <span>⏱${m.duration_minutes||sportDuration(m.sport_key)}min</span>
         </div>
       </div>
     </div>
@@ -1496,9 +1498,9 @@ function renderDetail(m) {
       <div style="flex:1;min-width:0">
         <div class="det-title">${esc(m.home_team)} vs ${esc(m.away_team)}</div>
         <div class="det-tags">
-          <span class="det-tag league">${esc(m.sport_title)}</span>
+          <span class="det-tag league">${esc(m.league||m.sport_title||"")}</span>
           <span class="det-tag">📅 ${fDate(m.commence_time)}</span>
-          
+          <span class="det-tag">⏱ ${m.duration_minutes||sportDuration(m.sport_key)} min</span>
         </div>
       </div>
     </div>
