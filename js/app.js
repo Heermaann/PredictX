@@ -148,6 +148,26 @@ function toggleBetslip() {
   document.getElementById('overlay').classList.remove('show');
 }
 
+
+async function updateNavBalance() {
+  if (!SESSION) {
+    const el = document.getElementById('nav-balance-display');
+    if (el) el.style.display = 'none';
+    return;
+  }
+  try {
+    const { data } = await _SB.from('profiles').select('balance').eq('email', SESSION.email).maybeSingle();
+    const bal = +(data?.balance || 0);
+    const el = document.getElementById('nav-balance-display');
+    const val = document.getElementById('nav-balance-val');
+    if (el) el.style.display = 'flex';
+    if (val) val.textContent = '$' + bal.toFixed(2);
+    // Also update dashboard balance
+    setText('sc-balance', '$' + bal.toFixed(2));
+    setText('tx-balance', '$' + bal.toFixed(2));
+    const d = adminData(); d.balance = bal; saveAdminData(d);
+  } catch(_) {}
+}
 async function updateActiveBetsCount() {
   try {
     const { count } = await _SB.from('bets')
@@ -2583,6 +2603,8 @@ function onLoginSuccess(animate) {
 
   // Update active bets badge
   setTimeout(updateActiveBetsCount, 1000);
+  // Show nav balance
+  setTimeout(updateNavBalance, 500);
 
   // Init notifications
   initNotifications();
@@ -3055,6 +3077,7 @@ window.placeBets = async function() {
   setText('sc-balance','$'+newBalance.toFixed(2));
   showToast('✅ Apuesta registrada · Saldo: $'+newBalance.toFixed(2));
   refreshAdminData();
+  updateNavBalance();
   } catch(err) {
     showToast('❌ Error al procesar apuesta: ' + err.message, 'error');
   }
