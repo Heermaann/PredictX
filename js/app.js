@@ -386,6 +386,7 @@ function processManualEvent(e) {
       away: { price:e.spread_away, point:e.spread_away_pt }, raw:{}
     } : null,
     description: e.description || null,
+    duration_minutes: e.duration_minutes || null,
     spark: genSpark(imp1||50, 24),
     vol: Math.round(Math.random()*500000+50000),
     sportCat: (e.sport_key||'').split('_')[0],
@@ -517,6 +518,13 @@ function sportIco(key) {
   return m[(key||'').split('_')[0]]||'🎯';
 }
 
+
+// Default durations by sport
+function sportDuration(sportKey) {
+  const s = (sportKey||'').split('_')[0];
+  return {soccer:90, basketball:48, americanfootball:60, baseball:180,
+          icehockey:60, mma:25, tennis:120, golf:0}[s] || 90;
+}
 function isLive(m) {
   // Manual events use explicit _status field
   if (m._manual) return m._status === 'live';
