@@ -86,19 +86,20 @@ async function renderActiveBets() {
   if (foot) foot.style.display = 'none';
 
   if (!SESSION) {
-    body.innerHTML = '<div class="slip-empty"><div class="slip-empty-ico">🔒</div><div class="slip-empty-txt">Inicia sesión para ver tus apuestas activas</div></div>';
+    body.innerHTML = '<div class="slip-empty"><div class="slip-empty-ico">🔒</div><div class="slip-empty-txt">Inicia sesión para ver tus apuestas</div></div>';
     return;
   }
 
   body.innerHTML = '<div class="slip-empty"><div class="slip-empty-ico">⏳</div><div class="slip-empty-txt">Cargando...</div></div>';
 
   try {
-    const { data: bets } = await _SB.from('bets')
+    const { data: bets, error } = await _SB.from('bets')
       .select('*')
       .eq('user_email', SESSION.email)
       .eq('status', 'open')
       .order('created_at', { ascending: false })
       .limit(20);
+    if (error) throw error;
 
     // Update badge count
     const countBadge = document.getElementById('slip-active-count');
@@ -2568,6 +2569,9 @@ function onLoginSuccess(animate) {
     }
   }
 
+  // Update active bets badge
+  setTimeout(updateActiveBetsCount, 1000);
+
   // Init notifications
   initNotifications();
   // Always ensure view-list is visible and others hidden
@@ -4363,7 +4367,7 @@ window.renderBets = async function renderBets(filter) {
   }
   tb.innerHTML = shown.map(b=>`
     <tr>
-      <td style="white-space:nowrap;color:var(--text2)">${b.date||'—'}</td>
+      <td style="white-space:nowrap;color:var(--text2)">${(b.created_at||b.date||'').slice(0,10)||'—'}</td>
       <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(b.match_name||b.match||'—')}</td>
       <td style="font-weight:600">${esc(b.pick||'—')}</td>
       <td><span class="tx-type bet">${b.type==='combo'?'Combinada':'Simple'}</span></td>
