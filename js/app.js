@@ -283,7 +283,9 @@ async function loadMarkets(force=false) {
     // ── Read from Supabase api_events (no API call) ──
     // Filter by selected sport/league if one is active
     // Only show events starting in future or up to 3h ago (in progress)
-    const _cutoff = new Date(Date.now() - 2*60*60*1000).toISOString();
+    // Use wider window for 'all' view (48h), narrower for specific sports
+    const cutoffHours = (S.sport && S.sport !== 'all') ? 2 : 48;
+    const _cutoff = new Date(Date.now() - cutoffHours*60*60*1000).toISOString();
     let apiQuery = _SB
       .from('api_events')
       .select('*')
@@ -342,7 +344,15 @@ async function loadMarkets(force=false) {
       showToast(`✅ ${total} eventos cargados desde la base de datos`);
   renderCatPills();
     } else {
-      showToast('⚠️ Sin eventos. Sincroniza desde el panel admin.');
+      // No events loaded - show helpful message without alarming toast
+      const evList = document.getElementById('events-list');
+      if (evList) {
+        evList.innerHTML = `<div style="text-align:center;padding:60px 20px;color:var(--text2)">
+          <div style="font-size:48px;margin-bottom:16px">📅</div>
+          <div style="font-size:16px;font-weight:600;margin-bottom:8px">Sin eventos disponibles</div>
+          <div style="font-size:13px">Sincroniza desde el panel admin para cargar partidos</div>
+        </div>`;
+      }
     }
 
     // Merge: featured manual first, then by time
@@ -1757,7 +1767,7 @@ function renderDetail(m) {
       <!-- Descripción/contexto del partido -->
       ${m.description ? `<div class="det-description">
         <div class="det-desc-title">📋 Contexto del partido</div>
-        <div class="det-desc-body">\${esc(m.description)}</div>
+        <div class="det-desc-body">${esc(m.description)}</div>
       </div>` : ''}
     </div>
 
