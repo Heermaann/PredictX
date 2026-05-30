@@ -134,6 +134,38 @@ async function renderActiveBets() {
 
 // Update active bets count badge when betslip opens
 const _origToggleBetslip = window.toggleBetslip || toggleBetslip;
+
+function toggleUserMenu() {
+  const menu = document.getElementById('user-nav-menu');
+  if (!menu) return;
+  const isOpen = menu.style.display !== 'none';
+  menu.style.display = isOpen ? 'none' : 'block';
+  if (!isOpen && SESSION) {
+    const nameEl = document.getElementById('user-menu-name');
+    const emailEl = document.getElementById('user-menu-email');
+    if (nameEl) nameEl.textContent = SESSION.name || SESSION.email;
+    if (emailEl) emailEl.textContent = SESSION.email;
+    setTimeout(() => {
+      document.addEventListener('click', function closeMenu(e) {
+        const av = document.getElementById('nav-avatar');
+        if (av && !av.contains(e.target)) {
+          menu.style.display = 'none';
+          document.removeEventListener('click', closeMenu);
+        }
+      });
+    }, 10);
+  }
+}
+
+function updateNavAvatar() {
+  const el = document.getElementById('nav-avatar');
+  if (!el || !SESSION) return;
+  const initial = (SESSION.name || SESSION.email || 'U')[0].toUpperCase();
+  // Set the text node (first child), not innerHTML since menu is inside
+  el.childNodes[0] && el.childNodes[0].nodeType === 3
+    ? (el.childNodes[0].textContent = initial)
+    : el.insertBefore(document.createTextNode(initial), el.firstChild);
+}
 function toggleBetslip() {
   const bs = document.getElementById('betslip');
   const ov = document.getElementById('overlay-slip');
@@ -2873,6 +2905,15 @@ function onLoginSuccess(animate) {
   // Render dynamic category pills from Supabase
   setTimeout(renderCatPills, 300);
   setTimeout(renderFullSidebar, 400);
+  // Show nav elements for logged-in state
+  setTimeout(() => {
+    const avatar = document.getElementById('nav-avatar');
+    const depositBtn = document.getElementById('nav-deposit-btn');
+    const loginBtn = document.getElementById('nav-login-btn');
+    if (avatar) { avatar.style.display = 'flex'; updateNavAvatar(); }
+    if (depositBtn) depositBtn.style.display = '';
+    if (loginBtn) loginBtn.style.display = 'none';
+  }, 100);
   // Show nav balance
   setTimeout(updateNavBalance, 500);
 
