@@ -319,6 +319,7 @@ async function loadMarkets(force=false) {
     const total = apiEvents.length + manualMarkets.length;
     if (total > 0) {
       showToast(`✅ ${total} eventos cargados desde la base de datos`);
+  renderCatPills();
     } else {
       showToast('⚠️ Sin eventos. Sincroniza desde el panel admin.');
     }
@@ -544,15 +545,40 @@ async function renderCatPills() {
   const wrap = document.getElementById('cat-pills-wrap');
   if (!wrap) return;
   try {
-    const { data: sports } = await _SB.from('sports').select('key,title,icon').eq('active', true).order('sort_order');
-    if (!sports || !sports.length) return;
+    const cutoff = new Date(Date.now() - 2*60*60*1000).toISOString();
+    const [sportsRes, countsRes] = await Promise.all([
+      _SB.from('sports').select('key,title,icon').eq('active', true).order('sort_order'),
+      _SB.from('api_events').select('sport_key').not('status','eq','finished').or(`commence_time.gt.${cutoff},show_in_home.eq.true`)
+    ]);
+    const sports = sportsRes.data || [];
+    if (!sports.length) return;
+
+    // Count events per sport prefix
+    const counts = {};
+    let total = 0;
+    (countsRes.data || []).forEach(e => {
+      const prefix = (e.sport_key||'').split('_')[0];
+      counts[prefix] = (counts[prefix]||0) + 1;
+      total++;
+    });
+    // Also count manual events
+    const manRes = await _SB.from('manual_events').select('sport_key').in('status',['upcoming','live']);
+    (manRes.data||[]).forEach(e => {
+      const prefix = (e.sport_key||'').split('_')[0];
+      counts[prefix] = (counts[prefix]||0) + 1;
+      total++;
+    });
+
     const current = document.querySelector('.cat-pill.active')?.dataset?.cat || 'all';
+    const badge = n => n ? `<span style="background:var(--accent);color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;margin-left:4px;font-weight:700">${n}</span>` : '';
+
     wrap.innerHTML = `
-      <button class="cat-pill ${current==='all'?'active':''}" data-cat="all" onclick="setCat('all',this)">Todos</button>
-      ${sports.map(s => `
-        <button class="cat-pill ${current===s.key?'active':''}" data-cat="${s.key}" onclick="setCat('${s.key}',this)">
-          ${s.icon||''} ${s.title}
-        </button>`).join('')}
+      <button class="cat-pill ${current==='all'?'active':''}" data-cat="all" onclick="setCat('all',this)">Todos${badge(total)}</button>
+      ${sports.map(s => {
+        const prefix = s.key.split('_')[0];
+        const n = counts[prefix] || 0;
+        return `<button class="cat-pill ${current===s.key?'active':''}" data-cat="${s.key}" onclick="setCat('${s.key}',this)">${s.icon||''} ${s.title}${badge(n)}</button>`;
+      }).join('')}
     `;
   } catch(e) { /* keep hardcoded pills on error */ }
 }
