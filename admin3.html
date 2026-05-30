@@ -1765,8 +1765,8 @@ async function renderSports(){
       <td style="font-family:var(--mono);font-size:12px;color:var(--text2)">${esc(s.key)}</td>
       <td style="font-size:20px">${esc(s.icon||'⚽')}</td>
       <td>
-        <span class="badge badge-blue">${leagueCount[s.key]||0} ligas</span>
-        <span class="badge badge-green" style="margin-left:4px">${eventCount[s.key.split('_')[0]]||0} partidos</span>
+        <span class="badge badge-blue" onclick="admGoToLeaguesBySport('${esc(s.key)}')" style="cursor:pointer" title="Ver ligas de esta categoría">${leagueCount[s.key]||0} ligas →</span>
+        <span class="badge badge-green" onclick="admGoToEventsBySport('${esc(s.key)}')" style="cursor:pointer;margin-left:4px" title="Ver partidos de esta categoría">${eventCount[s.key.split('_')[0]]||0} partidos →</span>
       </td>
       <td style="text-align:center">${s.sort_order}</td>
       <td>${s.active?'<span class="badge badge-green">Activo</span>':'<span class="badge badge-orange">Inactivo</span>'}</td>
@@ -1810,6 +1810,34 @@ async function admSaveSport(){
 async function admToggleSport(key,active){ await _SB.from('sports').update({active}).eq('key',key); showToast(active?'✅ Activada':'⏸ Desactivada'); await renderSports(); }
 async function admDeleteSport(key){ if(!confirm(`¿Borrar la categoría "${key}"?`))return; await _SB.from('leagues').delete().eq('sport_key',key); await _SB.from('sports').delete().eq('key',key); showToast('🗑 Categoría eliminada'); await renderSports(); }
 
+
+// ── Admin cross-navigation ──
+function admGoToLeaguesBySport(sportKey) {
+  // Go to leagues page filtered by this sport
+  _leagueSearch = '';
+  _leagueSportFilter = sportKey;
+  admShowPage('leagues', document.getElementById('nav-leagues'));
+}
+
+function admGoToEventsBySport(sportKey) {
+  // Go to events page filtered by this sport
+  admEvFilter = sportKey;
+  admShowPage('events', document.getElementById('nav-events'));
+}
+
+function admGoToEventsByLeague(apiKey, leagueName) {
+  // Go to events page and search for this league
+  _evSearch = leagueName;
+  admEvFilter = 'all';
+  admShowPage('events', document.getElementById('nav-events'));
+  // Set search box
+  setTimeout(() => {
+    const inp = document.getElementById('search-events');
+    if (inp) { inp.value = leagueName; admSearchEvents(leagueName); }
+  }, 100);
+}
+
+let _leagueSportFilter = '';
 // ── Ligas ──
 let _leagueSearch='';
 async function renderLeagues(){
@@ -1821,11 +1849,14 @@ async function renderLeagues(){
     _leagues=data||[];
     let list=_leagues;
     if(_leagueSearch) list=list.filter(l=>(l.name||'').toLowerCase().includes(_leagueSearch.toLowerCase()));
+    if(_leagueSportFilter) { list=list.filter(l=>l.sport_key===_leagueSportFilter); _leagueSportFilter=''; }
     const sportIcons={soccer:'⚽',basketball:'🏀',americanfootball:'🏈',baseball:'⚾',icehockey:'🏒',mma:'🥊'};
     if(!list.length){ body.innerHTML=`<tr><td colspan="7" class="table-empty">Sin ligas. Crea la primera con "+ Nueva liga"</td></tr>`; return; }
     body.innerHTML=list.map(l=>`<tr>
-      <td><div style="display:flex;align-items:center;gap:8px"><span style="font-size:18px">${esc(l.icon||'🏆')}</span><strong>${esc(l.name)}</strong></div></td>
-      <td><span class="badge badge-purple">${sportIcons[l.sport_key]||'🏅'} ${esc(l.sport_key)}</span></td>
+      <td><div style="display:flex;align-items:center;gap:8px"><span style="font-size:18px">${esc(l.icon||'🏆')}</span><strong style="cursor:pointer;color:var(--accent)" onclick="admGoToEventsByLeague('${esc(l.api_key||l.key)}','${esc(l.name)}')" title="Ver partidos de esta liga">${esc(l.name)} →</strong></div></td>
+      <td>
+        <span class="badge badge-purple" onclick="admGoToLeaguesBySport('${esc(l.sport_key)}')" style="cursor:pointer" title="Ver todas las ligas de esta categoría">${((_sports.find(s=>s.key===l.sport_key)||{}).icon||sportIcons[l.sport_key]||'🏅')} ${esc((_sports.find(s=>s.key===l.sport_key)||{}).title||l.sport_key)}</span>
+      </td>
       <td>${esc(l.country||'—')}</td>
       <td style="font-family:var(--mono);font-size:11px;color:var(--text2)">${esc(l.api_key||'—')}</td>
       <td style="text-align:center">${l.sort_order}</td>
@@ -1942,9 +1973,35 @@ async function renderEvents(){
   }catch(err){ body.innerHTML=`<tr><td colspan="6" class="table-empty" style="color:var(--red)">❌ ${esc(err.message)}</td></tr>`; }
 }
 
+
+function populateEvSportSelect(selectedKey) {
+  const sel = document.getElementById('ev-sport');
+  if (!sel) return;
+  sel.innerHTML = '';
+  const defaults = [
+    {key:'soccer_epl',title:'Fútbol',icon:'⚽'},
+    {key:'basketball_nba',title:'Baloncesto',icon:'🏀'},
+    {key:'americanfootball_nfl',title:'NFL',icon:'🏈'},
+    {key:'baseball_mlb',title:'Béisbol',icon:'⚾'},
+    {key:'icehockey_nhl',title:'Hockey',icon:'🏒'},
+    {key:'mma_mixed_martial_arts',title:'MMA',icon:'🥊'}
+  ];
+  const keyMap = {soccer:'soccer_epl',basketball:'basketball_nba',americanfootball:'americanfootball_nfl',baseball:'baseball_mlb',icehockey:'icehockey_nhl',mma:'mma_mixed_martial_arts'};
+  const sports = (_sports&&_sports.length) ? _sports.map(s=>({
+    key: s.key.includes('_') ? s.key : (keyMap[s.key]||s.key),
+    title: s.title||s.name||s.key, icon: s.icon||'🏆'
+  })) : defaults;
+  sports.forEach(s=>{
+    const o=document.createElement('option');
+    o.value=s.key; o.textContent=(s.icon||'')+' '+(s.title||s.key);
+    if(s.key===selectedKey || (!selectedKey && s.key==='soccer_epl')) o.selected=true;
+    sel.appendChild(o);
+  });
+  admOnEvSportChange();
+}
 function admOnEvSportChange(){ const sport=document.getElementById('ev-sport')?.value||''; const cat=sport.split('_')[0]; const xw=document.getElementById('ev-oddx-wrap'); if(xw) xw.style.display=(cat==='soccer'||cat==='icehockey')?'':'none'; const sm=document.getElementById('ev-soccer-markets'); if(sm) sm.style.display=cat==='soccer'?'':'none'; }
 
-function admOpenCreateEvent(){ _editingEventId=null; document.getElementById('event-modal-title').textContent='Nuevo Partido'; ['ev-league','ev-home','ev-away','ev-odd1','ev-oddx','ev-odd2','ev-total-line','ev-total-over','ev-total-under','ev-btts-yes','ev-btts-no','ev-spread-home-pt','ev-spread-home','ev-spread-away-pt','ev-spread-away'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';}); document.getElementById('ev-featured').checked=false; const _dElC=document.getElementById('ev-description'); if(_dElC) _dElC.value=''; document.getElementById('ev-sport').value='soccer_epl'; const tomorrow=new Date(Date.now()+86400000); tomorrow.setMinutes(0,0,0); document.getElementById('ev-datetime').value=tomorrow.toISOString().slice(0,16); admOnEvSportChange(); openModal('event-modal-overlay'); }
+function admOpenCreateEvent(){ _editingEventId=null; document.getElementById('event-modal-title').textContent='Nuevo Partido'; ['ev-league','ev-home','ev-away','ev-odd1','ev-oddx','ev-odd2','ev-total-line','ev-total-over','ev-total-under','ev-btts-yes','ev-btts-no','ev-spread-home-pt','ev-spread-home','ev-spread-away-pt','ev-spread-away'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';}); document.getElementById('ev-featured').checked=false; const _dElC=document.getElementById('ev-description'); if(_dElC) _dElC.value=''; populateEvSportSelect('soccer_epl'); const tomorrow=new Date(Date.now()+86400000); tomorrow.setMinutes(0,0,0); document.getElementById('ev-datetime').value=tomorrow.toISOString().slice(0,16); admOnEvSportChange(); openModal('event-modal-overlay'); }
 
 function admOpenEditEvent(id){ const e=_manualEvents.find(x=>x.id===id); if(!e)return; _editingEventId=id; document.getElementById('event-modal-title').textContent='Editar Partido'; document.getElementById('ev-sport').value=e.sport_key||'soccer_epl'; document.getElementById('ev-league').value=e.league||''; document.getElementById('ev-home').value=e.home_team||''; document.getElementById('ev-away').value=e.away_team||''; document.getElementById('ev-datetime').value=e.commence_time?new Date(e.commence_time).toISOString().slice(0,16):''; document.getElementById('ev-featured').checked=!!e.featured; const descEl=document.getElementById('ev-description'); if(descEl) descEl.value=e.description||''; const durEl=document.getElementById('ev-duration'); if(durEl) durEl.value=e.duration_minutes||90; ['ev-odd1','ev-oddx','ev-odd2','ev-total-line','ev-total-over','ev-total-under','ev-btts-yes','ev-btts-no','ev-spread-home-pt','ev-spread-home','ev-spread-away-pt','ev-spread-away'].forEach(id=>{ const el=document.getElementById(id); const key=id.replace('ev-','').replace(/-([a-z])/g,(_,c)=>c.toUpperCase()); if(el) el.value=e[key]||''; }); admOnEvSportChange(); openModal('event-modal-overlay'); }
 
@@ -2017,7 +2074,7 @@ async function admResolveEvent(id,result){
   let resolved=0;
   for(const bet of (openBets||[])){
     const won=bet.pick===result||(result==='1'&&bet.pick===e.home_team)||(result==='2'&&bet.pick===e.away_team)||(result==='X'&&(bet.pick==='Empate'||bet.pick==='X'));
-    const newStatus=won?'win':'loss'; const ret=won?+(bet.odd*bet.stake).toFixed(2):0;
+    const newStatus=won?'win':'loss'; const ret=won?+(+(bet.odds||bet.odd||0) * +(bet.stake||0)).toFixed(2):0;
     await _SB.from('bets').update({status:newStatus,ret}).eq('id',bet.id);
     if(won&&ret>0){
       const {data:prof}=await _SB.from('profiles').select('balance').eq('email',bet.user_email).maybeSingle();
@@ -2330,12 +2387,12 @@ async function admDeclareOutcome(id, source, result, homeTeam, awayTeam){
   }
 
   // Resolve open bets for this event
-  const { data: openBets } = await _SB.from('bets').select('*').eq('status','open').ilike('match_name',`%${homeTeam}%`);
+  const { data: openBets } = await _SB.from('bets').select('*').eq('status','open').or(`match_name.ilike.%${homeTeam}%,match_name.ilike.%${awayTeam}%`);
   let resolved = 0;
   for(const bet of (openBets||[])){
     const won = bet.pick===result||(result==='1'&&bet.pick===homeTeam)||(result==='2'&&bet.pick===awayTeam)||(result==='X'&&(bet.pick==='Empate'||bet.pick==='X'));
     const newStatus = won?'win':'loss';
-    const ret = won?+(bet.odd*bet.stake).toFixed(2):0;
+    const ret = won?+(+(bet.odds||bet.odd||0) * +(bet.stake||0)).toFixed(2):0;
     await _SB.from('bets').update({status:newStatus,ret}).eq('id',bet.id);
     if(won&&ret>0){
       const {data:prof}=await _SB.from('profiles').select('balance').eq('email',bet.user_email).maybeSingle();
@@ -2504,7 +2561,7 @@ function exportCSV(type){
     data=_cache.users.map(u=>[u.email,u.name||'',u.country||'',u.balance||0,u.deposited||0,u.role||'user',u.created_at||'']);
   } else if(type==='bets'){
     headers=['ID','Usuario','Partido','Pick','Cuota','Apuesta','Retorno','Estado','Fecha'];
-    data=_cache.bets.map(b=>[(b.id||'').slice(-8),b.user_email,b.match_name||'',b.pick||'',b.odd||0,b.stake||0,b.ret||0,b.status,b.created_at||'']);
+    data=_cache.bets.map(b=>[(b.id||'').slice(-8),b.user_email,b.match_name||'',b.pick||'',+(b.odds||b.odd||0),b.stake||0,+(b.payout||b.ret||0),b.status,b.created_at||'']);
   } else if(type==='transactions'){
     headers=['ID','Usuario','Descripción','Tipo','Importe','Saldo','Fecha'];
     data=_cache.tx.map(t=>[(t.id||'').slice(-8),t.user_email,t.description||'',t.type,t.amount||0,t.balance||0,t.created_at||'']);
