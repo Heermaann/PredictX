@@ -1852,18 +1852,42 @@ function admOpenLeagueModal(){
   const sel=document.getElementById('league-sport');
   sel.innerHTML='';
   (_sports&&_sports.length?_sports:[
-    {key:'soccer',name:'Fútbol',icon:'⚽'},{key:'basketball',name:'Baloncesto',icon:'🏀'},
-    {key:'americanfootball',name:'Fútbol Americano',icon:'🏈'},{key:'baseball',name:'Béisbol',icon:'⚾'},
-    {key:'icehockey',name:'Hockey',icon:'🏒'},{key:'mma',name:'MMA',icon:'🥊'}
+    {key:'soccer',title:'Fútbol',icon:'⚽'},{key:'basketball',title:'Baloncesto',icon:'🏀'},
+    {key:'americanfootball',title:'Fútbol Americano',icon:'🏈'},{key:'baseball',title:'Béisbol',icon:'⚾'},
+    {key:'icehockey',title:'Hockey',icon:'🏒'},{key:'mma',title:'MMA',icon:'🥊'}
   ]).forEach(s=>{
     const o=document.createElement('option');
-    o.value=s.key; o.textContent=(s.icon||'')+(s.name||s.key);
+    o.value=s.key; o.textContent=(s.icon||'')+(s.title||s.name||s.key);
     sel.appendChild(o);
   });
   if(sel.options.length) sel.selectedIndex=0;
   openModal('league-modal-overlay');
 }
-function admOpenEditLeague(id){ const l=_leagues.find(x=>x.id===id); if(!l)return; _editingLeagueId=id; document.getElementById('league-modal-title').textContent='Editar Liga'; document.getElementById('league-name').value=l.name||''; document.getElementById('league-country').value=l.country||''; document.getElementById('league-icon').value=l.icon||'🏆'; document.getElementById('league-sport').value=l.sport_key||'soccer'; document.getElementById('league-api-key').value=l.api_key||''; document.getElementById('league-order').value=l.sort_order||0; document.getElementById('league-active').checked=!!l.active; openModal('league-modal-overlay'); }
+function admOpenEditLeague(id){
+  const l=_leagues.find(x=>x.id===id); if(!l)return;
+  _editingLeagueId=id;
+  document.getElementById('league-modal-title').textContent='Editar Liga';
+  document.getElementById('league-name').value=l.name||'';
+  document.getElementById('league-country').value=l.country||'';
+  document.getElementById('league-icon').value=l.icon||'🏆';
+  document.getElementById('league-api-key').value=l.api_key||'';
+  document.getElementById('league-order').value=l.sort_order||0;
+  document.getElementById('league-active').checked=!!l.active;
+  // Populate sport select from _sports (includes custom categories)
+  const sel=document.getElementById('league-sport');
+  sel.innerHTML='';
+  (_sports&&_sports.length?_sports:[
+    {key:'soccer',title:'Fútbol',icon:'⚽'},{key:'basketball',title:'Baloncesto',icon:'🏀'},
+    {key:'americanfootball',title:'Fútbol Americano',icon:'🏈'},{key:'baseball',title:'Béisbol',icon:'⚾'},
+    {key:'icehockey',title:'Hockey',icon:'🏒'},{key:'mma',title:'MMA',icon:'🥊'}
+  ]).forEach(s=>{
+    const o=document.createElement('option');
+    o.value=s.key; o.textContent=(s.icon||'')+(s.title||s.name||s.key);
+    if(s.key===l.sport_key) o.selected=true;
+    sel.appendChild(o);
+  });
+  openModal('league-modal-overlay');
+}
 function admCloseLeagueModal(){ closeModal('league-modal-overlay'); }
 
 async function admSaveLeague(){
@@ -1936,7 +1960,7 @@ async function admSaveEvent(){
   if(!league||!home||!away||!dt){showToast('❌ Completa todos los campos obligatorios','error');return;}
   // Build sport title from _sports cache (includes custom categories)
   const sportTitles = {};
-  (_sports||[]).forEach(s => { sportTitles[s.key] = s.name; });
+  (_sports||[]).forEach(s => { sportTitles[s.key] = s.title||s.name||s.key; });
   // Fallback defaults
   Object.assign(sportTitles, {soccer_epl:'Fútbol',basketball_nba:'Baloncesto',americanfootball_nfl:'NFL',baseball_mlb:'Béisbol',icehockey_nhl:'Hockey',mma_mixed_martial_arts:'MMA'});
   const isLiveChk=document.getElementById('ev-live').checked;
