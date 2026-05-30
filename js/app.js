@@ -331,9 +331,7 @@ async function loadMarkets(force=false) {
 
     if (apiError) {
       console.error('loadMarkets api_events ERROR:', apiError.code, apiError.message);
-    } else {
-      console.log('loadMarkets: api_events returned', (apiData||[]).length, 'rows');
-    }
+}
 
     let apiEvents = (apiData || []).map(e => { try { return processManualEvent({ ...e, _fromApi: true, sport_key: e.sport_key, league: e.league || e.sport_title }); } catch(err) { console.warn('processManualEvent error:', err); return null; } }).filter(Boolean);
 
@@ -388,7 +386,6 @@ async function loadMarkets(force=false) {
       if (!a._featured && b._featured) return 1;
       return new Date(a.commence_time) - new Date(b.commence_time);
     });
-    console.log('S.markets total:', S.markets.length, '| manual:', manualMarkets.length, '| api:', apiEvents.length);
 
     _marketsLastLoaded = Date.now();
     updateSidebarCounts();
@@ -869,11 +866,8 @@ function applyFilters() {
   try {
   let list = [...S.markets];
 
-  // Only filter out explicitly finished events
-  list = list.filter(m => {
-    if (m._manual) return m._status !== 'finished';
-    return m.status !== 'finished';
-  });
+  // Filter out finished events only
+  list = list.filter(m => m.status !== 'finished' && m._status !== 'finished');
 
   // Sport category (cat-bar pills like Fútbol, Baloncesto...)
   // Manual events always show regardless of sport filter (they have their own sportCat)
