@@ -320,8 +320,6 @@ async function loadMarkets(force=false) {
       .select('*')
       .not('status', 'eq', 'finished')
       .order('commence_time', { ascending: true })
-      .limit(300)
-      .order('commence_time', { ascending: true })
       .limit(300);
 
     // If a specific league is selected, filter by sport_key
@@ -332,8 +330,9 @@ async function loadMarkets(force=false) {
     const { data: apiData, error: apiError } = await apiQuery;
 
     if (apiError) {
-      console.warn('loadMarkets api_events error:', apiError.message);
-      // Don't throw - continue with empty apiEvents
+      console.error('loadMarkets api_events ERROR:', apiError.code, apiError.message);
+    } else {
+      console.log('loadMarkets: api_events returned', (apiData||[]).length, 'rows');
     }
 
     let apiEvents = (apiData || []).map(e => { try { return processManualEvent({ ...e, _fromApi: true, sport_key: e.sport_key, league: e.league || e.sport_title }); } catch(err) { console.warn('processManualEvent error:', err); return null; } }).filter(Boolean);
@@ -389,6 +388,7 @@ async function loadMarkets(force=false) {
       if (!a._featured && b._featured) return 1;
       return new Date(a.commence_time) - new Date(b.commence_time);
     });
+    console.log('S.markets total:', S.markets.length, '| manual:', manualMarkets.length, '| api:', apiEvents.length);
 
     _marketsLastLoaded = Date.now();
     updateSidebarCounts();
@@ -431,7 +431,7 @@ function processManualEvent(e) {
     id: e.id, sport_key: e.sport_key, sport_title: e.sport_title,
     home_team: e.home_team, away_team: e.away_team,
     commence_time: e.commence_time,
-    bookmakers: [], _manual: true, _featured: e.featured, _status: e.status,
+    bookmakers: [], _manual: !e._fromApi, _featured: e.featured, _status: e.status, status: e.status,
     best1: o1||null, bestX: oX||null, best2: o2||null,
     imp1, impX, imp2,
     margin: margin > 0 ? +margin.toFixed(1) : null,
@@ -1347,20 +1347,18 @@ async function openDetail(idx) {
   setTimeout(updateSidebarVisibility, 50);
   document.getElementById('view-detail').style.display = 'block';
 
-  // Fetch fresh description from Supabase (bypasses 5min cache)
+  // Fetch fresh description BEFORE rendering
   try {
     const table = m._manual ? 'manual_events' : 'api_events';
-    let fresh = null;
-    // Try by id first
-    const r1 = await _SB.from(table).select('description').eq('id', m.id).maybeSingle();
-    fresh = r1.data;
-    // Fallback: match by home+away team name
-    if (!fresh || !fresh.description) {
-      const r2 = await _SB.from(table).select('description')
-        .ilike('home_team', m.home_team).ilike('away_team', m.away_team).maybeSingle();
-      fresh = r2.data;
+    const { data: d1 } = await _SB.from(table).select('description').eq('id', String(m.id)).maybeSingle();
+    if (d1?.description) {
+      m = { ...m, description: d1.description };
+    } else {
+      const { data: d2 } = await _SB.from(table).select('description')
+        .ilike('home_team', (m.home_team||'').replace(/'/g,"''"))
+        .ilike('away_team', (m.away_team||'').replace(/'/g,"''")).maybeSingle();
+      if (d2?.description) m = { ...m, description: d2.description };
     }
-    if (fresh && fresh.description) m = { ...m, description: fresh.description };
   } catch(_) {}
 
   renderDetail(m);
