@@ -3141,44 +3141,7 @@ function renderSecurityBadges() {
 /* showDepositModal defined later */
 /* showWithdrawModal defined later */
 
-/* ── Fix refreshAdminData to use session-scoped data ── */
-const _origRefresh = window.refreshAdminData;
-window.refreshAdminData = async function() {
-  if (!SESSION) return;
-  // Read balance from Supabase (source of truth)
-  try {
-    const { data: prof } = await _SB.from('profiles').select('balance,deposited,withdrawn').eq('email', SESSION.email).maybeSingle();
-    if (prof) {
-      const d = adminData();
-      d.balance = +(prof.balance||0);
-      d.deposited = +(prof.deposited||0);
-      d.withdrawn = +(prof.withdrawn||0);
-      saveAdminData(d);
-      // Update nav badge too
-      const navVal = document.getElementById('nav-balance-val');
-      if (navVal) navVal.textContent = '$' + d.balance.toFixed(2);
-      const navEl = document.getElementById('nav-balance-display');
-      if (navEl) navEl.style.display = 'flex';
-    }
-  } catch(_) {}
-  const d    = adminData();
-  const bets = betHistory();
-  const open = bets.filter(b=>b.status==='open').length;
-  const won  = bets.filter(b=>b.status==='win').length;
-  const totalStake = bets.reduce((a,b)=>a+(b.stake||0),0);
-  const totalRet   = bets.filter(b=>b.status==='win').reduce((a,b)=>a+(b.ret||0),0);
-  const roi  = totalStake>0?((totalRet-totalStake)/totalStake*100).toFixed(1)+'%':'—';
-  setText('sc-balance',  '$'+d.balance.toFixed(2));
-  setText('sc-open',     open);
-  setText('sc-won',      won);
-  setText('sc-roi',      roi);
-  setText('tx-balance',  '$'+d.balance.toFixed(2));
-  setText('tx-deposited','$'+d.deposited.toFixed(2));
-  setText('tx-withdrawn','$'+d.withdrawn.toFixed(2));
-  const badge=document.getElementById('open-bets-badge');
-  if(badge){badge.textContent=open;badge.style.display=open>0?'':'none';}
-  renderSecurityBadges();
-};
+/* refreshAdminData defined below */
 
 /* window.renderBets removed — using async function renderBets below */
 
@@ -4315,8 +4278,15 @@ async function refreshAdminData() {
   setText('tx-deposited','$'+d.deposited.toFixed(2));
   setText('tx-withdrawn','$'+d.withdrawn.toFixed(2));
 
+  // Sync nav balance badge
+  const navVal = document.getElementById('nav-balance-val');
+  if (navVal) navVal.textContent = '$' + d.balance.toFixed(2);
+  const navEl = document.getElementById('nav-balance-display');
+  if (navEl && SESSION) navEl.style.display = 'flex';
+
   const badge = document.getElementById('open-bets-badge');
   if (badge) { badge.textContent=open; badge.style.display=open>0?'':'none'; }
+  renderSecurityBadges();
 }
 function setText(id,v){ const e=document.getElementById(id); if(e) e.textContent=v; }
 
