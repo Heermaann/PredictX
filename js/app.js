@@ -4,7 +4,7 @@
    STATE
 ════════════════════════════════════════════════════ */
 const S = {
-  sport:     localStorage.getItem('px_sport')  || 'soccer_epl',
+  sport:     localStorage.getItem('px_sport')  || 'all',
   theme:     localStorage.getItem('px_theme')  || 'dark',
   markets:   [],
   filtered:  [],
@@ -647,7 +647,7 @@ async function renderFullSidebar() {
   try {
     const [sportsRes, leaguesRes] = await Promise.all([
       _SB.from('sports').select('key,title,icon,active').eq('active', true).order('sort_order'),
-      _SB.from('leagues').select('key,name,icon,sport_key,active,api_key').eq('active', true).order('sort_order')
+      _SB.from('leagues').select('key,name,icon,sport_key,active,api_key').eq('active', true)
     ]);
     const sports  = sportsRes.data  || [];
     const leagues = leaguesRes.data || [];
@@ -748,8 +748,7 @@ async function renderCustomSidebar() {
       .from('leagues')
       .select('key,name,icon,sport_key')
       .in('sport_key', custom.map(s => s.key))
-      .eq('active', true)
-      .order('sort_order');
+      .eq('active', true);
 
     wrap.innerHTML = custom.map(s => {
       const sportLeagues = (leagues || []).filter(l => l.sport_key === s.key);
@@ -2513,7 +2512,14 @@ async function sbQuery(table, filter={}) {
 }
 async function sbUpsert(table, row) {
   try {
-    const { data, error } = await _SB.from(table).upsert(row, {onConflict:'email'}).select();
+    // Try update first, then insert if not found
+    const { data: existing } = await _SB.from(table).select('email').eq('email', row.email).maybeSingle();
+    let data, error;
+    if (existing) {
+      ({data, error} = await _SB.from(table).update(row).eq('email', row.email).select());
+    } else {
+      ({data, error} = await _SB.from(table).insert(row).select());
+    }
     if (error) { return null; }
     return data?.[0] || null;
   } catch(e) { return null; }
@@ -2551,7 +2557,7 @@ function defaultAdmin(s) {
 async function saveAdminData(d) {
   if (!SESSION) return;
   _sbProfile = d;
-  await sbUpsert('profiles', { ...d, email: SESSION.email });
+  await _SB.from('profiles').update({ ...d }).eq('email', SESSION.email);
 }
 
 /* ── Bets & transactions (Supabase tables) ── */
