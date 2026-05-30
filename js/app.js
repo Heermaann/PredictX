@@ -4250,39 +4250,42 @@ function fmtDateTime(iso) {
 /* ── Refresh stats ── */
 async function refreshAdminData() {
   if (!SESSION) return;
+
+  // Read everything from Supabase directly — no localStorage intermediary
+  let balance = 0, deposited = 0, withdrawn = 0, open = 0, won = 0, roi = '—';
   try {
-    // Read balance from Supabase (source of truth)
-    const { data: prof } = await _SB.from('profiles').select('balance,deposited,withdrawn').eq('email', SESSION.email).maybeSingle();
-    if (prof) {
-      const d = adminData();
-      d.balance   = +(prof.balance   || 0);
-      d.deposited = +(prof.deposited || 0);
-      d.withdrawn = +(prof.withdrawn || 0);
-      saveAdminData(d);
+    const [profRes, betsRes] = await Promise.all([
+      _SB.from('profiles').select('balance,deposited,withdrawn').eq('email', SESSION.email).maybeSingle(),
+      _SB.from('bets').select('status,stake,payout').eq('user_email', SESSION.email)
+    ]);
+    if (profRes.data) {
+      balance   = +(profRes.data.balance   || 0);
+      deposited = +(profRes.data.deposited || 0);
+      withdrawn = +(profRes.data.withdrawn || 0);
     }
-  } catch(_) { /* use cached value on error */ }
+    if (betsRes.data) {
+      const bets = betsRes.data;
+      open = bets.filter(b=>b.status==='open').length;
+      won  = bets.filter(b=>b.status==='win').length;
+      const totalStake = bets.reduce((a,b)=>a+(+b.stake||0),0);
+      const totalRet   = bets.filter(b=>b.status==='win').reduce((a,b)=>a+(+b.payout||0),0);
+      roi = totalStake>0 ? ((totalRet-totalStake)/totalStake*100).toFixed(1)+'%' : '—';
+    }
+  } catch(e) { console.warn('refreshAdminData error:', e.message); }
 
-  const d    = adminData();
-  const bets = betHistory();
-  const open = bets.filter(b=>b.status==='open').length;
-  const won  = bets.filter(b=>b.status==='win').length;
-  const totalStake = bets.reduce((a,b)=>a+(b.stake||0),0);
-  const totalRet   = bets.filter(b=>b.status==='win').reduce((a,b)=>a+(b.ret||0),0);
-  const roi = totalStake>0 ? ((totalRet-totalStake)/totalStake*100).toFixed(1)+'%' : '—';
-
-  setText('sc-balance',  '$'+d.balance.toFixed(2));
+  setText('sc-balance',  '$'+balance.toFixed(2));
   setText('sc-open',     open);
   setText('sc-won',      won);
   setText('sc-roi',      roi);
-  setText('tx-balance',  '$'+d.balance.toFixed(2));
-  setText('tx-deposited','$'+d.deposited.toFixed(2));
-  setText('tx-withdrawn','$'+d.withdrawn.toFixed(2));
+  setText('tx-balance',  '$'+balance.toFixed(2));
+  setText('tx-deposited','$'+deposited.toFixed(2));
+  setText('tx-withdrawn','$'+withdrawn.toFixed(2));
 
   // Sync nav balance badge
   const navVal = document.getElementById('nav-balance-val');
-  if (navVal) navVal.textContent = '$' + d.balance.toFixed(2);
+  if (navVal) navVal.textContent = '$' + balance.toFixed(2);
   const navEl = document.getElementById('nav-balance-display');
-  if (navEl && SESSION) navEl.style.display = 'flex';
+  if (navEl) navEl.style.display = SESSION ? 'flex' : 'none';
 
   const badge = document.getElementById('open-bets-badge');
   if (badge) { badge.textContent=open; badge.style.display=open>0?'':'none'; }
