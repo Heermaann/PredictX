@@ -303,13 +303,24 @@ async function loadMarkets(force=false) {
 
     const apiEvents = (apiData || []).map(e => { try { return processManualEvent({ ...e, _fromApi: true, sport_key: e.sport_key, league: e.league || e.sport_title }); } catch(err) { console.warn('processManualEvent error:', err); return null; } }).filter(Boolean);
 
+    // ── Filter out events from inactive leagues ──
+    try {
+      const { data: inactiveLeagues } = await _SB.from('leagues').select('api_key,key').eq('active', false);
+      if (inactiveLeagues && inactiveLeagues.length) {
+        const inactiveKeys = new Set(inactiveLeagues.map(l => l.api_key || l.key).filter(Boolean));
+        apiEvents = apiEvents.filter(m => !inactiveKeys.has(m.sport_key));
+      }
+    } catch(_) {}
+
     // ── Also load manual events ──
     let manualMarkets = [];
     try {
+      const _cutoffM = new Date(Date.now() - 2*60*60*1000).toISOString();
       const { data: manualData } = await _SB
         .from('manual_events')
         .select('*')
         .in('status', ['upcoming','live'])
+        .or(`commence_time.gt.${_cutoffM},featured.eq.true`)
         .order('commence_time', { ascending: true });
       manualMarkets = (manualData || []).map(e => { try { return processManualEvent(e); } catch(err) { return null; } }).filter(Boolean);
     } catch(e) {
@@ -583,6 +594,56 @@ async function renderCatPills() {
   } catch(e) { /* keep hardcoded pills on error */ }
 }
 
+
+// ── Render full sidebar from Supabase (sports + leagues) ──
+async function renderFullSidebar() {
+  const wrap = document.getElementById('sb-sports-wrap');
+  if (!wrap) return;
+  try {
+    const [sportsRes, leaguesRes] = await Promise.all([
+      _SB.from('sports').select('key,title,icon,active').eq('active', true).order('sort_order'),
+      _SB.from('leagues').select('key,name,icon,sport_key,active,api_key').eq('active', true).order('sort_order')
+    ]);
+    const sports  = sportsRes.data  || [];
+    const leagues = leaguesRes.data || [];
+    if (!sports.length) return;
+
+    wrap.innerHTML = sports.map(s => {
+      const gid = 'g-dyn-' + s.key;
+      const sLeagues = leagues.filter(l => l.sport_key === s.key);
+      const leagueRows = sLeagues.length
+        ? sLeagues.map(l =>
+            `<div class="sb-league" onclick="loadLeague('${l.api_key||l.key}','${esc(l.name)}',this)">${l.icon||''} ${esc(l.name)}</div>`
+          ).join('')
+        : `<div class="sb-league" style="color:var(--text3);font-size:11px;padding:6px 16px">Sin ligas</div>`;
+
+      return `
+        <div class="sb-item sb-group" onclick="toggleSportGroup('${gid}','${s.key}')">
+          <span class="sb-item-ico">${s.icon||'🏆'}</span>${esc(s.title)}
+          <span class="sb-arrow" id="arr-${gid}">›</span>
+        </div>
+        <div class="sb-leagues" id="${gid}">${leagueRows}</div>`;
+    }).join('');
+  } catch(e) { console.warn('renderFullSidebar error:', e.message); }
+}
+
+// Toggle sport group AND filter by category
+function toggleSportGroup(gid, sportKey) {
+  // Expand/collapse
+  const el = document.getElementById(gid);
+  const arr = document.getElementById('arr-' + gid);
+  if (!el) return;
+  const isOpen = el.classList.toggle('open');
+  if (arr) arr.style.transform = isOpen ? 'rotate(90deg)' : '';
+  // Also filter events by this sport category
+  const pill = document.querySelector(`.cat-pill[data-cat="${sportKey}"]`);
+  if (pill) {
+    setCat(sportKey, pill);
+  } else {
+    // No pill for this sport - still filter
+    setCat(sportKey, { classList: { remove: ()=>{}, add: ()=>{} }, dataset: { cat: sportKey } });
+  }
+}
 // ── Render custom sports/categories in sidebar from Supabase ──
 const BUILT_IN_SPORT_KEYS = new Set([
   'soccer','basketball','americanfootball','baseball','icehockey','mma','tennis','golf','rugby'
@@ -2426,7 +2487,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   applyTheme(S.theme);
   renderSlip();
   renderCatPills(); // load dynamic categories from Supabase
-  renderCustomSidebar(); // load custom sports in sidebar
+  renderFullSidebar(); // load full sidebar from Supabase
   document.getElementById('modal-sport').value = S.sport;
   autoExpandActiveSport();
 
@@ -2736,7 +2797,7 @@ function onLoginSuccess(animate) {
   setTimeout(updateActiveBetsCount, 1000);
   // Render dynamic category pills from Supabase
   setTimeout(renderCatPills, 300);
-  setTimeout(renderCustomSidebar, 400);
+  setTimeout(renderFullSidebar, 400);
   // Show nav balance
   setTimeout(updateNavBalance, 500);
 
