@@ -2636,7 +2636,7 @@ async function loadNotifications(){
   }
 
   list.innerHTML = notifs.map(n=>`
-    <div style="display:flex;align-items:flex-start;gap:12px;padding:12px 20px;border-bottom:1px solid var(--border);cursor:pointer" onclick="if(n.page){document.getElementById('notif-panel').style.display='none';_notifOpen=false;admShowPage(n.page,document.getElementById('nav-'+n.page));}" onmouseover="this.style.background='var(--bg)'" onmouseout="this.style.background='transparent'">
+    <div style="display:flex;align-items:flex-start;gap:12px;padding:12px 20px;border-bottom:1px solid var(--border);cursor:pointer" onclick="if('${n.page||''}'){document.getElementById('notif-panel').style.display='none';_notifOpen=false;const pg='${n.page||''}';admShowPage(pg,document.getElementById('nav-'+pg));}" onmouseover="this.style.background='var(--bg)'" onmouseout="this.style.background='transparent'">
       <div style="width:36px;height:36px;border-radius:10px;background:${n.color}22;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">${n.icon}</div>
       <div style="flex:1;min-width:0">
         <div style="font-size:13px;font-weight:500;color:var(--text1)">${n.text}</div>
