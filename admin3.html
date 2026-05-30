@@ -1195,8 +1195,8 @@ tbody td { padding: 12px 16px; font-size: 13px; color: var(--text1); vertical-al
     <div class="modal-hd"><span class="modal-title" id="sport-modal-title">Nueva Categoría</span><button class="modal-close" onclick="admCloseSportModal()">✕</button></div>
     <div class="modal-body">
       <div class="form-row">
-        <div class="form-group"><label class="form-label" for="sport-key">Clave (key)</label><input type="text" id="sport-key" class="form-input" placeholder="ej: soccer"></div>
-        <div class="form-group"><label class="form-label" for="sport-title">Nombre</label><input type="text" id="sport-title" class="form-input" placeholder="ej: Fútbol"></div>
+        <div class="form-group"><label class="form-label" for="sport-title">Nombre de la categoría</label><input type="text" id="sport-title" class="form-input" placeholder="ej: Fútbol, Política, E-Sports" oninput="autoGenSportKey(this.value)"></div>
+        <input type="hidden" id="sport-key">
       </div>
       <div class="form-row">
         <div class="form-group">
@@ -1771,7 +1771,16 @@ async function renderSports(){
   }catch(err){ body.innerHTML=`<tr><td colspan="7" class="table-empty" style="color:var(--red)">❌ ${esc(err.message)}</td></tr>`; }
 }
 
-function admOpenSportModal(){ _editingSportKey=null; document.getElementById('sport-modal-title').textContent='Nueva Categoría'; document.getElementById('sport-key').value=''; document.getElementById('sport-key').disabled=false; document.getElementById('sport-title').value=''; document.getElementById('sport-icon').value='⚽'; document.getElementById('sport-order').value='0'; document.getElementById('sport-active').checked=true; openModal('sport-modal-overlay'); }
+function autoGenSportKey(name) {
+  const keyEl = document.getElementById('sport-key');
+  if (keyEl && !keyEl.disabled) {
+    keyEl.value = name.trim().toLowerCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+      .replace(/[^a-z0-9]+/g,'_')
+      .replace(/^_|_$/g,'');
+  }
+}
+function admOpenSportModal(){ _editingSportKey=null; document.getElementById('sport-modal-title').textContent='Nueva Categoría'; document.getElementById('sport-key').value=''; document.getElementById('sport-key').disabled=false; document.getElementById('sport-title').value=''; document.getElementById('sport-title').value=''; document.getElementById('sport-icon').value='⚽'; document.getElementById('sport-order').value='0'; document.getElementById('sport-active').checked=true; openModal('sport-modal-overlay'); }
 function admOpenEditSport(key){ const s=_sports.find(x=>x.key===key); if(!s)return; _editingSportKey=key; document.getElementById('sport-modal-title').textContent='Editar Categoría'; document.getElementById('sport-key').value=s.key; document.getElementById('sport-key').disabled=true; document.getElementById('sport-title').value=s.title; document.getElementById('sport-icon').value=s.icon||'⚽'; document.getElementById('sport-order').value=s.sort_order||0; document.getElementById('sport-active').checked=!!s.active; openModal('sport-modal-overlay'); }
 function admCloseSportModal(){ closeModal('sport-modal-overlay'); }
 
@@ -1781,7 +1790,7 @@ async function admSaveSport(){
   const icon=document.getElementById('sport-icon').value.trim()||'⚽';
   const order=parseInt(document.getElementById('sport-order').value)||0;
   const active=document.getElementById('sport-active').checked;
-  if(!key||!title){showToast('❌ Clave y nombre son obligatorios','error');return;}
+  if(!title){showToast('❌ El nombre es obligatorio','error');return;} if(!key) { showToast('❌ Error generando clave','error');return; }
   let error;
   if(_editingSportKey){ ({error}=await _SB.from('sports').update({title,icon,sort_order:order,active}).eq('key',_editingSportKey)); }
   else { ({error}=await _SB.from('sports').insert({key,title,icon,sort_order:order,active})); }
