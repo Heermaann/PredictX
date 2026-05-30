@@ -556,6 +556,53 @@ async function renderCatPills() {
     `;
   } catch(e) { /* keep hardcoded pills on error */ }
 }
+
+// ── Render custom sports/categories in sidebar from Supabase ──
+const BUILT_IN_SPORT_KEYS = new Set([
+  'soccer','basketball','americanfootball','baseball','icehockey','mma','tennis','golf','rugby'
+]);
+
+async function renderCustomSidebar() {
+  const wrap = document.getElementById('sb-custom-sports');
+  if (!wrap) return;
+  try {
+    const { data: sports } = await _SB
+      .from('sports')
+      .select('key,title,icon,active')
+      .eq('active', true)
+      .order('sort_order');
+    if (!sports) return;
+
+    // Only show sports NOT in the hardcoded list
+    const custom = sports.filter(s => !BUILT_IN_SPORT_KEYS.has(s.key.split('_')[0]));
+    if (!custom.length) { wrap.innerHTML = ''; return; }
+
+    // Also load leagues for custom sports
+    const { data: leagues } = await _SB
+      .from('leagues')
+      .select('key,name,icon,sport_key')
+      .in('sport_key', custom.map(s => s.key))
+      .eq('active', true)
+      .order('sort_order');
+
+    wrap.innerHTML = custom.map(s => {
+      const sportLeagues = (leagues || []).filter(l => l.sport_key === s.key);
+      const gid = 'g-custom-' + s.key;
+      return `
+        <div class="sb-divider"></div>
+        <div class="sb-item sb-group" onclick="toggleGroup('${gid}')">
+          <span class="sb-item-ico">${s.icon||'🏆'}</span>${s.title}
+          <span class="sb-arrow" id="arr-${gid}">›</span>
+        </div>
+        <div class="sb-leagues" id="${gid}">
+          ${sportLeagues.length
+            ? sportLeagues.map(l => `<div class="sb-league" onclick="loadLeague('${l.key}','${l.name}',this)">${l.icon||''} ${l.name}</div>`).join('')
+            : `<div class="sb-league" onclick="setCat('${s.key}',null)">${s.icon||''} Ver todos</div>`
+          }
+        </div>`;
+    }).join('');
+  } catch(e) { console.warn('renderCustomSidebar error:', e.message); }
+}
 function sportDuration(sportKey) {
   const s = (sportKey||'').split('_')[0];
   return {soccer:90, basketball:48, americanfootball:60, baseball:180,
@@ -2353,6 +2400,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   applyTheme(S.theme);
   renderSlip();
   renderCatPills(); // load dynamic categories from Supabase
+  renderCustomSidebar(); // load custom sports in sidebar
   document.getElementById('modal-sport').value = S.sport;
   autoExpandActiveSport();
 
@@ -2662,6 +2710,7 @@ function onLoginSuccess(animate) {
   setTimeout(updateActiveBetsCount, 1000);
   // Render dynamic category pills from Supabase
   setTimeout(renderCatPills, 300);
+  setTimeout(renderCustomSidebar, 400);
   // Show nav balance
   setTimeout(updateNavBalance, 500);
 
