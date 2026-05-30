@@ -320,21 +320,7 @@ async function loadMarkets(force=false) {
       }
     } catch(_) {}
 
-    // ── Filter out events from inactive leagues ──
-    try {
-      const { data: inactiveLeagues } = await _SB.from('leagues').select('api_key,key').eq('active', false);
-      if (inactiveLeagues && inactiveLeagues.length) {
-        // Only filter by api_key (the actual sport/league key), never by UUID
-        const inactiveKeys = new Set(
-          inactiveLeagues
-            .map(l => l.api_key)
-            .filter(k => k && k.length < 60) // skip UUIDs/names
-        );
-        if (inactiveKeys.size > 0) {
-          apiEvents = apiEvents.filter(m => !inactiveKeys.has(m.sport_key));
-        }
-      }
-    } catch(_) {}
+    // (inactive league filtering removed - handled via sidebar navigation)
 
     // ── Also load manual events ──
     let manualMarkets = [];
@@ -635,11 +621,45 @@ async function renderFullSidebar() {
     wrap.innerHTML = sports.map(s => {
       const gid = 'g-dyn-' + s.key;
       const sLeagues = leagues.filter(l => l.sport_key === s.key);
-      const leagueRows = sLeagues.length
-        ? sLeagues.map(l =>
+      // If no leagues in DB, use hardcoded defaults for built-in sports
+      const defaultLeagues = {
+        'soccer': [
+          {key:'soccer_epl',name:'Premier League',icon:'🏴'},
+          {key:'soccer_spain_la_liga',name:'La Liga',icon:'🇪🇸'},
+          {key:'soccer_uefa_champs_league',name:'Champions League',icon:'⭐'},
+          {key:'soccer_germany_bundesliga',name:'Bundesliga',icon:'🇩🇪'},
+          {key:'soccer_italy_serie_a',name:'Serie A',icon:'🇮🇹'},
+          {key:'soccer_france_ligue_one',name:'Ligue 1',icon:'🇫🇷'},
+          {key:'soccer_usa_mls',name:'MLS',icon:'🇺🇸'},
+          {key:'soccer_brazil_campeonato',name:'Brasileirão',icon:'🇧🇷'},
+          {key:'soccer_conmebol_copa_libertadores',name:'Copa Libertadores',icon:'🏆'},
+        ],
+        'basketball': [
+          {key:'basketball_nba',name:'NBA',icon:'🏀'},
+          {key:'basketball_euroleague',name:'EuroLeague',icon:'🇪🇺'},
+        ],
+        'americanfootball': [
+          {key:'americanfootball_nfl',name:'NFL',icon:'🏈'},
+          {key:'americanfootball_ncaaf',name:'NCAAF',icon:'🎓'},
+        ],
+        'baseball': [
+          {key:'baseball_mlb',name:'MLB',icon:'⚾'},
+        ],
+        'icehockey': [
+          {key:'icehockey_nhl',name:'NHL',icon:'🏒'},
+        ],
+        'mma': [
+          {key:'mma_mixed_martial_arts',name:'UFC / MMA',icon:'🥊'},
+        ],
+      };
+      const prefix = s.key.split('_')[0];
+      const fallbackLeagues = (!sLeagues.length && defaultLeagues[prefix]) ? defaultLeagues[prefix] : [];
+      const allLeagues = sLeagues.length ? sLeagues : fallbackLeagues;
+      const leagueRows = allLeagues.length
+        ? allLeagues.map(l =>
             `<div class="sb-league" onclick="loadLeague('${l.api_key||l.key}','${esc(l.name)}',this)">${l.icon||''} ${esc(l.name)}</div>`
           ).join('')
-        : `<div class="sb-league" style="color:var(--text3);font-size:11px;padding:6px 16px">Sin ligas</div>`;
+        : `<div class="sb-league" style="color:var(--text3);font-size:11px;padding:6px 16px">Sin ligas configuradas</div>`;
 
       return `
         <div class="sb-item sb-group" onclick="toggleSportGroup('${gid}','${s.key}')">
@@ -2651,7 +2671,7 @@ async function doRegister() {
 
   const fail = msg => {
     setAuthStatus(msg, 'err');
-    if (btn) { btn.disabled = false; btn.textContent = 'Crear cuenta y recibir bono →'; }
+    if (btn) { btn.disabled = false; btn.textContent = 'Crear cuenta →'; }
   };
 
   if (!name)                          return fail('Introduce tu nombre completo.');
@@ -2678,7 +2698,7 @@ async function doRegister() {
   SESSION = { id: authData.user?.id, email, name, country };
   DB.set('session', SESSION);
 
-  if (btn) { btn.disabled = false; btn.textContent = 'Crear cuenta y recibir bono →'; }
+  if (btn) { btn.disabled = false; btn.textContent = 'Crear cuenta →'; }
   onLoginSuccess(true);
 }
 
@@ -2882,7 +2902,7 @@ async function doLogout() {
   document.querySelectorAll('.auth-tab').forEach((b,i)=>b.classList.toggle('active',i===0));
   const avatarEl = document.getElementById('nav-avatar');
   if (avatarEl) avatarEl.classList.remove('show');
-  document.getElementById('nav-bonus-badge')?.classList.remove('show');
+  // nav-bonus-badge removed
   closeAdmin();
   showToast('👋 Sesión cerrada correctamente');
 }
@@ -3034,6 +3054,31 @@ async function creditBalance(amt, method, orderId) {
   }).eq('email', SESSION.email);
   if (updateErr) { showToast('❌ Error al acreditar saldo: ' + updateErr.message); return; }
 
+  // Apply first-deposit bonus if configured
+  const cfg = getSiteConfig();
+  const bonusPct = +(cfg.bonusPct || 0);
+  const bonusMax = +(cfg.bonusMax || 0);
+  const isFirstDeposit = !(await _SB.from('transactions')
+    .select('id', {count:'exact',head:true})
+    .eq('user_email', SESSION.email)
+    .eq('type', 'deposit')).count;
+  if (bonusPct > 0 && isFirstDeposit) {
+    let bonusAmt = +(amt * bonusPct / 100).toFixed(2);
+    if (bonusMax > 0) bonusAmt = Math.min(bonusAmt, bonusMax);
+    if (bonusAmt > 0) {
+      const bonusBal = +(newBalance + bonusAmt).toFixed(2);
+      await _SB.from('profiles').update({ balance: bonusBal }).eq('email', SESSION.email);
+      await _SB.from('transactions').insert({
+        user_email: SESSION.email,
+        description: `Bono de bienvenida (${bonusPct}% primera recarga)`,
+        type: 'bonus', amount: bonusAmt, balance: bonusBal,
+        created_at: new Date().toISOString()
+      });
+      newBalance = bonusBal;
+      showToast(`🎁 ¡Bono de $${bonusAmt.toFixed(2)} acreditado!`, 'success');
+    }
+  }
+
   // Record transaction
   await _SB.from('transactions').insert({
     user_email:  SESSION.email,
@@ -3051,7 +3096,7 @@ async function creditBalance(amt, method, orderId) {
   DB.set('admin', localD);
 
   // Update UI
-  document.getElementById('nav-bonus-badge')?.classList.remove('show');
+  // nav-bonus-badge removed
   document.getElementById('pay-step2').style.display = 'none';
   document.getElementById('pay-step3').style.display = 'block';
   document.getElementById('pay-bonus-txt').textContent = '✅ Saldo acreditado';
