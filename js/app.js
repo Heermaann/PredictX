@@ -299,16 +299,19 @@ async function loadMarkets(force=false) {
 
     const { data: apiData, error: apiError } = await apiQuery;
 
-    if (apiError) throw new Error(apiError.message);
+    if (apiError) {
+      console.warn('loadMarkets api_events error:', apiError.message);
+      // Don't throw - continue with empty apiEvents
+    }
 
-    // Also load featured events (show_in_home=true) separately
+    // Try to load featured events (show_in_home=true) if column exists
     try {
-      const { data: featuredData } = await _SB.from('api_events').select('*')
+      const { data: featuredData, error: fErr } = await _SB.from('api_events').select('*')
         .not('status','eq','finished').eq('show_in_home', true);
-      if (featuredData && featuredData.length) {
-        const featuredIds = new Set(apiEvents.map(e=>e.id||e.home_team));
+      if (!fErr && featuredData && featuredData.length) {
+        const featuredIds = new Set(apiEvents.map(e=>e.id));
         const newFeatured = featuredData
-          .filter(e => !featuredIds.has(e.id||e.home_team))
+          .filter(e => !featuredIds.has(e.id))
           .map(e => { try { return processManualEvent({...e,_fromApi:true,_featured:true,sport_key:e.sport_key,league:e.league||e.sport_title}); } catch(_) { return null; } })
           .filter(Boolean);
         apiEvents = [...apiEvents, ...newFeatured];
@@ -1874,14 +1877,14 @@ async function loadLeague(sportKey, label, el) {
 
     if (apiError) throw new Error(apiError.message);
 
-    // Also load featured events (show_in_home=true) separately
+    // Try to load featured events (show_in_home=true) if column exists
     try {
-      const { data: featuredData } = await _SB.from('api_events').select('*')
+      const { data: featuredData, error: fErr } = await _SB.from('api_events').select('*')
         .not('status','eq','finished').eq('show_in_home', true);
-      if (featuredData && featuredData.length) {
-        const featuredIds = new Set(apiEvents.map(e=>e.id||e.home_team));
+      if (!fErr && featuredData && featuredData.length) {
+        const featuredIds = new Set(apiEvents.map(e=>e.id));
         const newFeatured = featuredData
-          .filter(e => !featuredIds.has(e.id||e.home_team))
+          .filter(e => !featuredIds.has(e.id))
           .map(e => { try { return processManualEvent({...e,_fromApi:true,_featured:true,sport_key:e.sport_key,league:e.league||e.sport_title}); } catch(_) { return null; } })
           .filter(Boolean);
         apiEvents = [...apiEvents, ...newFeatured];
