@@ -304,7 +304,9 @@ async function loadMarkets(force=false) {
       // Don't throw - continue with empty apiEvents
     }
 
-    // Try to load featured events (show_in_home=true) if column exists
+    let apiEvents = (apiData || []).map(e => { try { return processManualEvent({ ...e, _fromApi: true, sport_key: e.sport_key, league: e.league || e.sport_title }); } catch(err) { console.warn('processManualEvent error:', err); return null; } }).filter(Boolean);
+
+    // Load featured/show_in_home events (after apiEvents is declared)
     try {
       const { data: featuredData, error: fErr } = await _SB.from('api_events').select('*')
         .not('status','eq','finished').eq('show_in_home', true);
@@ -314,11 +316,9 @@ async function loadMarkets(force=false) {
           .filter(e => !featuredIds.has(e.id))
           .map(e => { try { return processManualEvent({...e,_fromApi:true,_featured:true,sport_key:e.sport_key,league:e.league||e.sport_title}); } catch(_) { return null; } })
           .filter(Boolean);
-        apiEvents = [...apiEvents, ...newFeatured];
+        apiEvents.push(...newFeatured);
       }
     } catch(_) {}
-
-    const apiEvents = (apiData || []).map(e => { try { return processManualEvent({ ...e, _fromApi: true, sport_key: e.sport_key, league: e.league || e.sport_title }); } catch(err) { console.warn('processManualEvent error:', err); return null; } }).filter(Boolean);
 
     // ── Filter out events from inactive leagues ──
     try {
