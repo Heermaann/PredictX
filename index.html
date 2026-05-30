@@ -36,7 +36,6 @@
     <div class="search-drop" id="search-drop" style="display:none"></div>
   </div>
   <div class="nav-right">
-
     <button class="theme-btn" onclick="toggleTheme()" title="Cambiar tema">
       <span class="ico-d">🌙</span><span class="ico-l">☀️</span>
     </button>
@@ -44,13 +43,38 @@
       🎟 Boleto<span class="slip-count" id="slip-count">0</span>
     </button>
     <button class="owner-nav-btn" id="owner-nav-btn" onclick="window.open('/admin','_blank')">⚡ Admin</button>
-    <div id="nav-balance-display" style="display:none;align-items:center;gap:6px;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:6px 12px;font-size:13px;font-weight:700;color:var(--green);cursor:pointer" onclick="openAdmin()" title="Mi saldo">
+    <!-- Deposit button — shown when logged in -->
+    <button id="nav-deposit-btn" style="display:none;background:var(--accent);color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:13px;font-weight:700;cursor:pointer" onclick="openPayModal('deposit')" title="Depositar saldo">
+      + Depositar
+    </button>
+    <!-- Balance badge — shown when logged in -->
+    <div id="nav-balance-display" style="display:none;align-items:center;gap:6px;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:6px 12px;font-size:13px;font-weight:700;color:var(--green);cursor:pointer" onclick="openPayModal('deposit')" title="Mi saldo — click para depositar">
       💰 <span id="nav-balance-val">$0.00</span>
     </div>
-    <button class="slip-btn" onclick="openAdmin()" style="background:var(--bg3);border:1px solid var(--border2);color:var(--text2)" title="Mi cuenta">
-      👤 Mi cuenta
+    <!-- User avatar — click to open account panel -->
+    <div class="nav-avatar" id="nav-avatar" onclick="toggleUserMenu()" title="Mi cuenta" style="display:none;position:relative">
+      U
+      <!-- User dropdown menu -->
+      <div id="user-nav-menu" style="display:none;position:absolute;top:calc(100% + 8px);right:0;background:var(--bg);border:1px solid var(--border);border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.15);min-width:200px;z-index:500;overflow:hidden;text-align:left">
+        <div style="padding:12px 16px;border-bottom:1px solid var(--border)">
+          <div style="font-size:13px;font-weight:700;color:var(--text1)" id="user-menu-name">—</div>
+          <div style="font-size:11px;color:var(--text2)" id="user-menu-email">—</div>
+        </div>
+        <div onclick="openPayModal('deposit');document.getElementById('user-nav-menu').style.display='none'" style="display:flex;align-items:center;gap:10px;padding:11px 16px;font-size:13px;color:var(--text1);cursor:pointer" onmouseover="this.style.background='var(--bg2)'" onmouseout="this.style.background='transparent'">
+          💰 Depositar
+        </div>
+        <div onclick="openAdmin();document.getElementById('user-nav-menu').style.display='none'" style="display:flex;align-items:center;gap:10px;padding:11px 16px;font-size:13px;color:var(--text1);cursor:pointer" onmouseover="this.style.background='var(--bg2)'" onmouseout="this.style.background='transparent'">
+          👤 Mi cuenta
+        </div>
+        <div onclick="doLogout();document.getElementById('user-nav-menu').style.display='none'" style="display:flex;align-items:center;gap:10px;padding:11px 16px;font-size:13px;color:var(--red,#ef4444);cursor:pointer;border-top:1px solid var(--border)" onmouseover="this.style.background='var(--bg2)'" onmouseout="this.style.background='transparent'">
+          🚪 Cerrar sesión
+        </div>
+      </div>
+    </div>
+    <!-- Login button — shown when logged out -->
+    <button id="nav-login-btn" class="slip-btn" onclick="openAuthGate()" style="background:var(--accent);color:#fff;border-color:var(--accent)" title="Iniciar sesión">
+      Iniciar sesión
     </button>
-    <div class="nav-avatar" id="nav-avatar" onclick="openAdmin()" title="Mi cuenta">U</div>
   </div>
 </nav>
 
