@@ -288,7 +288,7 @@ async function loadMarkets(force=false) {
       .from('api_events')
       .select('*')
       .not('status', 'eq', 'finished')
-      .gt('commence_time', _cutoff)
+      .or(`commence_time.gt.${_cutoff},show_in_home.eq.true`)
       .order('commence_time', { ascending: true })
       .limit(300);
 
@@ -520,6 +520,24 @@ function sportIco(key) {
 
 
 // Default durations by sport
+
+// ── Team logo: initials + deterministic color ──
+function teamColor(name) {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  const h = Math.abs(hash) % 360;
+  return `hsl(${h},55%,45%)`;
+}
+function teamInitials(name) {
+  const words = name.trim().split(/\s+/);
+  if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
+  return (words[0][0] + words[words.length - 1][0]).toUpperCase();
+}
+function teamLogo(name, size = 32) {
+  const color = teamColor(name || '?');
+  const initials = teamInitials(name || '?');
+  return `<div style="width:${size}px;height:${size}px;border-radius:50%;background:${color};display:flex;align-items:center;justify-content:center;font-size:${Math.round(size*0.38)}px;font-weight:700;color:#fff;flex-shrink:0;letter-spacing:-0.5px">${initials}</div>`;
+}
 function sportDuration(sportKey) {
   const s = (sportKey||'').split('_')[0];
   return {soccer:90, basketball:48, americanfootball:60, baseball:180,
@@ -735,9 +753,15 @@ function buildCard(m, i) {
     </div>
 
     <div class="mc-teams-row">
-      <span>${esc(m.home_team.split(' ').pop())}</span>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
+        ${teamLogo(m.home_team,28)}
+        <span style="font-size:11px;max-width:70px;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(m.home_team.split(' ').pop())}</span>
+      </div>
       <span style="color:var(--text3);font-size:11px">vs</span>
-      <span>${esc(m.away_team.split(' ').pop())}</span>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
+        ${teamLogo(m.away_team,28)}
+        <span style="font-size:11px;max-width:70px;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(m.away_team.split(' ').pop())}</span>
+      </div>
     </div>
 
     <div class="mc-odds">
@@ -1496,7 +1520,11 @@ function renderDetail(m) {
     <div class="det-header">
       <div class="det-ico">${sportIco(m.sport_key)}</div>
       <div style="flex:1;min-width:0">
-        <div class="det-title">${esc(m.home_team)} vs ${esc(m.away_team)}</div>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+          ${teamLogo(m.home_team,36)}
+          <span class="det-title" style="flex:1;text-align:center">${esc(m.home_team)} vs ${esc(m.away_team)}</span>
+          ${teamLogo(m.away_team,36)}
+        </div>
         <div class="det-tags">
           <span class="det-tag league">${esc(m.league||m.sport_title||"")}</span>
           <span class="det-tag">📅 ${fDate(m.commence_time)}</span>
