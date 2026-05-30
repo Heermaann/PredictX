@@ -299,7 +299,16 @@ async function loadMarkets(force=false) {
 
     const { data: apiData, error: apiError } = await apiQuery;
 
-    if (apiError) throw new Error(apiError.message);
+    if (apiError) {
+      console.error('loadMarkets API error:', apiError.message, apiError.code);
+      // If OR query fails (e.g. show_in_home column missing), fall back to simple query
+      if (apiError.code === 'PGRST116' || apiError.message.includes('show_in_home')) {
+        const { data: fallbackData } = await _SB.from('api_events').select('*')
+          .not('status','eq','finished').gt('commence_time', _cutoff)
+          .order('commence_time',{ascending:true}).limit(300);
+        if (fallbackData) { apiEvents = fallbackData.map(e => { try { return processManualEvent({...e,_fromApi:true,sport_key:e.sport_key,league:e.league||e.sport_title}); } catch(_) { return null; } }).filter(Boolean); }
+      } else throw new Error(apiError.message);
+    }
 
     const apiEvents = (apiData || []).map(e => { try { return processManualEvent({ ...e, _fromApi: true, sport_key: e.sport_key, league: e.league || e.sport_title }); } catch(err) { console.warn('processManualEvent error:', err); return null; } }).filter(Boolean);
 
@@ -1858,7 +1867,16 @@ async function loadLeague(sportKey, label, el) {
       .order('commence_time', { ascending: true })
       .limit(200);
 
-    if (apiError) throw new Error(apiError.message);
+    if (apiError) {
+      console.error('loadMarkets API error:', apiError.message, apiError.code);
+      // If OR query fails (e.g. show_in_home column missing), fall back to simple query
+      if (apiError.code === 'PGRST116' || apiError.message.includes('show_in_home')) {
+        const { data: fallbackData } = await _SB.from('api_events').select('*')
+          .not('status','eq','finished').gt('commence_time', _cutoff)
+          .order('commence_time',{ascending:true}).limit(300);
+        if (fallbackData) { apiEvents = fallbackData.map(e => { try { return processManualEvent({...e,_fromApi:true,sport_key:e.sport_key,league:e.league||e.sport_title}); } catch(_) { return null; } }).filter(Boolean); }
+      } else throw new Error(apiError.message);
+    }
 
     const apiEvents = (apiData || []).map(e => { try { return processManualEvent({ ...e, _fromApi: true, sport_key: e.sport_key, league: e.league || e.sport_title }); } catch(err) { return null; } }).filter(Boolean);
 
@@ -4618,7 +4636,12 @@ window.renderTx = async function renderTx(filter) {
     } catch(_) { txs = txHistory(); }
   } else { txs = txHistory(); }
 
-  const shown = filter==='all' ? txs : txs.filter(t=>t.type===filter);
+  const shown = txs.filter(t => {
+    if (filter==='all') return true;
+    if (filter==='dep') return t.type==='dep'||t.type==='deposit';
+    if (filter==='wit') return t.type==='wit'||t.type==='withdraw';
+    return t.type===filter;
+  });
   const tb = document.getElementById('tx-body');
   if (!tb) return;
   if (!shown.length) {
