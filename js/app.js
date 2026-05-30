@@ -283,14 +283,12 @@ async function loadMarkets(force=false) {
     // ── Read from Supabase api_events (no API call) ──
     // Filter by selected sport/league if one is active
     // Only show events starting in future or up to 3h ago (in progress)
-    // Use wider window for 'all' view (48h), narrower for specific sports
-    const cutoffHours = (S.sport && S.sport !== 'all') ? 2 : 48;
-    const _cutoff = new Date(Date.now() - cutoffHours*60*60*1000).toISOString();
     let apiQuery = _SB
       .from('api_events')
       .select('*')
       .not('status', 'eq', 'finished')
-      .gt('commence_time', _cutoff)
+      .order('commence_time', { ascending: true })
+      .limit(300)
       .order('commence_time', { ascending: true })
       .limit(300);
 
@@ -327,12 +325,10 @@ async function loadMarkets(force=false) {
     // ── Also load manual events ──
     let manualMarkets = [];
     try {
-      const _cutoffM = new Date(Date.now() - 2*60*60*1000).toISOString();
       const { data: manualData } = await _SB
         .from('manual_events')
         .select('*')
         .in('status', ['upcoming','live'])
-        .or(`commence_time.gt.${_cutoffM},featured.eq.true`)
         .order('commence_time', { ascending: true });
       manualMarkets = (manualData || []).map(e => { try { return processManualEvent(e); } catch(err) { return null; } }).filter(Boolean);
     } catch(e) {
@@ -795,13 +791,12 @@ async function loadMarketsForCategory(cat) {
     '<div class="spinner-wrap"><div class="spin"></div><div>Cargando eventos…</div></div>';
   try {
     // Load API events filtered by sport category prefix
-    const _cutoffC = new Date(Date.now() - 2*60*60*1000).toISOString();
+
     const { data: apiData, error } = await _SB
       .from('api_events')
       .select('*')
       .like('sport_key', cat + '%')
       .not('status', 'eq', 'finished')
-      .gt('commence_time', _cutoffC)
       .order('commence_time', { ascending: true })
       .limit(200);
     if (error) throw new Error(error.message);
@@ -842,13 +837,10 @@ function applyFilters() {
   try {
   let list = [...S.markets];
 
-  // Remove finished events - show recent events (last 48h) plus featured ones
-  const cutoffMs = Date.now() - 48*60*60*1000;
+  // Only filter out explicitly finished events
   list = list.filter(m => {
     if (m._manual) return m._status !== 'finished';
-    if (m.status === 'finished') return false;
-    if (m._featured) return true; // always show featured
-    return new Date(m.commence_time).getTime() > cutoffMs;
+    return m.status !== 'finished';
   });
 
   // Sport category (cat-bar pills like Fútbol, Baloncesto...)
@@ -1326,7 +1318,16 @@ async function openDetail(idx) {
   // Fetch fresh description from Supabase (bypasses 5min cache)
   try {
     const table = m._manual ? 'manual_events' : 'api_events';
-    const { data: fresh } = await _SB.from(table).select('description').eq('id', m.id).maybeSingle();
+    let fresh = null;
+    // Try by id first
+    const r1 = await _SB.from(table).select('description').eq('id', m.id).maybeSingle();
+    fresh = r1.data;
+    // Fallback: match by home+away team name
+    if (!fresh || !fresh.description) {
+      const r2 = await _SB.from(table).select('description')
+        .ilike('home_team', m.home_team).ilike('away_team', m.away_team).maybeSingle();
+      fresh = r2.data;
+    }
     if (fresh && fresh.description) m = { ...m, description: fresh.description };
   } catch(_) {}
 
@@ -1911,13 +1912,12 @@ async function loadLeague(sportKey, label, el) {
 
   try {
     // Read from Supabase api_events (source of truth)
-    const _cutoffL = new Date(Date.now() - 2*60*60*1000).toISOString();
+
     const { data: apiData, error: apiError } = await _SB
       .from('api_events')
       .select('*')
       .eq('sport_key', sportKey)
       .not('status', 'eq', 'finished')
-      .gt('commence_time', _cutoffL)
       .order('commence_time', { ascending: true })
       .limit(200);
 
@@ -2375,13 +2375,11 @@ async function connectAPI() {
   _marketsLastLoaded = 0; // invalidate cache
   try {
     // Read from Supabase (not API directly)
-    const _cutoffM = new Date(Date.now() - 2*60*60*1000).toISOString();
     const { data, error } = await _SB
       .from('api_events')
       .select('*')
       .eq('sport_key', sport)
       .not('status', 'eq', 'finished')
-      .gt('commence_time', _cutoffM)
       .order('commence_time', { ascending: true })
       .limit(200);
     if (error) throw new Error(error.message);
