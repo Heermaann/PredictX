@@ -288,7 +288,7 @@ async function loadMarkets(force=false) {
       .from('api_events')
       .select('*')
       .not('status', 'eq', 'finished')
-      .or(`commence_time.gt.${_cutoff},show_in_home.eq.true`)
+      .gt('commence_time', _cutoff)
       .order('commence_time', { ascending: true })
       .limit(300);
 
@@ -299,16 +299,21 @@ async function loadMarkets(force=false) {
 
     const { data: apiData, error: apiError } = await apiQuery;
 
-    if (apiError) {
-      console.error('loadMarkets API error:', apiError.message, apiError.code);
-      // If OR query fails (e.g. show_in_home column missing), fall back to simple query
-      if (apiError.code === 'PGRST116' || apiError.message.includes('show_in_home')) {
-        const { data: fallbackData } = await _SB.from('api_events').select('*')
-          .not('status','eq','finished').gt('commence_time', _cutoff)
-          .order('commence_time',{ascending:true}).limit(300);
-        if (fallbackData) { apiEvents = fallbackData.map(e => { try { return processManualEvent({...e,_fromApi:true,sport_key:e.sport_key,league:e.league||e.sport_title}); } catch(_) { return null; } }).filter(Boolean); }
-      } else throw new Error(apiError.message);
-    }
+    if (apiError) throw new Error(apiError.message);
+
+    // Also load featured events (show_in_home=true) separately
+    try {
+      const { data: featuredData } = await _SB.from('api_events').select('*')
+        .not('status','eq','finished').eq('show_in_home', true);
+      if (featuredData && featuredData.length) {
+        const featuredIds = new Set(apiEvents.map(e=>e.id||e.home_team));
+        const newFeatured = featuredData
+          .filter(e => !featuredIds.has(e.id||e.home_team))
+          .map(e => { try { return processManualEvent({...e,_fromApi:true,_featured:true,sport_key:e.sport_key,league:e.league||e.sport_title}); } catch(_) { return null; } })
+          .filter(Boolean);
+        apiEvents = [...apiEvents, ...newFeatured];
+      }
+    } catch(_) {}
 
     const apiEvents = (apiData || []).map(e => { try { return processManualEvent({ ...e, _fromApi: true, sport_key: e.sport_key, league: e.league || e.sport_title }); } catch(err) { console.warn('processManualEvent error:', err); return null; } }).filter(Boolean);
 
@@ -1867,16 +1872,21 @@ async function loadLeague(sportKey, label, el) {
       .order('commence_time', { ascending: true })
       .limit(200);
 
-    if (apiError) {
-      console.error('loadMarkets API error:', apiError.message, apiError.code);
-      // If OR query fails (e.g. show_in_home column missing), fall back to simple query
-      if (apiError.code === 'PGRST116' || apiError.message.includes('show_in_home')) {
-        const { data: fallbackData } = await _SB.from('api_events').select('*')
-          .not('status','eq','finished').gt('commence_time', _cutoff)
-          .order('commence_time',{ascending:true}).limit(300);
-        if (fallbackData) { apiEvents = fallbackData.map(e => { try { return processManualEvent({...e,_fromApi:true,sport_key:e.sport_key,league:e.league||e.sport_title}); } catch(_) { return null; } }).filter(Boolean); }
-      } else throw new Error(apiError.message);
-    }
+    if (apiError) throw new Error(apiError.message);
+
+    // Also load featured events (show_in_home=true) separately
+    try {
+      const { data: featuredData } = await _SB.from('api_events').select('*')
+        .not('status','eq','finished').eq('show_in_home', true);
+      if (featuredData && featuredData.length) {
+        const featuredIds = new Set(apiEvents.map(e=>e.id||e.home_team));
+        const newFeatured = featuredData
+          .filter(e => !featuredIds.has(e.id||e.home_team))
+          .map(e => { try { return processManualEvent({...e,_fromApi:true,_featured:true,sport_key:e.sport_key,league:e.league||e.sport_title}); } catch(_) { return null; } })
+          .filter(Boolean);
+        apiEvents = [...apiEvents, ...newFeatured];
+      }
+    } catch(_) {}
 
     const apiEvents = (apiData || []).map(e => { try { return processManualEvent({ ...e, _fromApi: true, sport_key: e.sport_key, league: e.league || e.sport_title }); } catch(err) { return null; } }).filter(Boolean);
 
