@@ -609,10 +609,19 @@ tbody td { padding: 12px 16px; font-size: 13px; color: var(--text1); vertical-al
         <div class="topbar-btn" title="Notificaciones" onclick="toggleNotifPanel()" id="notif-bell">
           🔔<div class="topbar-notif-dot" id="notif-dot"></div>
         </div>
-        <div class="topbar-user" onclick="window.location.href='/'">
+        <div class="topbar-user" onclick="toggleAdminUserMenu()" style="position:relative" id="topbar-user-btn">
           <div class="topbar-user-avatar" id="topbar-avatar">?</div>
           <div class="topbar-user-name" id="topbar-name">Admin</div>
           <span>▾</span>
+          <div id="adm-user-menu" style="display:none;position:absolute;top:calc(100% + 8px);right:0;background:var(--bg,#fff);border:1px solid var(--border,#e5e7eb);border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.15);min-width:180px;z-index:500;overflow:hidden">
+            <div style="padding:12px 16px;border-bottom:1px solid var(--border,#e5e7eb);font-size:12px;color:var(--text2,#6b7280)" id="adm-menu-email">—</div>
+            <div onclick="event.stopPropagation();window.open('/','_blank')" style="display:flex;align-items:center;gap:10px;padding:11px 16px;font-size:13px;color:var(--text1,#1a1d2e);cursor:pointer" onmouseover="this.style.background='var(--bg2,#f8fafc)'" onmouseout="this.style.background='transparent'">
+              🏠 Salir al sitio (nueva pestaña)
+            </div>
+            <div onclick="event.stopPropagation();admLogout()" style="display:flex;align-items:center;gap:10px;padding:11px 16px;font-size:13px;color:#ef4444;cursor:pointer;border-top:1px solid var(--border,#e5e7eb)" onmouseover="this.style.background='#fef2f2'" onmouseout="this.style.background='transparent'">
+              🚪 Cerrar sesión
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -1410,6 +1419,28 @@ async function admEnterWithSession(session){
   loadAdmConfig();
 }
 
+async 
+function toggleAdminUserMenu() {
+  const menu = document.getElementById('adm-user-menu');
+  if (!menu) return;
+  const isOpen = menu.style.display !== 'none';
+  menu.style.display = isOpen ? 'none' : 'block';
+  if (!isOpen) {
+    // Update email in menu
+    const emailEl = document.getElementById('adm-menu-email');
+    if (emailEl && SESSION) emailEl.textContent = SESSION.email || '—';
+    // Close on outside click
+    setTimeout(() => {
+      document.addEventListener('click', function closeMenu(e) {
+        const btn = document.getElementById('topbar-user-btn');
+        if (btn && !btn.contains(e.target)) {
+          menu.style.display = 'none';
+          document.removeEventListener('click', closeMenu);
+        }
+      });
+    }, 10);
+  }
+}
 async function admLogout(){
   try { await _SB.auth.signOut(); } catch(_) {}
   SESSION = null;
@@ -1601,6 +1632,7 @@ function renderUsers(users){
       <td>${u.is_suspended?'<span class="badge badge-red">Suspendido</span>':'<span class="badge badge-green">Activo</span>'}</td>
       <td><div class="action-group">
         <button class="btn btn-outline btn-sm" onclick="admViewUser('${esc(u.email)}')">👁 Detalle</button>
+        <button class="btn btn-outline btn-sm" onclick="admResetUserPassword('${esc(u.email)}')" title="Enviar email de reseteo de contraseña">🔑 Reset</button>
         ${u.is_suspended
           ?`<button class="btn btn-success btn-sm" onclick="admToggleSuspend('${esc(u.email)}',false)">✅ Activar</button>`
           :u.role!=='owner'?`<button class="btn btn-danger btn-sm" onclick="admToggleSuspend('${esc(u.email)}',true)">🚫 Suspender</button>`:''}
@@ -1620,6 +1652,19 @@ async function admToggleSuspend(email,suspend){
   await fetchAll(); renderUsers(_cache.users);
 }
 
+
+async function admResetUserPassword(email) {
+  if (!confirm(`¿Enviar email de recuperación de contraseña a ${email}?`)) return;
+  try {
+    const { error } = await _SB.auth.resetPasswordForEmail(email, {
+      redirectTo: 'https://predict-x-beta.vercel.app'
+    });
+    if (error) throw error;
+    showToast(`✅ Email de recuperación enviado a ${email}`, 'success');
+  } catch(e) {
+    showToast('❌ ' + e.message, 'error');
+  }
+}
 function admViewUser(email){
   const u=_cache.users.find(x=>x.email===email);
   const bets=_cache.bets.filter(b=>b.user_email===email);
