@@ -1820,9 +1820,19 @@ function admGoToLeaguesBySport(sportKey) {
 }
 
 function admGoToEventsBySport(sportKey) {
-  // Go to events page filtered by this sport
-  admEvFilter = sportKey;
-  admShowPage('events', document.getElementById('nav-events'));
+  // Show BOTH api-events and manual events filtered by sport
+  // Go to api-events page with sport filter
+  const apiSportSel = document.getElementById('api-events-sport');
+  if (apiSportSel) {
+    // Find the base sport prefix
+    const prefix = sportKey.split('_')[0];
+    // Try to match option value
+    for (const opt of apiSportSel.options) {
+      if (opt.value === prefix || opt.value === sportKey) { apiSportSel.value = opt.value; break; }
+    }
+  }
+  admShowPage('api-events', document.getElementById('nav-api-events'));
+  setTimeout(renderApiEvents, 100);
 }
 
 function admGoToEventsByLeague(apiKey, leagueName) {
@@ -2395,12 +2405,12 @@ async function admDeclareOutcome(id, source, result, homeTeam, awayTeam){
     const ret = won?+(+(bet.odds||bet.odd||0) * +(bet.stake||0)).toFixed(2):0;
     await _SB.from('bets').update({status:newStatus,ret}).eq('id',bet.id);
     if(won&&ret>0){
-      const {data:prof}=await _SB.from('profiles').select('balance').eq('email',bet.user_email).maybeSingle();
-      if(prof){
-        const newBal=+(prof.balance+ret).toFixed(2);
-        await _SB.from('profiles').update({balance:newBal}).eq('email',bet.user_email);
-        await _SB.from('transactions').insert({user_email:bet.user_email,description:`Premio: ${bet.pick} (${homeTeam} vs ${awayTeam})`,type:'win',amount:ret,balance:newBal,created_at:new Date().toISOString()});
-      }
+      // Increment balance for winner - read then write
+      const {data:wProf}=await _SB.from('profiles').select('balance,email').eq('email',bet.user_email).maybeSingle();
+      const curBal = wProf ? +(wProf.balance||0) : 0;
+      const newBal = +(curBal + ret).toFixed(2);
+      await _SB.from('profiles').update({balance:newBal}).eq('email',bet.user_email);
+      await _SB.from('transactions').insert({user_email:bet.user_email,description:`Premio: ${bet.pick} (${homeTeam} vs ${awayTeam})`,type:'win',amount:ret,balance:newBal,created_at:new Date().toISOString()});
     }
     resolved++;
   }
@@ -2594,23 +2604,23 @@ async function loadNotifications(){
   
   // Open bets count
   const openBets = _cache.bets.filter(b=>b.status==='open');
-  if(openBets.length > 0) notifs.push({ icon:'🎟', text:`${openBets.length} apuesta${openBets.length!==1?'s':''} pendiente${openBets.length!==1?'s':''} de resolver`, time:'Ahora', color:'var(--orange)' });
+  if(openBets.length > 0) notifs.push({ icon:'🎟', text:`${openBets.length} apuesta${openBets.length!==1?'s':''} pendiente${openBets.length!==1?'s':''} de resolver`, time:'Ahora', color:'var(--orange)', page:'outcomes' });
 
   // Open support tickets
   try {
     const { count } = await _SB.from('support_tickets').select('id',{count:'exact'}).eq('status','open');
-    if(count > 0) notifs.push({ icon:'🎫', text:`${count} ticket${count!==1?'s':''} de soporte abierto${count!==1?'s':''}`, time:'Ahora', color:'var(--red)' });
+    if(count > 0) notifs.push({ icon:'🎫', text:`${count} ticket${count!==1?'s':''} de soporte abierto${count!==1?'s':''}`, time:'Ahora', color:'var(--red)', page:'support' });
   } catch(_){}
 
   // New users today
   const today = new Date().toDateString();
   const newUsers = _cache.users.filter(u=>u.created_at && new Date(u.created_at).toDateString()===today);
-  if(newUsers.length > 0) notifs.push({ icon:'👥', text:`${newUsers.length} nuevo${newUsers.length!==1?'s':''} usuario${newUsers.length!==1?'s':''} hoy`, time:'Hoy', color:'var(--green)' });
+  if(newUsers.length > 0) notifs.push({ icon:'👥', text:`${newUsers.length} nuevo${newUsers.length!==1?'s':''} usuario${newUsers.length!==1?'s':''} hoy`, time:'Hoy', color:'var(--green)', page:'users' });
 
   // Live events
   try {
     const { data: liveEvs } = await _SB.from('manual_events').select('id').eq('status','live');
-    if((liveEvs||[]).length > 0) notifs.push({ icon:'🔴', text:`${liveEvs.length} partido${liveEvs.length!==1?'s':''} en vivo`, time:'Ahora', color:'var(--red)' });
+    if((liveEvs||[]).length > 0) notifs.push({ icon:'🔴', text:`${liveEvs.length} partido${liveEvs.length!==1?'s':''} en vivo`, time:'Ahora', color:'var(--red)', page:'outcomes' });
   } catch(_) {}
 
   if(!notifs.length){
@@ -2620,7 +2630,7 @@ async function loadNotifications(){
   }
 
   list.innerHTML = notifs.map(n=>`
-    <div style="display:flex;align-items:flex-start;gap:12px;padding:12px 20px;border-bottom:1px solid var(--border);cursor:pointer" onmouseover="this.style.background='var(--bg)'" onmouseout="this.style.background='transparent'">
+    <div style="display:flex;align-items:flex-start;gap:12px;padding:12px 20px;border-bottom:1px solid var(--border);cursor:pointer" onclick="if(n.page){document.getElementById('notif-panel').style.display='none';_notifOpen=false;admShowPage(n.page,document.getElementById('nav-'+n.page));}" onmouseover="this.style.background='var(--bg)'" onmouseout="this.style.background='transparent'">
       <div style="width:36px;height:36px;border-radius:10px;background:${n.color}22;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">${n.icon}</div>
       <div style="flex:1;min-width:0">
         <div style="font-size:13px;font-weight:500;color:var(--text1)">${n.text}</div>
