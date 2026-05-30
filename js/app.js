@@ -842,12 +842,13 @@ function applyFilters() {
   try {
   let list = [...S.markets];
 
-  // Remove finished events and events that started more than 2 hours ago (client-side guard)
-  const cutoffMs = Date.now() - 2*60*60*1000;
+  // Remove finished events - show recent events (last 48h) plus featured ones
+  const cutoffMs = Date.now() - 48*60*60*1000;
   list = list.filter(m => {
-    if (m._manual) return m._status !== 'finished'; // manual events respect explicit status
-    if (m.status === 'finished') return false;       // API events marked finished are hidden
-    return new Date(m.commence_time).getTime() > cutoffMs; // hide if started > 2h ago
+    if (m._manual) return m._status !== 'finished';
+    if (m.status === 'finished') return false;
+    if (m._featured) return true; // always show featured
+    return new Date(m.commence_time).getTime() > cutoffMs;
   });
 
   // Sport category (cat-bar pills like Fútbol, Baloncesto...)
@@ -1313,14 +1314,22 @@ function updateComboStake(val, doRender) {
 /* ════════════════════════════════════════════════════
    DETAIL VIEW
 ════════════════════════════════════════════════════ */
-function openDetail(idx) {
-  const m = S.filtered[idx];
+async function openDetail(idx) {
+  let m = S.filtered[idx];
   if (!m) return;
   closeSidebar();
 
   document.getElementById('view-list').style.display   = 'none';
   setTimeout(updateSidebarVisibility, 50);
   document.getElementById('view-detail').style.display = 'block';
+
+  // Fetch fresh description from Supabase (bypasses 5min cache)
+  try {
+    const table = m._manual ? 'manual_events' : 'api_events';
+    const { data: fresh } = await _SB.from(table).select('description').eq('id', m.id).maybeSingle();
+    if (fresh && fresh.description) m = { ...m, description: fresh.description };
+  } catch(_) {}
+
   renderDetail(m);
 }
 
