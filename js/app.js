@@ -538,6 +538,24 @@ function teamLogo(name, size = 32) {
   const initials = teamInitials(name || '?');
   return `<div style="width:${size}px;height:${size}px;border-radius:50%;background:${color};display:flex;align-items:center;justify-content:center;font-size:${Math.round(size*0.38)}px;font-weight:700;color:#fff;flex-shrink:0;letter-spacing:-0.5px">${initials}</div>`;
 }
+
+// ── Render category pills from Supabase sports table ──
+async function renderCatPills() {
+  const wrap = document.getElementById('cat-pills-wrap');
+  if (!wrap) return;
+  try {
+    const { data: sports } = await _SB.from('sports').select('key,title,icon').eq('active', true).order('sort_order');
+    if (!sports || !sports.length) return;
+    const current = document.querySelector('.cat-pill.active')?.dataset?.cat || 'all';
+    wrap.innerHTML = `
+      <button class="cat-pill ${current==='all'?'active':''}" data-cat="all" onclick="setCat('all',this)">Todos</button>
+      ${sports.map(s => `
+        <button class="cat-pill ${current===s.key?'active':''}" data-cat="${s.key}" onclick="setCat('${s.key}',this)">
+          ${s.icon||''} ${s.title}
+        </button>`).join('')}
+    `;
+  } catch(e) { /* keep hardcoded pills on error */ }
+}
 function sportDuration(sportKey) {
   const s = (sportKey||'').split('_')[0];
   return {soccer:90, basketball:48, americanfootball:60, baseball:180,
@@ -2334,6 +2352,7 @@ function defaultTx()   { return []; }
 document.addEventListener('DOMContentLoaded', async () => {
   applyTheme(S.theme);
   renderSlip();
+  renderCatPills(); // load dynamic categories from Supabase
   document.getElementById('modal-sport').value = S.sport;
   autoExpandActiveSport();
 
@@ -2641,6 +2660,8 @@ function onLoginSuccess(animate) {
 
   // Update active bets badge
   setTimeout(updateActiveBetsCount, 1000);
+  // Render dynamic category pills from Supabase
+  setTimeout(renderCatPills, 300);
   // Show nav balance
   setTimeout(updateNavBalance, 500);
 
