@@ -2405,12 +2405,18 @@ async function admDeclareOutcome(id, source, result, homeTeam, awayTeam){
     const ret = won?+(+(bet.odds||bet.odd||0) * +(bet.stake||0)).toFixed(2):0;
     await _SB.from('bets').update({status:newStatus,ret}).eq('id',bet.id);
     if(won&&ret>0){
-      // Increment balance for winner - read then write
-      const {data:wProf}=await _SB.from('profiles').select('balance,email').eq('email',bet.user_email).maybeSingle();
-      const curBal = wProf ? +(wProf.balance||0) : 0;
-      const newBal = +(curBal + ret).toFixed(2);
-      await _SB.from('profiles').update({balance:newBal}).eq('email',bet.user_email);
-      await _SB.from('transactions').insert({user_email:bet.user_email,description:`Premio: ${bet.pick} (${homeTeam} vs ${awayTeam})`,type:'win',amount:ret,balance:newBal,created_at:new Date().toISOString()});
+      // Call serverless function to pay winner (bypasses RLS)
+      try {
+        const resp = await fetch('/api/pay-winner', {
+          method: 'POST',
+          headers: {'Content-Type':'application/json','x-admin-token':'predictx-admin-sync'},
+          body: JSON.stringify({email:bet.user_email, amount:ret, pick:bet.pick, match:`${homeTeam} vs ${awayTeam}`})
+        });
+        if(!resp.ok) throw new Error('pay-winner failed');
+      } catch(payErr) {
+        console.error('Payout error:', payErr.message);
+        showToast('⚠️ Error pagando a ' + bet.user_email, 'error');
+      }
     }
     resolved++;
   }
