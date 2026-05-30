@@ -324,8 +324,15 @@ async function loadMarkets(force=false) {
     try {
       const { data: inactiveLeagues } = await _SB.from('leagues').select('api_key,key').eq('active', false);
       if (inactiveLeagues && inactiveLeagues.length) {
-        const inactiveKeys = new Set(inactiveLeagues.map(l => l.api_key || l.key).filter(Boolean));
-        apiEvents = apiEvents.filter(m => !inactiveKeys.has(m.sport_key));
+        // Only filter by api_key (the actual sport/league key), never by UUID
+        const inactiveKeys = new Set(
+          inactiveLeagues
+            .map(l => l.api_key)
+            .filter(k => k && k.length < 60) // skip UUIDs/names
+        );
+        if (inactiveKeys.size > 0) {
+          apiEvents = apiEvents.filter(m => !inactiveKeys.has(m.sport_key));
+        }
       }
     } catch(_) {}
 
