@@ -148,7 +148,7 @@ export default async function handler(req, res) {
         // We need to fetch existing events to preserve overrides
         const ids = rows.map(r => r.id);
         const existingRes = await fetch(
-          `${SB_URL}/rest/v1/api_events?id=in.(${ids.map(id=>`"${id}"`).join(',')})&select=id,sync_paused,odds_frozen,overrides,original_data`,
+          `${SB_URL}/rest/v1/api_events?id=in.(${ids.map(id=>`"${id}"`).join(',')})&select=id,sync_paused,odds_frozen,overrides,original_data,description,show_in_home`,
           { headers: sbHeaders }
         );
         const existing = existingRes.ok ? await existingRes.json() : [];
@@ -172,6 +172,10 @@ export default async function handler(req, res) {
           if (overrides.away_team)  result.away_team  = overrides.away_team;
           if (overrides.league)     result.league     = overrides.league;
           if (overrides.commence_time) result.commence_time = overrides.commence_time;
+
+          // Always preserve admin-entered fields (never overwrite with API data)
+          if (prev.description)   result.description   = prev.description;
+          if (prev.show_in_home)  result.show_in_home  = prev.show_in_home;
 
           // If odds are frozen, keep existing odds
           if (prev.odds_frozen) {
