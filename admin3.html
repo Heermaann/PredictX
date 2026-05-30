@@ -1288,7 +1288,7 @@ tbody td { padding: 12px 16px; font-size: 13px; color: var(--text1); vertical-al
         <div class="form-group"><label class="form-label" for="ev-datetime">Fecha y Hora</label><input type="datetime-local" id="ev-datetime" class="form-input"></div>
         <div class="form-group"><label class="form-label" for="ev-duration">Duración estimada (minutos)</label><input type="number" id="ev-duration" class="form-input" placeholder="90" min="1" max="600" value="90"></div>
         <div class="form-group" style="display:flex;align-items:flex-end;gap:16px">
-          <label class="form-check"><input type="checkbox" id="ev-featured"><span style="font-size:13px">⭐ Destacado</span></label>
+          <label class="form-check"><input type="checkbox" id="ev-featured"><span style="font-size:13px">⭐ Mostrar en home (aunque sea futuro)</span></label>
           <label class="form-check"><input type="checkbox" id="ev-live"><span style="font-size:13px">🔴 En Vivo</span></label>
         </div>
         <div class="form-group">
@@ -2929,6 +2929,7 @@ async function admOpenApiEventEdit(eventId){
   el('ae-tunder').value   = overrides.total_under  ?? data.total_under  ?? '';
 
   el('ae-sync-paused').checked = !!data.sync_paused;
+  const showHomeEl = el('ae-show-home'); if(showHomeEl) showHomeEl.checked = !!data.show_in_home;
   el('ae-odds-frozen').checked = !!data.odds_frozen;
 
   // Show override badges for existing overrides
@@ -3009,6 +3010,7 @@ async function admSaveApiEventEdit(){
   const payload = {
     sync_paused:  syncPaused,
     odds_frozen:  oddsFrozen,
+    show_in_home: !!(el('ae-show-home')?.checked),
     overrides:    newOverrides,
     edited_by:    SESSION?.email || '',
     edited_at:    new Date().toISOString(),
@@ -3269,6 +3271,12 @@ document.addEventListener('DOMContentLoaded', () => initAdmin());
         <div style="font-size:12px;font-weight:700;margin-bottom:8px;color:var(--text2,#6c757d)">📡 Datos originales de la API</div>
         <div id="ae-original-data" style="font-size:12px;color:var(--text2,#6c757d);font-family:monospace"></div>
       </div>
+    </div>
+    <div style="padding:14px 20px;border-top:1px solid var(--border);display:flex;align-items:center;gap:10px">
+      <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;font-weight:600">
+        <input type="checkbox" id="ae-show-home" style="width:16px;height:16px;accent-color:var(--accent)">
+        ⭐ Mostrar en home (aunque sea futuro)
+      </label>
     </div>
     <div class="modal-ft">
       <button class="btn btn-danger" onclick="admRestoreApiEvent()" style="margin-right:auto">↩ Restaurar original</button>
