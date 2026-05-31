@@ -3696,7 +3696,11 @@ function closeAdmin() {
 /* ── Open owner panel ── */
 function openOwner() {
   if (!SESSION) { openAuthGate(); return; }
-  if (!isOwner()) { showToast('⛔ Acceso restringido'); return; }
+  // Check owner by email (hardcoded) OR by Supabase role — belt and suspenders
+  const emailMatch = SESSION.email === OWNER_EMAIL;
+  const roleMatch  = SESSION.role === 'owner';
+  if (!emailMatch && !roleMatch) { showToast('⛔ Acceso restringido'); return; }
+
   const vl = document.getElementById('view-list');
   const vd = document.getElementById('view-detail');
   const va = document.getElementById('view-admin');
@@ -3704,9 +3708,11 @@ function openOwner() {
   if (vl) vl.style.display = 'none';
   if (vd) vd.style.display = 'none';
   if (va) va.style.display = 'none';
-  if (vo) vo.style.display = 'block';
+  if (vo) { vo.style.display = 'block'; }
+  window.scrollTo(0, 0);
   updateSidebarVisibility();
   showOwnerPage('dashboard', document.getElementById('own-nav-dashboard'));
+  document.querySelectorAll('.bn-btn').forEach(b => b.classList.remove('active'));
 }
 function closeOwner() {
   showListView();
@@ -4762,17 +4768,30 @@ function getSiteConfig() {
 ════════════════════════════════════════════════ */
 function checkOwnerAccess() {
   const btn = document.getElementById('owner-nav-btn');
-  if (btn) btn.classList.toggle('show', isOwner());
+  // Use style.display directly — CSS class alone cannot override inline styles
+  const showBtn = () => { if (btn) { btn.style.display = 'flex'; btn.classList.add('show'); } };
+  const hideBtn = () => { if (btn) { btn.style.display = 'none'; btn.classList.remove('show'); } };
+
+  if (isOwner()) {
+    showBtn();
+  } else {
+    hideBtn();
+  }
+
   if (SESSION) {
-    // Also check role from Supabase profile
+    // Double-check role from Supabase profile (async)
     _SB.from('profiles').select('role').eq('email', SESSION.email).maybeSingle()
       .then(({ data }) => {
         if (data?.role === 'owner') {
           SESSION.role = 'owner';
-          if (btn) btn.classList.add('show');
+          showBtn();
         }
+      }).catch(() => {
+        // If query fails but email matches OWNER_EMAIL, still show button
+        if (SESSION.email === OWNER_EMAIL) showBtn();
       });
   }
+
   const ownerEmailEl = document.getElementById('owner-email-display');
   if (ownerEmailEl && SESSION) ownerEmailEl.textContent = SESSION.email;
 }
