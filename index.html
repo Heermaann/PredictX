@@ -267,6 +267,9 @@
           <div class="admin-nav-item" id="ap-nav-tx" onclick="showAdminPage('tx',this)">
             <span class="an-ico">💳</span>Transacciones
           </div>
+          <div class="admin-nav-item" id="ap-nav-support" onclick="showAdminPage('support',this)">
+            <span class="an-ico">🆘</span>Soporte
+          </div>
           <div class="admin-nav-sep"></div>
           <div class="admin-nav-item" id="ap-nav-profile" onclick="showAdminPage('profile',this)">
             <span class="an-ico">👤</span>Mi Perfil
@@ -287,6 +290,7 @@
             <div class="admin-tab active" onclick="showAdminPage('dashboard',null,this)">📊 Dashboard</div>
             <div class="admin-tab" onclick="showAdminPage('bets',null,this)">🎟 Apuestas</div>
             <div class="admin-tab" onclick="showAdminPage('tx',null,this)">💳 Transacciones</div>
+            <div class="admin-tab" onclick="showAdminPage('support',null,this)">🆘 Soporte</div>
             <div class="admin-tab" onclick="showAdminPage('profile',null,this)">👤 Perfil</div>
           </div>
 
@@ -1562,4 +1566,53 @@
 
 <!-- ── Welcome Banner ── -->
 </body>
-</html>
+</html
+          <!-- Soporte -->
+          <div class="admin-page" id="ap-support">
+            <div class="page-hd">
+              <div>
+                <div class="page-title">🆘 Soporte</div>
+                <div class="page-sub">Envía una consulta o reporte al equipo de soporte</div>
+              </div>
+            </div>
+
+            <!-- Ticket form -->
+            <div class="info-card" style="max-width:600px;margin-bottom:24px">
+              <div style="font-size:15px;font-weight:700;margin-bottom:16px">Nuevo ticket de soporte</div>
+
+              <div class="form-group">
+                <label class="form-label">Asunto</label>
+                <input type="text" id="sup-subject" class="form-input" placeholder="Describe brevemente tu problema..." maxlength="120">
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Descripción detallada</label>
+                <textarea id="sup-body" class="form-input" rows="5" style="resize:vertical" placeholder="Explica con detalle tu consulta, error o sugerencia..."></textarea>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Adjuntar archivo (PNG, JPG, PDF) <span style="color:var(--text3);font-size:11px">— Opcional</span></label>
+                <input type="file" id="sup-file" accept=".png,.jpg,.jpeg,.pdf" style="display:none" onchange="supPreviewFile(this)">
+                <div onclick="document.getElementById('sup-file').click()" style="border:2px dashed var(--border2);border-radius:10px;padding:20px;text-align:center;cursor:pointer;color:var(--text2);font-size:13px" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border2)'">
+                  📎 Clic para adjuntar archivo
+                </div>
+                <div id="sup-file-preview" style="display:none;margin-top:8px;padding:8px 12px;background:var(--bg3);border-radius:8px;font-size:12px;color:var(--text2);display:flex;align-items:center;gap:8px">
+                  <span id="sup-file-name"></span>
+                  <button onclick="supClearFile()" style="background:none;border:none;cursor:pointer;color:var(--red);font-size:16px;padding:0;margin-left:auto">✕</button>
+                </div>
+              </div>
+
+              <div class="auth-status" id="sup-status" style="display:none"></div>
+
+              <button class="btn btn-primary" onclick="supSubmit()" style="width:100%;margin-top:8px">
+                📨 Enviar ticket
+              </button>
+            </div>
+
+            <!-- My tickets history -->
+            <div class="info-card" style="max-width:600px">
+              <div style="font-size:15px;font-weight:700;margin-bottom:16px">Mis tickets anteriores</div>
+              <div id="sup-my-tickets"><div style="color:var(--text2);font-size:13px">Cargando...</div></div>
+            </div>
+          </div>
+>
