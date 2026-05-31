@@ -969,7 +969,7 @@ function buildCard(m, i) {
         <div class="mc-title">${esc(m.home_team)} vs ${esc(m.away_team)}</div>
         <div class="mc-meta">
           ${live ? '<span class="mc-live-badge">EN VIVO</span>' : ''}
-          <span class="mc-league-link" onclick="event.stopPropagation();loadLeague('${esc(m.sport_key)}','${esc(m.league||m.sport_title||m.sport_key)}',null)" style="cursor:pointer;text-decoration:underline dotted;text-underline-offset:2px">${esc(m.league||m.sport_title||m.sport_key)}</span>
+          <span class="mc-league-link" data-sport="${m.sport_key}" data-label="${(m.league||m.sport_title||m.sport_key).replace(/"/g,'')}" style="cursor:pointer;text-decoration:underline dotted;text-underline-offset:2px">${esc(m.league||m.sport_title||m.sport_key)}</span>
           <span class="mc-dot"></span>
           <span>${fDate(m.commence_time)}</span>
           <span class="mc-dot"></span>
