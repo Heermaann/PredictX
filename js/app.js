@@ -642,6 +642,38 @@ async function renderCatPills() {
 
 
 // ── Render full sidebar from Supabase (sports + leagues) ──
+// Default hardcoded sports/leagues shown when Supabase sports table is empty
+const DEFAULT_SIDEBAR_SPORTS = [
+  { key:'soccer',             title:'Fútbol',           icon:'⚽', leagues:[
+    {api_key:'soccer_epl',                       name:'Premier League',     icon:'🏴'},
+    {api_key:'soccer_spain_la_liga',             name:'La Liga',            icon:'🇪🇸'},
+    {api_key:'soccer_uefa_champs_league',        name:'Champions League',   icon:'⭐'},
+    {api_key:'soccer_germany_bundesliga',        name:'Bundesliga',         icon:'🇩🇪'},
+    {api_key:'soccer_italy_serie_a',             name:'Serie A',            icon:'🇮🇹'},
+    {api_key:'soccer_france_ligue_one',          name:'Ligue 1',            icon:'🇫🇷'},
+    {api_key:'soccer_usa_mls',                   name:'MLS',                icon:'🇺🇸'},
+    {api_key:'soccer_brazil_campeonato',         name:'Brasileirão',        icon:'🇧🇷'},
+    {api_key:'soccer_conmebol_copa_libertadores',name:'Copa Libertadores',  icon:'🏆'},
+  ]},
+  { key:'basketball',         title:'Baloncesto',       icon:'🏀', leagues:[
+    {api_key:'basketball_nba',       name:'NBA',       icon:'🏀'},
+    {api_key:'basketball_euroleague',name:'EuroLeague',icon:'🇪🇺'},
+  ]},
+  { key:'americanfootball',   title:'Fútbol Am.',       icon:'🏈', leagues:[
+    {api_key:'americanfootball_nfl', name:'NFL',  icon:'🏈'},
+    {api_key:'americanfootball_ncaaf',name:'NCAAF',icon:'🎓'},
+  ]},
+  { key:'baseball',           title:'Béisbol',          icon:'⚾', leagues:[
+    {api_key:'baseball_mlb',name:'MLB',icon:'⚾'},
+  ]},
+  { key:'icehockey',          title:'Hockey',           icon:'🏒', leagues:[
+    {api_key:'icehockey_nhl',name:'NHL',icon:'🏒'},
+  ]},
+  { key:'mma',                title:'MMA / UFC',        icon:'🥊', leagues:[
+    {api_key:'mma_mixed_martial_arts',name:'UFC / MMA',icon:'🥊'},
+  ]},
+];
+
 async function renderFullSidebar() {
   const wrap = document.getElementById('sb-sports-wrap');
   if (!wrap) return;
@@ -652,7 +684,22 @@ async function renderFullSidebar() {
     ]);
     const sports  = sportsRes.data  || [];
     const leagues = leaguesRes.data || [];
-    if (!sports.length) return;
+    // If no sports configured in Supabase, use hardcoded defaults
+    if (!sports.length) {
+      wrap.innerHTML = DEFAULT_SIDEBAR_SPORTS.map(s => {
+        const gid = 'g-dyn-' + s.key;
+        const leagueRows = s.leagues.map(l =>
+          `<div class="sb-league" onclick="loadLeague('${l.api_key}','${esc(l.name)}',this)">${l.icon||''} ${esc(l.name)}</div>`
+        ).join('');
+        return `
+          <div class="sb-item sb-group" onclick="toggleSportGroup('${gid}','${s.key}')">
+            <span class="sb-item-ico">${s.icon}</span>${s.title}
+            <span class="sb-arrow" id="arr-${gid}">›</span>
+          </div>
+          <div class="sb-leagues" id="${gid}">${leagueRows}</div>`;
+      }).join('');
+      return;
+    }
 
     wrap.innerHTML = sports.map(s => {
       const gid = 'g-dyn-' + s.key;
@@ -4412,8 +4459,10 @@ function clearEventForm() {
     const el = document.getElementById(id);
     if (el) el.value = '';
   });
-  document.getElementById('ev-featured').checked = false;
-  null.checked = false;
+  const evFeatured = document.getElementById('ev-featured');
+  if (evFeatured) evFeatured.checked = false;
+  const evLive = document.getElementById('ev-live');
+  if (evLive) evLive.checked = false;
   document.getElementById('ev-sport').value = 'soccer_epl';
   onEvSportChange();
 }
@@ -4437,8 +4486,8 @@ async function saveManualEvent() {
   const home     = document.getElementById('ev-home').value.trim();
   const away     = document.getElementById('ev-away').value.trim();
   const dt       = document.getElementById('ev-datetime').value;
-  const featured = document.getElementById('ev-featured').checked;
-  const isLiveChk = null.checked;
+  const featured = document.getElementById('ev-featured')?.checked || false;
+  const isLiveChk = document.getElementById('ev-live')?.checked || false;
 
   if (!league || !home || !away || !dt) { showToast('❌ Completa todos los campos obligatorios'); return; }
 
