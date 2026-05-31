@@ -856,8 +856,8 @@ tbody td { padding: 12px 16px; font-size: 13px; color: var(--text1); vertical-al
               </div>
             </div>
             <div class="form-row">
-              <div class="form-group"><label class="form-label" for="cfg-dep-min">Depósito mínimo (€)</label><input type="number" id="cfg-dep-min" class="form-input" value="10"></div>
-              <div class="form-group"><label class="form-label" for="cfg-wit-min">Retirada mínima (€)</label><input type="number" id="cfg-wit-min" class="form-input" value="20"></div>
+              <div class="form-group"><label class="form-label" for="cfg-dep-min">Depósito mínimo ($)</label><input type="number" id="cfg-dep-min" class="form-input" value="10"></div>
+              <div class="form-group"><label class="form-label" for="cfg-wit-min">Retirada mínima ($)</label><input type="number" id="cfg-wit-min" class="form-input" value="20"></div>
             </div>
             <div class="form-row form-row-1">
               <div class="form-group"><label class="form-label" for="cfg-house-margin">Comisión de la casa (%)</label><input type="number" id="cfg-house-margin" class="form-input" value="5"></div>
@@ -873,13 +873,41 @@ tbody td { padding: 12px 16px; font-size: 13px; color: var(--text1); vertical-al
               <label class="form-check"><input type="checkbox" id="cfg-maintenance"><div><div style="font-size:13px;font-weight:600;color:var(--red)">Modo mantenimiento</div><div style="font-size:12px;color:var(--text2)">Muestra aviso a los usuarios</div></div></label>
             </div>
           </div>
-          <!-- Permisos -->
+          <!-- Gestión de Roles -->
           <div class="table-card" style="padding:20px;grid-column:1/-1">
-            <div style="font-size:15px;font-weight:700;margin-bottom:16px">👤 Gestión de roles</div>
-            <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">
-              <div class="form-group" style="flex:1;min-width:200px"><label class="form-label" for="cfg-promote-email">Email del usuario</label><input type="email" id="cfg-promote-email" class="form-input" placeholder="usuario@email.com"></div>
-              <button class="btn btn-primary" onclick="admPromoteUser()">⬆ Hacer Owner</button>
-              <button class="btn btn-danger" onclick="admDemoteUser()">⬇ Hacer Usuario</button>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px">
+              <div style="font-size:15px;font-weight:700">👤 Gestión de Roles</div>
+              <div style="display:flex;gap:8px;align-items:center">
+                <input type="text" id="roles-search" placeholder="Buscar usuario..." oninput="admFilterRolesTable(this.value)"
+                  style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:6px 12px;color:var(--text);font-size:12px;outline:none;width:180px">
+                <button class="btn btn-ghost btn-sm" onclick="admLoadRolesTable()">🔄 Actualizar</button>
+              </div>
+            </div>
+            <p style="font-size:12px;color:var(--text2);margin-bottom:14px">
+              Todos los usuarios tienen el rol <strong>Usuario</strong> por defecto. Asigna roles superiores con cuidado.
+            </p>
+            <!-- Role legend -->
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
+              <span style="font-size:11px;padding:3px 10px;border-radius:20px;background:#e8f5e9;color:#2e7d32;font-weight:600">● Usuario</span>
+              <span style="font-size:11px;padding:3px 10px;border-radius:20px;background:#e3f2fd;color:#1565c0;font-weight:600">● Editor</span>
+              <span style="font-size:11px;padding:3px 10px;border-radius:20px;background:#fff3e0;color:#e65100;font-weight:600">● Administrador</span>
+              <span style="font-size:11px;padding:3px 10px;border-radius:20px;background:#fce4ec;color:#880e4f;font-weight:600">● Owner</span>
+            </div>
+            <div style="overflow-x:auto">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Usuario</th>
+                    <th>Email</th>
+                    <th>Rol actual</th>
+                    <th>Cambiar rol</th>
+                    <th>Acción</th>
+                  </tr>
+                </thead>
+                <tbody id="roles-table-body">
+                  <tr><td colspan="5" class="table-empty">⏳ Cargando usuarios...</td></tr>
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
@@ -1536,7 +1564,7 @@ function admShowPage(page, btn){
   if(page==='sports')    renderSports();
   if(page==='leagues')   renderLeagues();
   if(page==='events')    renderEvents();
-  if(page==='config')    loadAdmConfig();
+  if(page==='config')    { loadAdmConfig(); admLoadRolesTable(); }
   if(page==='teams')     renderTeams();
   if(page==='outcomes')  renderOutcomes();
   if(page==='api-events') renderApiEvents();
@@ -1635,9 +1663,9 @@ function renderUsers(users){
   body.innerHTML=users.map(u=>{
     const color=avatarColor(u.email);
     return `<tr>
-      <td><div class="user-chip">
+      <td><div class="user-chip" style="cursor:pointer" onclick="admViewUser('${esc(u.email)}')" title="Ver detalle">
         <div class="user-chip-avatar" style="background:${color}">${(u.name||u.email||'?')[0].toUpperCase()}</div>
-        <div><div class="user-chip-name">${esc(u.name||'Sin nombre')}</div><div class="user-chip-email">@${esc(u.email.split('@')[0])}</div></div>
+        <div><div class="user-chip-name" style="color:var(--blue)">${esc(u.name||'Sin nombre')}</div><div class="user-chip-email">@${esc(u.email.split('@')[0])}</div></div>
       </div></td>
       <td>${esc(u.country||'—')}</td>
       <td><div class="amount-cell"><span class="amount-icon">💎</span>${fMoney(u.balance)}</div></td>
@@ -1647,6 +1675,7 @@ function renderUsers(users){
       <td>${u.is_suspended?'<span class="badge badge-red">Suspendido</span>':'<span class="badge badge-green">Activo</span>'}</td>
       <td><div class="action-group">
         <button class="btn btn-outline btn-sm" onclick="admViewUser('${esc(u.email)}')">👁 Detalle</button>
+        <button class="btn btn-primary btn-sm" onclick="admEditUser('${esc(u.email)}')">✏️ Editar</button>
         <button class="btn btn-outline btn-sm" onclick="admResetUserPassword('${esc(u.email)}')" title="Enviar email de reseteo de contraseña">🔑 Reset</button>
         ${u.is_suspended
           ?`<button class="btn btn-success btn-sm" onclick="admToggleSuspend('${esc(u.email)}',false)">✅ Activar</button>`
@@ -1680,41 +1709,192 @@ async function admResetUserPassword(email) {
     showToast('❌ ' + e.message, 'error');
   }
 }
+function admCloseUserModal(){
+  const el=document.getElementById('adm-user-detail-modal-container');
+  if(el) el.innerHTML='';
+}
+
 function admViewUser(email){
   const u=_cache.users.find(x=>x.email===email);
   const bets=_cache.bets.filter(b=>b.user_email===email);
   if(!u)return;
-  const won=bets.filter(b=>b.status==='win').length, lost=bets.filter(b=>b.status==='loss').length, open=bets.filter(b=>b.status==='open').length;
+  const won=bets.filter(b=>b.status==='win').length;
+  const lost=bets.filter(b=>b.status==='loss').length;
+  const open=bets.filter(b=>b.status==='open').length;
   const staked=bets.reduce((a,b)=>a+(+b.stake||0),0);
   const returned=bets.filter(b=>b.status==='win').reduce((a,b)=>a+(+b.ret||0),0);
   const netPnL=returned-staked;
   const color=avatarColor(u.email);
-  const container=document.getElementById('adm-user-detail-modal-container');
-  container.innerHTML=`
-  <div style="position:fixed;inset:0;z-index:800;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;padding:16px" onclick="if(event.target===this)this.remove()">
-    <div style="background:#fff;border-radius:14px;width:100%;max-width:540px;max-height:85vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,.2)">
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:20px 24px;border-bottom:1px solid #e9ecef">
-        <div style="display:flex;align-items:center;gap:12px">
-          <div style="width:46px;height:46px;border-radius:12px;background:${color};color:#fff;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700">${(u.name||'?')[0].toUpperCase()}</div>
-          <div><div style="font-size:16px;font-weight:700">${esc(u.name||'Sin nombre')}</div><div style="font-size:12px;color:#6c757d">@${esc(u.email.split('@')[0])}</div></div>
+  const roleMap={owner:'<span class="badge badge-purple">Owner</span>',admin:'<span class="badge badge-orange">Admin</span>',editor:'<span class="badge badge-blue">Editor</span>'};
+  const roleBadgeHtml=roleMap[u.role]||'<span class="badge badge-green">Usuario</span>';
+  const betRows=bets.slice(0,8).map(b=>`
+    <tr>
+      <td style="font-size:11px;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(b.match_name||'--')}</td>
+      <td style="font-size:12px;font-weight:600">${esc(b.pick||'--')}</td>
+      <td style="font-size:12px">${fOdd(b.odd)}</td>
+      <td>${fMoney(b.stake)}</td>
+      <td>${badgeHtml(b.status)}</td>
+    </tr>`).join('');
+  document.getElementById('adm-user-detail-modal-container').innerHTML=`
+  <div style="position:fixed;inset:0;z-index:800;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:16px" onclick="if(event.target===this)admCloseUserModal()">
+    <div style="background:var(--bg);border-radius:16px;width:100%;max-width:580px;max-height:88vh;overflow-y:auto;box-shadow:0 12px 50px rgba(0,0,0,.3);border:1px solid var(--border)">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:20px 24px;border-bottom:1px solid var(--border)">
+        <div style="display:flex;align-items:center;gap:14px">
+          <div style="width:50px;height:50px;border-radius:14px;background:${color};color:#fff;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;flex-shrink:0">${(u.name||'?')[0].toUpperCase()}</div>
+          <div>
+            <div style="font-size:17px;font-weight:700;color:var(--text)">${esc(u.name||'Sin nombre')}</div>
+            <div style="font-size:12px;color:var(--text2)">${esc(u.email)}</div>
+            <div style="margin-top:5px;display:flex;gap:6px;align-items:center">${roleBadgeHtml}${u.country?' <span style="font-size:11px">🌍 '+esc(u.country)+'</span>':''}</div>
+          </div>
         </div>
-        <button onclick="document.getElementById('adm-user-detail-modal-container').innerHTML=''" style="width:32px;height:32px;border-radius:8px;border:1px solid #e9ecef;background:#fff;font-size:16px;cursor:pointer">✕</button>
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;padding:20px 24px">
-        <div style="background:#f4f6f9;border-radius:10px;padding:14px;text-align:center"><div style="font-size:11px;color:#6c757d;margin-bottom:4px">Saldo</div><div style="font-size:18px;font-weight:800">${fMoney(u.balance)}</div></div>
-        <div style="background:#f4f6f9;border-radius:10px;padding:14px;text-align:center"><div style="font-size:11px;color:#6c757d;margin-bottom:4px">Depositado</div><div style="font-size:18px;font-weight:800;color:#28a745">${fMoney(u.deposited)}</div></div>
-        <div style="background:#f4f6f9;border-radius:10px;padding:14px;text-align:center"><div style="font-size:11px;color:#6c757d;margin-bottom:4px">P&L</div><div style="font-size:18px;font-weight:800;color:${netPnL>=0?'#28a745':'#dc3545'}">${netPnL>=0?'+':''}${fMoney(netPnL)}</div></div>
-      </div>
-      <div style="padding:0 24px 20px">
-        <div style="display:flex;gap:8px;margin-bottom:14px">
-          <span class="badge badge-orange">🎟 ${open} activas</span>
-          <span class="badge badge-green">✓ ${won} ganadas</span>
-          <span class="badge badge-red">✗ ${lost} perdidas</span>
+        <div style="display:flex;gap:8px">
+          <button onclick="admCloseUserModal();admEditUser('${esc(u.email)}')" style="padding:6px 14px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:12px;font-weight:600;cursor:pointer">✏️ Editar</button>
+          <button onclick="admCloseUserModal()" style="width:32px;height:32px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);font-size:16px;cursor:pointer;color:var(--text)">✕</button>
         </div>
-        ${bets.length?`<div style="overflow-x:auto"><table><thead><tr><th>Partido</th><th>Pick</th><th>Cuota</th><th>Apuesta</th><th>Estado</th></tr></thead><tbody>${bets.slice(0,8).map(b=>`<tr><td style="font-size:11px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(b.match_name||'—')}</td><td style="font-size:12px;font-weight:600">${esc(b.pick||'—')}</td><td style="font-size:12px">${fOdd(b.odd)}</td><td>${fMoney(b.stake)}</td><td>${badgeHtml(b.status)}</td></tr>`).join('')}</tbody></table></div>`:'<div style="text-align:center;color:#adb5bd;padding:20px;font-size:13px">Sin apuestas</div>'}
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:18px 24px">
+        <div style="background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:14px;text-align:center">
+          <div style="font-size:10px;color:var(--text2);margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px">Saldo</div>
+          <div style="font-size:20px;font-weight:800;color:var(--text)">${fMoney(u.balance)}</div>
+        </div>
+        <div style="background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:14px;text-align:center">
+          <div style="font-size:10px;color:var(--text2);margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px">Depositado</div>
+          <div style="font-size:20px;font-weight:800;color:#28a745">${fMoney(u.deposited)}</div>
+        </div>
+        <div style="background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:14px;text-align:center">
+          <div style="font-size:10px;color:var(--text2);margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px">P&L</div>
+          <div style="font-size:20px;font-weight:800;color:${netPnL>=0?'#28a745':'#dc3545'}">${netPnL>=0?'+':''}${fMoney(netPnL)}</div>
+        </div>
+      </div>
+      <div style="padding:0 24px 16px;display:flex;gap:8px;flex-wrap:wrap">
+        <span class="badge badge-orange">🎟 ${open} activas</span>
+        <span class="badge badge-green">&#10003; ${won} ganadas</span>
+        <span class="badge badge-red">&#10007; ${lost} perdidas</span>
+        <span class="badge badge-blue" style="cursor:pointer" onclick="admCloseUserModal();admViewUserBets('${esc(u.email)}')">Ver todas las apuestas &rarr;</span>
+      </div>
+      <div style="padding:0 24px 24px">
+        ${bets.length?`<div style="overflow-x:auto;border-radius:10px;border:1px solid var(--border)"><table><thead><tr><th>Partido</th><th>Pick</th><th>Cuota</th><th>Apuesta</th><th>Estado</th></tr></thead><tbody>${betRows}</tbody></table></div>`:'<div style="text-align:center;color:var(--text2);padding:24px;font-size:13px">Sin apuestas registradas</div>'}
       </div>
     </div>
   </div>`;
+}
+
+function admViewUserBets(email){
+  admShowPage('bets',document.getElementById('nav-bets'));
+  const bets=_cache.bets.filter(b=>b.user_email===email);
+  const body=document.getElementById('adm-bets-body');
+  const username=email.split('@')[0];
+  const sub=document.querySelector('#adm-bets .page-hd-left .page-sub');
+  if(sub) sub.textContent='Apuestas de @'+username+' \u00b7 '+bets.length+' registros';
+  const total=bets.reduce((a,b)=>a+(+b.stake||0),0);
+  const openBets=bets.filter(b=>b.status==='open');
+  const exposure=openBets.reduce((a,b)=>a+((+b.odd||1)*(+b.stake||0)-(+b.stake||0)),0);
+  const el=id=>document.getElementById(id);
+  if(el('bets-k-total'))    el('bets-k-total').textContent=fMoney(total);
+  if(el('bets-k-open'))     el('bets-k-open').textContent=openBets.length;
+  if(el('bets-k-exposure')) el('bets-k-exposure').textContent=fMoney(exposure);
+  if(!bets.length){body.innerHTML='<tr><td colspan="10" class="table-empty">Sin apuestas para @'+username+'</td></tr>';return;}
+  body.innerHTML=bets.map(b=>`<tr>
+    <td style="font-size:11px;color:var(--text2);font-family:var(--mono)">${(b.id||'').slice(-6)}</td>
+    <td><span style="font-size:12px;color:var(--blue);cursor:pointer;font-weight:600" onclick="admViewUserBets('${esc(b.user_email||'')}')">@${esc((b.user_email||'').split('@')[0])}</span></td>
+    <td style="font-size:11px;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(b.match_name||b.match||'--')}</td>
+    <td style="font-weight:600;font-size:12px">${esc(b.pick||'--')}</td>
+    <td style="font-size:12px">${fOdd(b.odd)}</td>
+    <td><div class="amount-cell"><span class="amount-icon">&#128142;</span>${fMoney(b.stake)}</div></td>
+    <td><div class="amount-cell">${b.ret?'<span class="amount-icon">&#128142;</span>'+fMoney(b.ret):'--'}</div></td>
+    <td>${b.type==='combo'?'<span class="badge badge-purple">Combinada</span>':'<span class="badge badge-green">Simple</span>'}</td>
+    <td>${badgeHtml(b.status)}</td>
+    <td><div class="action-group">${b.status==='open'?`
+      <button class="btn btn-success btn-sm" onclick="admResolveBet('${b.id}','${esc(b.user_email)}',${+b.stake||0},${+b.odd||1},'win')">&#10003; Ganada</button>
+      <button class="btn btn-danger btn-sm" onclick="admResolveBet('${b.id}','${esc(b.user_email)}',${+b.stake||0},${+b.odd||1},'loss')">&#10007; Perdida</button>`:'--'}</div></td>
+  </tr>`).join('');
+  const card=document.querySelector('#adm-bets .table-card');
+  if(card&&!document.getElementById('bets-filter-banner')){
+    const banner=document.createElement('div');
+    banner.id='bets-filter-banner';
+    banner.style.cssText='background:var(--accent);color:#fff;padding:8px 16px;font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:space-between;border-radius:8px;margin-bottom:10px';
+    banner.innerHTML='<span>&#128269; Filtrando apuestas de @'+username+'</span><button onclick="admShowPage(\'bets\',document.getElementById(\'nav-bets\'));renderBets(\'all\');document.querySelector(\'#adm-bets .page-hd-left .page-sub\').textContent=\'Historial y resolución de apuestas\';this.parentElement.remove()" style="background:rgba(255,255,255,.2);border:none;color:#fff;padding:3px 10px;border-radius:6px;cursor:pointer;font-size:11px">&#10005; Quitar filtro</button>';
+    card.prepend(banner);
+  }
+}
+
+function admEditUser(email){
+  const u=_cache.users.find(x=>x.email===email);
+  if(!u)return;
+  const color=avatarColor(u.email);
+  document.getElementById('adm-user-detail-modal-container').innerHTML=`
+  <div style="position:fixed;inset:0;z-index:800;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:16px" onclick="if(event.target===this)admCloseUserModal()">
+    <div style="background:var(--bg);border-radius:16px;width:100%;max-width:500px;box-shadow:0 12px 50px rgba(0,0,0,.3);border:1px solid var(--border)">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:20px 24px;border-bottom:1px solid var(--border)">
+        <div style="display:flex;align-items:center;gap:12px">
+          <div style="width:44px;height:44px;border-radius:12px;background:${color};color:#fff;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700">${(u.name||'?')[0].toUpperCase()}</div>
+          <div>
+            <div style="font-size:15px;font-weight:700;color:var(--text)">Editar cuenta</div>
+            <div style="font-size:12px;color:var(--text2)">${esc(u.email)}</div>
+          </div>
+        </div>
+        <button onclick="admCloseUserModal()" style="width:32px;height:32px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);font-size:16px;cursor:pointer;color:var(--text)">&#10005;</button>
+      </div>
+      <div style="padding:24px;display:flex;flex-direction:column;gap:16px">
+        <div>
+          <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text2);margin-bottom:6px">Nombre completo</label>
+          <input id="edit-user-name" type="text" value="${esc(u.name||'')}" placeholder="Nombre del usuario"
+            style="width:100%;box-sizing:border-box;padding:10px 14px;border-radius:10px;border:1.5px solid var(--border);background:var(--bg3);color:var(--text);font-size:14px;outline:none"
+            onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'">
+        </div>
+        <div>
+          <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text2);margin-bottom:6px">Correo electr&oacute;nico</label>
+          <input id="edit-user-email" type="email" value="${esc(u.email||'')}" placeholder="email@ejemplo.com"
+            style="width:100%;box-sizing:border-box;padding:10px 14px;border-radius:10px;border:1.5px solid var(--border);background:var(--bg3);color:var(--text);font-size:14px;outline:none"
+            onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'">
+          <div style="font-size:11px;color:var(--text2);margin-top:4px">&#9888;&#65039; Cambiar el email solo actualiza el perfil, no las credenciales de acceso.</div>
+        </div>
+        <div>
+          <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text2);margin-bottom:6px">Pa&iacute;s</label>
+          <input id="edit-user-country" type="text" value="${esc(u.country||'')}" placeholder="Ej: Espa&ntilde;a, Colombia, M&eacute;xico..."
+            style="width:100%;box-sizing:border-box;padding:10px 14px;border-radius:10px;border:1.5px solid var(--border);background:var(--bg3);color:var(--text);font-size:14px;outline:none"
+            onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'">
+        </div>
+        <div>
+          <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text2);margin-bottom:6px">Saldo ($)</label>
+          <input id="edit-user-balance" type="number" step="0.01" min="0" value="${(+(u.balance)||0).toFixed(2)}" placeholder="0.00"
+            style="width:100%;box-sizing:border-box;padding:10px 14px;border-radius:10px;border:1.5px solid var(--border);background:var(--bg3);color:var(--text);font-size:14px;outline:none"
+            onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'">
+        </div>
+        <div id="edit-user-status" style="display:none;padding:10px 14px;border-radius:10px;font-size:13px;font-weight:600"></div>
+        <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:4px">
+          <button onclick="admCloseUserModal()" style="padding:10px 20px;border-radius:10px;border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:13px;font-weight:600;cursor:pointer">Cancelar</button>
+          <button onclick="admSaveUserEdit('${esc(u.email)}')" style="padding:10px 20px;border-radius:10px;border:none;background:var(--accent);color:#fff;font-size:13px;font-weight:700;cursor:pointer">&#128190; Guardar cambios</button>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+async function admSaveUserEdit(originalEmail){
+  const name    =(document.getElementById('edit-user-name')?.value    ||'').trim();
+  const email   =(document.getElementById('edit-user-email')?.value   ||'').trim();
+  const country =(document.getElementById('edit-user-country')?.value ||'').trim();
+  const balance =parseFloat(document.getElementById('edit-user-balance')?.value||0);
+  const statusEl=document.getElementById('edit-user-status');
+  const setStatus=(msg,ok=false)=>{
+    if(!statusEl)return;
+    statusEl.style.display='block';
+    statusEl.style.background=ok?'#d4edda':'#f8d7da';
+    statusEl.style.color=ok?'#155724':'#721c24';
+    statusEl.textContent=msg;
+  };
+  if(!name)  return setStatus('El nombre no puede estar vacio.');
+  if(!email) return setStatus('El email no puede estar vacio.');
+  if(isNaN(balance)||balance<0) return setStatus('El saldo debe ser un numero positivo.');
+  const updates={name,country,balance:+balance.toFixed(2)};
+  if(email!==originalEmail) updates.email=email;
+  const {error}=await _SB.from('profiles').update(updates).eq('email',originalEmail);
+  if(error) return setStatus('Error: '+error.message);
+  const u=_cache.users.find(x=>x.email===originalEmail);
+  if(u) Object.assign(u,updates);
+  setStatus('Cambios guardados correctamente.',true);
+  setTimeout(()=>{admCloseUserModal();renderUsers(_cache.users);},1200);
 }
 
 // ── Apuestas ──
@@ -1732,7 +1912,7 @@ function renderBets(filter){
   if(!bets.length){ body.innerHTML=`<tr><td colspan="10" class="table-empty">Sin apuestas</td></tr>`; return; }
   body.innerHTML=bets.map(b=>`<tr>
     <td style="font-size:11px;color:var(--text2);font-family:var(--mono)">${(b.id||'').slice(-6)}</td>
-    <td style="font-size:12px;color:var(--blue)">@${esc((b.user_email||'').split('@')[0])}</td>
+    <td><span style="font-size:12px;color:var(--blue);cursor:pointer;font-weight:600" onclick="admViewUserBets('${esc(b.user_email||'')}')" title="Ver apuestas de este usuario">@${esc((b.user_email||'').split('@')[0])}</span></td>
     <td style="font-size:11px;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(b.match_name||b.match||'—')}</td>
     <td style="font-weight:600;font-size:12px">${esc(b.pick||'—')}</td>
     <td style="font-size:12px">${fOdd(b.odd)}</td>
@@ -2211,8 +2391,84 @@ async function admSaveConfig(){
   showToast('✅ Configuración guardada','success');
 }
 
-async function admPromoteUser(){ const email=document.getElementById('cfg-promote-email').value.trim(); if(!email){showToast('❌ Introduce un email','error');return;} const {error}=await _SB.from('profiles').update({role:'owner'}).eq('email',email); if(error){showToast('❌ '+error.message,'error');return;} showToast('✅ Usuario promovido a Owner','success'); }
-async function admDemoteUser(){  const email=document.getElementById('cfg-promote-email').value.trim(); if(!email){showToast('❌ Introduce un email','error');return;} const {error}=await _SB.from('profiles').update({role:'user'}).eq('email',email); if(error){showToast('❌ '+error.message,'error');return;} showToast('✅ Usuario degradado a Usuario','success'); }
+// ── Roles Table ──────────────────────────────────
+let _rolesData = [];
+
+const ROLE_CONFIG = {
+  user:          { label:'Usuario',        color:'#2e7d32', bg:'#e8f5e9' },
+  editor:        { label:'Editor',         color:'#1565c0', bg:'#e3f2fd' },
+  admin:         { label:'Administrador',  color:'#e65100', bg:'#fff3e0' },
+  owner:         { label:'Owner',          color:'#880e4f', bg:'#fce4ec' },
+};
+
+function roleBadge(role) {
+  const r = ROLE_CONFIG[role] || ROLE_CONFIG.user;
+  return `<span style="font-size:11px;padding:3px 10px;border-radius:20px;background:${r.bg};color:${r.color};font-weight:600">${r.label}</span>`;
+}
+
+async function admLoadRolesTable() {
+  const body = document.getElementById('roles-table-body');
+  if (!body) return;
+  body.innerHTML = '<tr><td colspan="5" class="table-empty">⏳ Cargando...</td></tr>';
+  const { data, error } = await _SB.from('profiles')
+    .select('id,name,email,role')
+    .order('created_at', { ascending: false });
+  if (error) { body.innerHTML = `<tr><td colspan="5" class="table-empty">❌ ${error.message}</td></tr>`; return; }
+  _rolesData = (data || []).map(u => ({ ...u, role: u.role || 'user' }));
+  admRenderRolesTable(_rolesData);
+}
+
+function admRenderRolesTable(users) {
+  const body = document.getElementById('roles-table-body');
+  if (!body) return;
+  if (!users.length) { body.innerHTML = '<tr><td colspan="5" class="table-empty">Sin usuarios</td></tr>'; return; }
+  body.innerHTML = users.map(u => `
+    <tr id="roles-row-${u.id}">
+      <td><strong>${u.name || '—'}</strong></td>
+      <td style="font-size:12px;color:var(--text2)">${u.email}</td>
+      <td>${roleBadge(u.role)}</td>
+      <td>
+        <select id="roles-sel-${u.id}" style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:5px 10px;color:var(--text);font-size:12px;outline:none">
+          <option value="user"  ${u.role==='user'  ?'selected':''}>Usuario</option>
+          <option value="editor"${u.role==='editor'?'selected':''}>Editor</option>
+          <option value="admin" ${u.role==='admin' ?'selected':''}>Administrador</option>
+          <option value="owner" ${u.role==='owner' ?'selected':''}>Owner</option>
+        </select>
+      </td>
+      <td>
+        <button class="btn btn-primary btn-sm" onclick="admSaveRole('${u.id}','${u.email}')">Guardar</button>
+      </td>
+    </tr>`).join('');
+}
+
+function admFilterRolesTable(q) {
+  const query = q.toLowerCase();
+  const filtered = _rolesData.filter(u =>
+    (u.name||'').toLowerCase().includes(query) ||
+    (u.email||'').toLowerCase().includes(query) ||
+    (u.role||'').toLowerCase().includes(query)
+  );
+  admRenderRolesTable(filtered);
+}
+
+async function admSaveRole(userId, email) {
+  const sel = document.getElementById('roles-sel-' + userId);
+  if (!sel) return;
+  const newRole = sel.value;
+  const { error } = await _SB.from('profiles').update({ role: newRole }).eq('id', userId);
+  if (error) { showToast('❌ ' + error.message, 'error'); return; }
+  // Update local cache
+  const u = _rolesData.find(x => x.id === userId);
+  if (u) u.role = newRole;
+  // Refresh badge in row
+  const row = document.getElementById('roles-row-' + userId);
+  if (row) row.cells[2].innerHTML = roleBadge(newRole);
+  showToast(`✅ Rol de ${email} actualizado a ${ROLE_CONFIG[newRole]?.label || newRole}`, 'success');
+}
+
+// Legacy (kept for compatibility)
+async function admPromoteUser(){ showToast('Usa la tabla de Gestión de Roles','info'); }
+async function admDemoteUser(){  showToast('Usa la tabla de Gestión de Roles','info'); }
 
 
 // ═══════════════════════════════════════════════════════════

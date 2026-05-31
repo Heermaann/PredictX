@@ -199,7 +199,7 @@
               <div class="sc">
                 <div class="sc-ico g">💰</div>
                 <div class="sc-label">Saldo</div>
-                <div class="sc-val" id="sc-balance">€0.00</div>
+                <div class="sc-val" id="sc-balance">$0.00</div>
                 <div class="sc-delta pos">↑ Disponible</div>
               </div>
               <div class="sc">
@@ -273,15 +273,15 @@
             <div class="stat-cards" style="grid-template-columns:repeat(3,1fr);margin-bottom:18px">
               <div class="sc">
                 <div class="sc-label">Total apostado</div>
-                <div class="sc-val" id="bets-total-stake">€0.00</div>
+                <div class="sc-val" id="bets-total-stake">$0.00</div>
               </div>
               <div class="sc">
                 <div class="sc-label">Retornos</div>
-                <div class="sc-val" id="bets-total-ret">€0.00</div>
+                <div class="sc-val" id="bets-total-ret">$0.00</div>
               </div>
               <div class="sc">
                 <div class="sc-label">P&amp;G neto</div>
-                <div class="sc-val" id="bets-pnl">€0.00</div>
+                <div class="sc-val" id="bets-pnl">$0.00</div>
               </div>
             </div>
 
@@ -317,17 +317,17 @@
               <div class="sc">
                 <div class="sc-ico g">💳</div>
                 <div class="sc-label">Saldo disponible</div>
-                <div class="sc-val" id="tx-balance">€0.00</div>
+                <div class="sc-val" id="tx-balance">$0.00</div>
               </div>
               <div class="sc">
                 <div class="sc-ico b">📥</div>
                 <div class="sc-label">Total depositado</div>
-                <div class="sc-val" id="tx-deposited">€0.00</div>
+                <div class="sc-val" id="tx-deposited">$0.00</div>
               </div>
               <div class="sc">
                 <div class="sc-ico r">📤</div>
                 <div class="sc-label">Total retirado</div>
-                <div class="sc-val" id="tx-withdrawn">€0.00</div>
+                <div class="sc-val" id="tx-withdrawn">$0.00</div>
               </div>
             </div>
 
@@ -424,7 +424,7 @@
                 <div class="pf-group">
                   <div class="pf-label">Moneda preferida</div>
                   <select class="pf-input" id="pf-currency">
-                    <option value="EUR">€ Euro</option>
+                    <option value="EUR">$ Dólar</option>
                     <option value="USD">$ Dólar</option>
                     <option value="MXN">$ Peso MX</option>
                   </select>
@@ -468,11 +468,11 @@
               <div class="profile-grid">
                 <div class="pf-group">
                   <div class="pf-label">Límite diario de apuestas</div>
-                  <input class="pf-input" type="number" placeholder="€ Sin límite" id="pf-daily-limit">
+                  <input class="pf-input" type="number" placeholder="$ Sin límite" id="pf-daily-limit">
                 </div>
                 <div class="pf-group">
                   <div class="pf-label">Límite semanal</div>
-                  <input class="pf-input" type="number" placeholder="€ Sin límite" id="pf-weekly-limit">
+                  <input class="pf-input" type="number" placeholder="$ Sin límite" id="pf-weekly-limit">
                 </div>
               </div>
               <div class="profile-foot">
@@ -491,13 +491,17 @@
             </div>
             <div class="info-card" style="max-width:560px;margin-bottom:24px">
               <div style="font-size:15px;font-weight:700;margin-bottom:20px">Nuevo ticket</div>
-              <div style="margin-bottom:20px">
-                <label style="display:block;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text2);margin-bottom:8px">Asunto *</label>
-                <input type="text" id="sup-subject" class="form-input" placeholder="¿En qué podemos ayudarte?" maxlength="120" style="font-size:14px">
+              <div style="margin-bottom:16px">
+                <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--text2);margin-bottom:6px">Asunto <span style="color:var(--red)">*</span></label>
+                <input type="text" id="sup-subject" class="form-input" placeholder="¿En qué podemos ayudarte?" maxlength="120"
+                  style="font-size:14px;padding:11px 14px;border-radius:10px;background:var(--bg3);border:1.5px solid var(--border);color:var(--text);outline:none;width:100%;box-sizing:border-box;transition:border .15s"
+                  onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'">
               </div>
               <div style="margin-bottom:20px">
-                <label style="display:block;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text2);margin-bottom:8px">Descripción *</label>
-                <textarea id="sup-body" class="form-input" rows="5" style="resize:vertical;font-size:14px;line-height:1.6" placeholder="Describe con detalle lo que ocurrió, qué pasos seguiste y cuál es el error..."></textarea>
+                <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--text2);margin-bottom:6px">Descripción <span style="color:var(--red)">*</span></label>
+                <textarea id="sup-body" class="form-input" rows="5" placeholder="Describe con detalle lo que ocurrió, qué pasos seguiste y cuál es el error..."
+                  style="font-size:14px;line-height:1.6;padding:11px 14px;border-radius:10px;background:var(--bg3);border:1.5px solid var(--border);color:var(--text);outline:none;width:100%;box-sizing:border-box;resize:vertical;font-family:inherit;transition:border .15s"
+                  onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'"></textarea>
               </div>
               <div style="margin-bottom:24px">
                 <label style="display:block;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text2);margin-bottom:8px">Adjunto <span style="font-weight:400;text-transform:none;color:var(--text3)">PNG, JPG, PDF · máx 5MB (opcional)</span></label>
@@ -694,19 +698,19 @@
                   <input class="cfg-input" id="cfg-bonus-pct" type="number" value="100" min="0" max="200">
                 </div>
                 <div class="cfg-group">
-                  <div class="cfg-label">Bono máximo (€)</div>
+                  <div class="cfg-label">Bono máximo ($)</div>
                   <input class="cfg-input" id="cfg-bonus-max" type="number" value="100" min="0">
                 </div>
                 <div class="cfg-group">
-                  <div class="cfg-label">Depósito mínimo (€)</div>
+                  <div class="cfg-label">Depósito mínimo ($)</div>
                   <input class="cfg-input" id="cfg-dep-min" type="number" value="10" min="1">
                 </div>
                 <div class="cfg-group">
-                  <div class="cfg-label">Retirada mínima (€)</div>
+                  <div class="cfg-label">Retirada mínima ($)</div>
                   <input class="cfg-input" id="cfg-wit-min" type="number" value="20" min="1">
                 </div>
                 <div class="cfg-group">
-                  <div class="cfg-label">Saldo inicial nuevos usuarios (€)</div>
+                  <div class="cfg-label">Saldo inicial nuevos usuarios ($)</div>
                   <input class="cfg-input" id="cfg-initial-balance" type="number" value="0" min="0">
                 </div>
                 <div class="cfg-group">
@@ -836,8 +840,8 @@
       </div>
     </div>
     <div class="slip-foot" id="slip-foot" style="display:none">
-      <div class="slip-total-row"><span class="slip-total-key">Apuesta total</span><span class="slip-total-val" id="slip-ttl-stake">€0.00</span></div>
-      <div class="slip-total-row"><span class="slip-total-key">Ganancia potencial</span><span class="slip-total-val green" id="slip-ttl-ret">€0.00</span></div>
+      <div class="slip-total-row"><span class="slip-total-key">Apuesta total</span><span class="slip-total-val" id="slip-ttl-stake">$0.00</span></div>
+      <div class="slip-total-row"><span class="slip-total-key">Ganancia potencial</span><span class="slip-total-val green" id="slip-ttl-ret">$0.00</span></div>
       <button class="slip-bet-btn" onclick="placeBets()">Realizar Apuesta</button>
       <div class="slip-disclaimer">Las cuotas pueden cambiar. Apuesta con responsabilidad. +18.</div>
     </div>
