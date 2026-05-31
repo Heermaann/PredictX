@@ -426,6 +426,7 @@ function processManualEvent(e) {
   const margin = [imp1,impX,imp2].filter(Boolean).reduce((a,b)=>a+b,0);
   return {
     id: e.id, sport_key: e.sport_key, sport_title: e.sport_title,
+    league: e.league || e.sport_title || '',
     home_team: e.home_team, away_team: e.away_team,
     commence_time: e.commence_time,
     bookmakers: [], _manual: !e._fromApi, _featured: e.featured, _status: e.status, status: e.status,
@@ -1925,6 +1926,7 @@ let _activeLeagueEl = null;
 async function loadLeague(sportKey, label, el) {
   // ── Always navigate to home view first ──
   showListView();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
   updateSidebarVisibility();
   // Update bottom nav active state
   document.querySelectorAll('.bn-btn').forEach(b => b.classList.remove('active'));
@@ -3679,6 +3681,117 @@ function closeOwner() {
 }
 
 /* ── Sub-page switching (user panel) ── */
+
+/* ══════════════════════════════════════════════════
+   SOPORTE — funciones del usuario
+══════════════════════════════════════════════════ */
+
+function supPreviewFile(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const allowed = ['image/png','image/jpeg','application/pdf'];
+  if (!allowed.includes(file.type)) {
+    showToast('❌ Solo se permiten PNG, JPG y PDF', 'error');
+    input.value = '';
+    return;
+  }
+  if (file.size > 5 * 1024 * 1024) {
+    showToast('❌ El archivo no puede superar 5 MB', 'error');
+    input.value = '';
+    return;
+  }
+  const preview = document.getElementById('sup-file-preview');
+  const nameEl = document.getElementById('sup-file-name');
+  if (preview) preview.style.display = 'flex';
+  if (nameEl) nameEl.textContent = '📎 ' + file.name;
+}
+
+function supClearFile() {
+  document.getElementById('sup-file').value = '';
+  const preview = document.getElementById('sup-file-preview');
+  if (preview) preview.style.display = 'none';
+}
+
+async function supSubmit() {
+  if (!SESSION) { showToast('❌ Debes iniciar sesión'); return; }
+
+  const subject = (document.getElementById('sup-subject')?.value || '').trim();
+  const body    = (document.getElementById('sup-body')?.value    || '').trim();
+  const fileInput = document.getElementById('sup-file');
+  const file = fileInput?.files?.[0] || null;
+
+  const statusEl = document.getElementById('sup-status');
+  const setStatus = (msg, cls='err') => {
+    if (!statusEl) return;
+    statusEl.style.display = 'block';
+    statusEl.className = 'auth-status ' + cls;
+    statusEl.textContent = msg;
+  };
+
+  if (!subject) return setStatus('Introduce un asunto para el ticket.');
+  if (!body || body.length < 10) return setStatus('La descripción debe tener al menos 10 caracteres.');
+
+  let attachmentUrl = null;
+  // Upload file to Supabase Storage if provided
+  if (file) {
+    try {
+      const ext = file.name.split('.').pop();
+      const path = `support/${SESSION.email}/${Date.now()}.${ext}`;
+      const { error: upErr } = await _SB.storage.from('support-attachments').upload(path, file, { upsert: true });
+      if (!upErr) {
+        const { data: urlData } = _SB.storage.from('support-attachments').getPublicUrl(path);
+        attachmentUrl = urlData?.publicUrl || null;
+      }
+    } catch(_) {}
+  }
+
+  // Insert ticket
+  const { error } = await _SB.from('support_tickets').insert({
+    user_email:  SESSION.email,
+    subject,
+    body,
+    attachment_url: attachmentUrl,
+    status:      'open',
+    priority:    'normal',
+    created_at:  new Date().toISOString()
+  });
+
+  if (error) return setStatus('❌ Error al enviar: ' + error.message);
+
+  setStatus('✅ Ticket enviado correctamente. Te responderemos pronto.', 'ok');
+  document.getElementById('sup-subject').value = '';
+  document.getElementById('sup-body').value = '';
+  supClearFile();
+  setTimeout(() => { if (statusEl) statusEl.style.display = 'none'; }, 5000);
+  supLoadMyTickets();
+}
+
+async function supLoadMyTickets() {
+  if (!SESSION) return;
+  const container = document.getElementById('sup-my-tickets');
+  if (!container) return;
+  const { data, error } = await _SB.from('support_tickets')
+    .select('id,subject,status,priority,created_at')
+    .eq('user_email', SESSION.email)
+    .order('created_at', { ascending: false })
+    .limit(10);
+  if (error || !data?.length) {
+    container.innerHTML = '<div style="color:var(--text2);font-size:13px">No tienes tickets anteriores.</div>';
+    return;
+  }
+  const statusLabel = { open:'🔴 Abierto', in_progress:'🟡 En proceso', closed:'🟢 Cerrado' };
+  container.innerHTML = data.map(t => `
+    <div style="padding:12px;border:1px solid var(--border);border-radius:10px;margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+        <div style="font-weight:600;font-size:13px">${esc(t.subject)}</div>
+        <span style="font-size:12px;white-space:nowrap">${statusLabel[t.status]||t.status}</span>
+      </div>
+      <div style="font-size:11px;color:var(--text2);margin-top:4px">${fDate(t.created_at)}</div>
+    </div>
+  `).join('');
+}
+
+/* ══════════════════════════════════════════════════ */
 function showAdminPage(page, sidebarBtn, tabBtn) {
   document.querySelectorAll('.admin-page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.admin-nav-item').forEach(b => b.classList.remove('active'));
@@ -3693,6 +3806,7 @@ function showAdminPage(page, sidebarBtn, tabBtn) {
   if (page === 'bets')      renderBets('all');
   if (page === 'tx')        renderTx('all');
   if (page === 'profile')   renderProfile();
+  if (page === 'support')   supLoadMyTickets();
 }
 
 /* ── Sub-page switching (owner panel) ── */
