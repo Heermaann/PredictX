@@ -893,10 +893,11 @@ function applyFilters() {
   // Search
   if (S.searchQ) {
     const q = S.searchQ.toLowerCase();
-    list = list.filter(m =>
-      ((m.home_team||'') + ' ' + (m.away_team||'') + ' ' + (m.sport_title||'') + ' ' + (m.league||''))
-      .toLowerCase().includes(q)
-    );
+    list = list.filter(m => {
+      const text = [m.home_team, m.away_team, m.sport_title, m.league, m.sport_key]
+        .filter(Boolean).join(' ').toLowerCase();
+      return text.includes(q);
+    });
   }
 
   // Sort
@@ -1786,7 +1787,7 @@ function renderDetail(m) {
           ${teamLogo(m.away_team,36)}
         </div>
         <div class="det-tags">
-          <span class="det-tag league">${esc(m.league||m.sport_title||"")}</span>
+          <span class="det-tag league" onclick="loadLeague('${m.sport_key}','${(m.league||m.sport_title||m.sport_key).replace(/'/g,'').replace(/\`/g,'')}',null);closeDetail()" style="cursor:pointer;text-decoration:underline dotted;text-underline-offset:2px" title="Ver partidos de esta liga">${esc(m.league||m.sport_title||"")}</span>
           <span class="det-tag">📅 ${fDate(m.commence_time)}</span>
           <span class="det-tag">⏱ ${m.duration_minutes||sportDuration(m.sport_key)} min</span>
         </div>
