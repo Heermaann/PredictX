@@ -34,17 +34,13 @@
     <div class="search-drop" id="search-drop" style="display:none"></div>
   </div>
   <div class="nav-right">
-    <div class="api-pill" onclick="openModal()" id="api-pill">
-      <div class="api-dot" id="api-dot"></div>
-      <span class="api-pill-txt" id="api-pill-txt">Cargando…</span>
-    </div>
     <button class="theme-btn" onclick="toggleTheme()" title="Cambiar tema">
       <span class="ico-d">🌙</span><span class="ico-l">☀️</span>
     </button>
     <button class="slip-btn" onclick="toggleBetslip()" title="Boleto de apuestas">
       🎟 Boleto<span class="slip-count" id="slip-count">0</span>
     </button>
-    <button class="owner-nav-btn" id="owner-nav-btn" onclick="openOwner()">⚡ Admin</button>
+    <button class="owner-nav-btn" id="owner-nav-btn" onclick="window.open('/admin','_blank')">⚡ Admin</button>
     <button id="nav-deposit-btn" style="display:none;background:var(--accent);color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:13px;font-weight:700;cursor:pointer" onclick="openPayModal('deposit')">+ Depositar</button>
     <div id="nav-balance-display" style="display:none;align-items:center;gap:6px;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:6px 12px;font-size:13px;font-weight:700;color:var(--green);cursor:pointer" onclick="openPayModal('deposit')" title="Mi saldo">
       💰 <span id="nav-balance-val">$0.00</span>
