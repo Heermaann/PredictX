@@ -73,11 +73,7 @@
       <button class="sb-close-btn" onclick="closeSidebar()" aria-label="Cerrar menú">✕</button>
     </div>
     <div class="sb-item active" id="nav-home" onclick="navTo('home',this)">
-      <span class="sb-item-ico">⚡</span>Destacados
-      <span class="sb-badge" id="badge-total">—</span>
-    </div>
-    <div class="sb-item" id="nav-live" onclick="navTo('live',this)">
-      <span class="sb-item-ico">🔴</span>En Vivo
+      <span class="sb-item-ico">🏠</span>Todos
     </div>
     <div class="sb-item" id="nav-upcoming" onclick="navTo('upcoming',this)">
       <span class="sb-item-ico">📅</span>Próximos
@@ -166,17 +162,11 @@
     <!-- LIST VIEW — Polymarket-style home -->
     <div id="view-list">
 
-      <!-- ── Category pill bar ─────────────────────── -->
-      <div class="cat-bar" id="cat-pills-wrap">
-        <button class="cat-pill active" data-cat="all"    onclick="setCat('all',this)">🔥 Tendencia</button>
-        <button class="cat-pill"        data-cat="new"    onclick="setCat('new',this)">✨ Nuevo</button>
-        <button class="cat-pill"        data-cat="live"   onclick="setCat('live',this)">🔴 En Vivo</button>
-        <button class="cat-pill"        data-cat="soccer" onclick="setCat('soccer',this)">⚽ Fútbol</button>
-        <button class="cat-pill"        data-cat="basketball" onclick="setCat('basketball',this)">🏀 Baloncesto</button>
-        <button class="cat-pill"        data-cat="americanfootball" onclick="setCat('americanfootball',this)">🏈 NFL</button>
-        <button class="cat-pill"        data-cat="baseball" onclick="setCat('baseball',this)">⚾ Béisbol</button>
-        <button class="cat-pill"        data-cat="icehockey" onclick="setCat('icehockey',this)">🏒 Hockey</button>
-        <button class="cat-pill"        data-cat="mma"    onclick="setCat('mma',this)">🥊 MMA</button>
+      <!-- ── Nav tabs: Todos / Próximos / Mayor Volumen ─── -->
+      <div class="list-tabs" id="cat-pills-wrap" style="display:flex;gap:4px;padding:12px 16px 0;overflow-x:auto">
+        <button class="list-tab active" onclick="setNavMode('home',this)">Todos</button>
+        <button class="list-tab" onclick="setNavMode('upcoming',this)">Próximos</button>
+        <button class="list-tab" onclick="setNavMode('best',this)">Mayor Volumen</button>
       </div>
 
       <!-- ── Sort / filter row ────────────────────── -->
