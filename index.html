@@ -6,22 +6,25 @@
 <title>PredictX — Apuestas Deportivas</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
   <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Urbanist:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 
-  <!-- Izipay CSS loaded dynamically with SDK -->
+  <!-- Izipay Smart Form SDK -->
+  <script src="https://static.micuentaweb.pe/static/js/krypton-client/V4.0/stable/kr-payment-form.min.js"
+    kr-language="es-PE"></script>
+  <link rel="stylesheet" href="https://static.micuentaweb.pe/static/js/krypton-client/V4.0/stable/classic-reset.css">
+  <link rel="stylesheet" href="https://static.micuentaweb.pe/static/js/krypton-client/V4.0/stable/classic.css">
   <link rel="stylesheet" href="css/style.css">
   <!-- OTPAuth: TOTP 2FA without backend -->
   <script src="https://cdn.jsdelivr.net/npm/otpauth@9.3.6/dist/otpauth.umd.min.js"></script>
-  <!-- Izipay SDK loaded dynamically only when deposit modal is opened -->
 </head>
 <body>
 
 <!-- ════ NAV ════ -->
 <nav class="nav">
   <button class="nav-hamburger" id="hamburger" onclick="toggleSidebar()" aria-label="Menú">☰</button>
-  <div class="nav-logo" onclick="window.location.href='/'" style="cursor:pointer" title="Ir al inicio">
+  <div class="nav-logo">
     <div class="nav-logo-mark">P</div>
     <div class="nav-logo-text">Predict<span>X</span></div>
   </div>
@@ -36,56 +39,28 @@
     <div class="search-drop" id="search-drop" style="display:none"></div>
   </div>
   <div class="nav-right">
+    <div class="api-pill" onclick="openModal()" id="api-pill">
+      <div class="api-dot" id="api-dot"></div>
+      <span class="api-pill-txt" id="api-pill-txt">Cargando…</span>
+    </div>
     <button class="theme-btn" onclick="toggleTheme()" title="Cambiar tema">
       <span class="ico-d">🌙</span><span class="ico-l">☀️</span>
     </button>
     <button class="slip-btn" onclick="toggleBetslip()" title="Boleto de apuestas">
       🎟 Boleto<span class="slip-count" id="slip-count">0</span>
     </button>
-    <button class="owner-nav-btn" id="owner-nav-btn" onclick="window.open('/admin','_blank')">⚡ Admin</button>
-    <!-- Deposit button — shown when logged in -->
-    <button id="nav-deposit-btn" style="display:none;background:var(--accent);color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:13px;font-weight:700;cursor:pointer" onclick="openPayModal('deposit')" title="Depositar saldo">
-      + Depositar
+    <div class="nav-bonus-badge" id="nav-bonus-badge" onclick="openPayModal('deposit')">🎁 +100% Bono</div>
+    <button class="owner-nav-btn" id="owner-nav-btn" onclick="openOwner()">⚡ Admin</button>
+    <button class="slip-btn" onclick="openAdmin()" style="background:var(--bg3);border:1px solid var(--border2);color:var(--text2)" title="Mi cuenta">
+      👤 Mi cuenta
     </button>
-    <!-- Balance badge — shown when logged in -->
-    <div id="nav-balance-display" style="display:none;align-items:center;gap:6px;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:6px 12px;font-size:13px;font-weight:700;color:var(--green);cursor:pointer" onclick="openPayModal('deposit')" title="Mi saldo — click para depositar">
-      💰 <span id="nav-balance-val">$0.00</span>
-    </div>
-    <!-- User avatar — click to open account panel -->
-    <div class="nav-avatar" id="nav-avatar" title="Mi cuenta" style="display:none;cursor:pointer" onclick="
-  var va=document.getElementById('view-admin');
-  var vl=document.getElementById('view-list');
-  var vd=document.getElementById('view-detail');
-  if(vl)vl.style.display='none';
-  if(vd)vd.style.display='none';
-  if(va){va.style.setProperty('display','block','important');}
-  if(window.refreshAdminData)refreshAdminData();
-  if(window.showAdminPage)showAdminPage('dashboard',document.getElementById('ap-nav-dashboard'));
-">U</div>
-    <!-- Login button — shown when logged out -->
-    <button id="nav-login-btn" class="slip-btn" onclick="openAuthGate()" style="background:var(--accent);color:#fff;border-color:var(--accent)" title="Iniciar sesión">
-      Iniciar sesión
-    </button>
+    <div class="nav-avatar" id="nav-avatar" onclick="openAdmin()" title="Mi cuenta">U</div>
   </div>
 </nav>
 
 <!-- Overlay for sidebar + betslip on mobile -->
-<div class="overlay" id="overlay" onclick="closeSidebar()"></div>
+<div class="overlay" id="overlay" onclick="closeSidebar()" ontouchend="event.preventDefault();closeSidebar()"></div>
 <div class="overlay-slip" id="overlay-slip" onclick="closeBetslip()" ontouchend="event.preventDefault();closeBetslip()"></div>
-
-<!-- ── Mobile search overlay ── -->
-<div class="mob-search-overlay" id="mob-search-overlay">
-  <div class="mob-search-bar">
-    <button class="mob-search-back" onclick="closeMobSearch()" aria-label="Volver">←</button>
-    <input type="text" class="mob-search-inp" id="mob-search-inp"
-      placeholder="Buscar equipo, liga o deporte…"
-      oninput="onSearch(this.value)"
-      onkeydown="searchKeyNav(event)"
-      autocomplete="off">
-    <button class="mob-search-clear" onclick="clearMobSearch()" id="mob-search-clear-btn">✕</button>
-  </div>
-  <div class="search-drop mob-search-drop" id="mob-search-drop" style="display:none"></div>
-</div>
 
 <!-- ════ LAYOUT ════ -->
 <div class="layout">
@@ -97,8 +72,11 @@
       <button class="sb-close-btn" onclick="closeSidebar()" aria-label="Cerrar menú">✕</button>
     </div>
     <div class="sb-item active" id="nav-home" onclick="navTo('home',this)">
-      <span class="sb-item-ico">⚡</span>Todos
+      <span class="sb-item-ico">⚡</span>Destacados
       <span class="sb-badge" id="badge-total">—</span>
+    </div>
+    <div class="sb-item" id="nav-live" onclick="navTo('live',this)">
+      <span class="sb-item-ico">🔴</span>En Vivo
     </div>
     <div class="sb-item" id="nav-upcoming" onclick="navTo('upcoming',this)">
       <span class="sb-item-ico">📅</span>Próximos
@@ -108,7 +86,6 @@
     </div>
     <div class="sb-divider"></div>
     <div class="sb-label">Ligas y Deportes</div>
-    <div id="sb-sports-wrap">
 
     <!-- FÚTBOL -->
     <div class="sb-item sb-group" onclick="toggleGroup('g-soccer')">
@@ -180,7 +157,6 @@
 
     <!-- GOLF -->
 
-    </div><!-- /sb-sports-wrap -->
   </aside>
 
   <!-- MAIN -->
@@ -191,13 +167,15 @@
 
       <!-- ── Category pill bar ─────────────────────── -->
       <div class="cat-bar" id="cat-pills-wrap">
-        <button class="cat-pill active" data-cat="all" onclick="setCat('all',this)">Todos</button>
-        <button class="cat-pill" data-cat="soccer" onclick="setCat('soccer',this)">⚽ Fútbol</button>
-        <button class="cat-pill" data-cat="basketball" onclick="setCat('basketball',this)">🏀 Baloncesto</button>
-        <button class="cat-pill" data-cat="americanfootball" onclick="setCat('americanfootball',this)">🏈 NFL</button>
-        <button class="cat-pill" data-cat="baseball" onclick="setCat('baseball',this)">⚾ Béisbol</button>
-        <button class="cat-pill" data-cat="icehockey" onclick="setCat('icehockey',this)">🏒 Hockey</button>
-        <button class="cat-pill" data-cat="mma" onclick="setCat('mma',this)">🥊 MMA</button>
+        <button class="cat-pill active" data-cat="all"    onclick="setCat('all',this)">🔥 Tendencia</button>
+        <button class="cat-pill"        data-cat="new"    onclick="setCat('new',this)">✨ Nuevo</button>
+        <button class="cat-pill"        data-cat="live"   onclick="setCat('live',this)">🔴 En Vivo</button>
+        <button class="cat-pill"        data-cat="soccer" onclick="setCat('soccer',this)">⚽ Fútbol</button>
+        <button class="cat-pill"        data-cat="basketball" onclick="setCat('basketball',this)">🏀 Baloncesto</button>
+        <button class="cat-pill"        data-cat="americanfootball" onclick="setCat('americanfootball',this)">🏈 NFL</button>
+        <button class="cat-pill"        data-cat="baseball" onclick="setCat('baseball',this)">⚾ Béisbol</button>
+        <button class="cat-pill"        data-cat="icehockey" onclick="setCat('icehockey',this)">🏒 Hockey</button>
+        <button class="cat-pill"        data-cat="mma"    onclick="setCat('mma',this)">🥊 MMA</button>
       </div>
 
       <!-- ── Sort / filter row ────────────────────── -->
@@ -206,7 +184,7 @@
           <span class="home-count" id="list-sub">Cargando…</span>
         </div>
         <div class="home-bar-right">
-          <select id="sort-events" name="sort-events" class="sort-sel" onchange="sortBy(this.value)">
+          <select class="sort-sel" onchange="sortBy(this.value)">
             <option value="vol">Mayor volumen</option>
             <option value="date">Por hora</option>
             <option value="odd">Por cuota</option>
@@ -219,6 +197,7 @@
       <div id="live-section" style="display:none;background:var(--bg)">
         <div class="section-hdr">
           <span class="section-dot-live"></span>
+          <span class="section-ttl">En Vivo</span>
           <span class="section-count" id="live-count"></span>
         </div>
         <div class="cards-grid" id="live-grid"></div>
@@ -290,7 +269,6 @@
             <div class="admin-tab active" onclick="showAdminPage('dashboard',null,this)">📊 Dashboard</div>
             <div class="admin-tab" onclick="showAdminPage('bets',null,this)">🎟 Apuestas</div>
             <div class="admin-tab" onclick="showAdminPage('tx',null,this)">💳 Transacciones</div>
-            <div class="admin-tab" onclick="showAdminPage('support',null,this)">🆘 Soporte</div>
             <div class="admin-tab" onclick="showAdminPage('profile',null,this)">👤 Perfil</div>
           </div>
 
@@ -305,7 +283,7 @@
               <div class="sc">
                 <div class="sc-ico g">💰</div>
                 <div class="sc-label">Saldo</div>
-                <div class="sc-val" id="sc-balance">$0.00</div>
+                <div class="sc-val" id="sc-balance">€0.00</div>
                 <div class="sc-delta pos">↑ Disponible</div>
               </div>
               <div class="sc">
@@ -331,6 +309,7 @@
             <!-- Quick bets from live events -->
             <div class="admin-card" id="dash-quick-card">
               <div class="admin-card-hd">
+                <div class="admin-card-title">⚡ Apuestas rápidas — En Vivo</div>
                 <div class="admin-card-action" onclick="closeAdmin()">Ver todos →</div>
               </div>
               <div class="quick-row" id="dash-quick-grid" style="padding:12px">
@@ -378,15 +357,15 @@
             <div class="stat-cards" style="grid-template-columns:repeat(3,1fr);margin-bottom:18px">
               <div class="sc">
                 <div class="sc-label">Total apostado</div>
-                <div class="sc-val" id="bets-total-stake">$0.00</div>
+                <div class="sc-val" id="bets-total-stake">€0.00</div>
               </div>
               <div class="sc">
                 <div class="sc-label">Retornos</div>
-                <div class="sc-val" id="bets-total-ret">$0.00</div>
+                <div class="sc-val" id="bets-total-ret">€0.00</div>
               </div>
               <div class="sc">
                 <div class="sc-label">P&amp;G neto</div>
-                <div class="sc-val" id="bets-pnl">$0.00</div>
+                <div class="sc-val" id="bets-pnl">€0.00</div>
               </div>
             </div>
 
@@ -422,24 +401,24 @@
               <div class="sc">
                 <div class="sc-ico g">💳</div>
                 <div class="sc-label">Saldo disponible</div>
-                <div class="sc-val" id="tx-balance">$0.00</div>
+                <div class="sc-val" id="tx-balance">€0.00</div>
               </div>
               <div class="sc">
                 <div class="sc-ico b">📥</div>
                 <div class="sc-label">Total depositado</div>
-                <div class="sc-val" id="tx-deposited">$0.00</div>
+                <div class="sc-val" id="tx-deposited">€0.00</div>
               </div>
               <div class="sc">
                 <div class="sc-ico r">📤</div>
                 <div class="sc-label">Total retirado</div>
-                <div class="sc-val" id="tx-withdrawn">$0.00</div>
+                <div class="sc-val" id="tx-withdrawn">€0.00</div>
               </div>
             </div>
 
             <div class="admin-card">
               <div class="admin-card-hd">
                 <div class="admin-card-title">Historial</div>
-                <select id="filter-tx" name="filter-tx" class="sort-sel" style="font-size:11px;padding:4px 8px" onchange="filterTx(this.value)">
+                <select class="sort-sel" style="font-size:11px;padding:4px 8px" onchange="filterTx(this.value)">
                   <option value="all">Todos</option>
                   <option value="dep">Depósitos</option>
                   <option value="wit">Retiradas</option>
@@ -529,7 +508,7 @@
                 <div class="pf-group">
                   <div class="pf-label">Moneda preferida</div>
                   <select class="pf-input" id="pf-currency">
-                    <option value="USD">$ Dólar</option>
+                    <option value="EUR">€ Euro</option>
                     <option value="USD">$ Dólar</option>
                     <option value="MXN">$ Peso MX</option>
                   </select>
@@ -549,15 +528,15 @@
               <div class="profile-grid">
                 <div class="pf-group">
                   <div class="pf-label">Contraseña actual</div>
-                  <input class="pf-input" id="cfg-cur-pw" type="password" placeholder="••••••••" autocomplete="current-password">
+                  <input class="pf-input" type="password" placeholder="••••••••" name="••••••••">
                 </div>
                 <div class="pf-group">
                   <div class="pf-label">Nueva contraseña</div>
-                  <input class="pf-input" id="cfg-new-pw" type="password" placeholder="••••••••" autocomplete="new-password">
+                  <input class="pf-input" type="password" placeholder="••••••••" name="••••••••">
                 </div>
                 <div class="pf-group full">
                   <div class="pf-label">Confirmar contraseña</div>
-                  <input class="pf-input" id="cfg-conf-pw" type="password" placeholder="••••••••" autocomplete="new-password">
+                  <input class="pf-input" type="password" placeholder="••••••••" name="••••••••">
                 </div>
               </div>
               <div class="profile-foot">
@@ -573,11 +552,11 @@
               <div class="profile-grid">
                 <div class="pf-group">
                   <div class="pf-label">Límite diario de apuestas</div>
-                  <input class="pf-input" type="number" placeholder="$ Sin límite" id="pf-daily-limit">
+                  <input class="pf-input" type="number" placeholder="€ Sin límite" id="pf-daily-limit">
                 </div>
                 <div class="pf-group">
                   <div class="pf-label">Límite semanal</div>
-                  <input class="pf-input" type="number" placeholder="$ Sin límite" id="pf-weekly-limit">
+                  <input class="pf-input" type="number" placeholder="€ Sin límite" id="pf-weekly-limit">
                 </div>
               </div>
               <div class="profile-foot">
@@ -585,6 +564,7 @@
               </div>
             </div>
           </div>
+
           <!-- Soporte -->
           <div class="admin-page" id="ap-support">
             <div class="page-hd">
@@ -593,24 +573,729 @@
                 <div class="page-sub">Envía una consulta o reporte al equipo de soporte</div>
               </div>
             </div>
-            <div style="max-width:600px;margin-bottom:24px">
-              <div style="margin-bottom:24px">
-                <label style="display:block;font-size:13px;font-weight:600;color:var(--text1);margin-bottom:6px">Asunto *</label>
+            <div class="info-card" style="max-width:560px;margin-bottom:24px">
+              <div style="font-size:15px;font-weight:700;margin-bottom:20px">Nuevo ticket</div>
+              <div style="margin-bottom:16px">
+                <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px">Asunto *</label>
                 <input type="text" id="sup-subject" class="form-input" placeholder="¿En qué podemos ayudarte?" maxlength="120">
               </div>
-              <div style="margin-bottom:24px">
-                <label style="display:block;font-size:13px;font-weight:600;color:var(--text1);margin-bottom:6px">Descripción *</label>
-                <textarea id="sup-body" class="form-input" rows="6" style="resize:vertical" placeholder="Describe con detalle lo que ocurrió..."></textarea>
+              <div style="margin-bottom:16px">
+                <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px">Descripción *</label>
+                <textarea id="sup-body" class="form-input" rows="5" style="resize:vertical" placeholder="Describe con detalle lo que ocurrió..."></textarea>
               </div>
-              <div style="margin-bottom:24px">
-                <label style="display:block;font-size:13px;font-weight:600;color:var(--text1);margin-bottom:6px">Adjunto <span style="font-weight:400;color:var(--text3);font-size:12px">PNG, JPG o PDF · máx 5 MB (opcional)</span></label>
+              <div style="margin-bottom:20px">
+                <label style="display:block;font-size:13px;font-weight:600;margin-bottom=6px">Adjunto <span style="font-weight:400;color:var(--text3);font-size:12px">PNG, JPG, PDF · máx 5MB (opcional)</span></label>
                 <input type="file" id="sup-file" accept=".png,.jpg,.jpeg,.pdf" style="display:none" onchange="supPreviewFile(this)">
-                <button type="button" onclick="document.getElementById('sup-file').click()" class="btn btn-ghost" style="width:100%;justify-content:center;gap:8px;padding:12px;border-style:dashed">
-                  📎 Seleccionar archivo
-                </button>
-                <div id="sup-file-preview" style="display:none;margin-top:8px;padding:10px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;font-size:13px;color:var(--text2);display:flex;align-items:center;gap:10px">
+                <button type="button" onclick="document.getElementById(&apos;sup-file&apos;).click()" class="btn btn-ghost" style="width:100%;justify-content:center;border-style:dashed">📎 Seleccionar archivo</button>
+                <div id="sup-file-preview" style="display:none;margin-top:8px;padding:10px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;font-size:13px;align-items:center;gap:10px">
                   <span id="sup-file-name" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
-                  <button onclick="supClearFile()" style="background:none;border:none;cursor:pointer;color:var(--red);font-size:18px;padding:0;flex-shrink:0">✕</button>
+                  <button onclick="supClearFile()" style="background:none;border:none;cursor:pointer;color:var(--red);font-size:18px;padding:0">✕</button>
                 </div>
               </div>
-              
+              <div class="auth-status" id="sup-status" style="display:none;margin-bottom:12px"></div>
+              <button class="btn btn-primary" onclick="supSubmit()" style="width:100%">📨 Enviar ticket</button>
+            </div>
+            <div class="info-card" style="max-width:560px">
+              <div style="font-size:15px;font-weight:700;margin-bottom:16px">Mis tickets anteriores</div>
+              <div id="sup-my-tickets"><div style="color:var(--text2);font-size:13px">Cargando...</div></div>
+            </div>
+          </div>
+
+        </div><!-- /admin-main -->
+      </div><!-- /admin-wrap -->
+    </div><!-- /view-admin -->
+
+    <!-- ════ OWNER PANEL ════ -->
+    <div id="view-owner" style="display:none">
+      <div class="owner-wrap">
+
+        <!-- Owner sidebar (desktop) -->
+        <aside class="owner-sidebar">
+          <div class="owner-badge">
+            <div class="owner-badge-ico">⚡</div>
+            <div>
+              <div class="owner-badge-title">Panel Owner</div>
+              <div class="owner-badge-sub" id="owner-email-display">admin@predictx.com</div>
+            </div>
+          </div>
+          <div class="owner-nav-item active" id="own-nav-dashboard" onclick="showOwnerPage('dashboard',this)"><span class="an-ico">📊</span>Dashboard</div>
+          <div class="owner-nav-item" id="own-nav-users" onclick="showOwnerPage('users',this)"><span class="an-ico">👥</span>Usuarios<span class="owner-nav-badge" id="own-users-badge">—</span></div>
+          <div class="owner-nav-item" id="own-nav-bets" onclick="showOwnerPage('bets',this)"><span class="an-ico">🎟</span>Apuestas<span class="owner-nav-badge" id="own-bets-badge" style="background:var(--yellow)">—</span></div>
+          <div class="owner-nav-item" id="own-nav-tx" onclick="showOwnerPage('tx',this)"><span class="an-ico">💳</span>Transacciones</div>
+          <div class="owner-nav-sep"></div>
+          <div class="owner-nav-item" id="own-nav-config" onclick="showOwnerPage('config',this)"><span class="an-ico">⚙️</span>Configuración</div>
+          <div class="owner-nav-sep"></div>
+          <div class="owner-nav-item" onclick="openAdmin()"><span class="an-ico">👤</span>Mi cuenta</div>
+          <div class="owner-nav-item" onclick="closeOwner()"><span class="an-ico">←</span>Volver</div>
+        </aside>
+
+        <div class="owner-main">
+          <!-- Mobile tab bar -->
+          <div class="owner-tab-bar">
+            <div class="owner-tab active" onclick="showOwnerPage('dashboard',null,this)">📊 Dashboard</div>
+            <div class="owner-tab" onclick="showOwnerPage('users',null,this)">👥 Usuarios</div>
+            <div class="owner-tab" onclick="showOwnerPage('bets',null,this)">🎟 Apuestas</div>
+            <div class="owner-tab" onclick="showOwnerPage('tx',null,this)">💳 Transacciones</div>
+            <div class="owner-tab" onclick="showOwnerPage('config',null,this)">⚙️ Config</div>
+          </div>
+
+          <!-- ── DASHBOARD OWNER ── -->
+          <div class="owner-page active" id="own-dashboard">
+            <div style="padding-top:20px;margin-bottom:22px">
+              <div class="ap-title">Dashboard Global</div>
+              <div class="ap-sub">Resumen en tiempo real de toda la plataforma</div>
+            </div>
+            <div class="kpi-grid">
+              <div class="kpi"><div class="kpi-ico">👥</div><div class="kpi-label">Usuarios totales</div><div class="kpi-val" id="kpi-users">—</div><div class="kpi-sub up" id="kpi-users-sub">Cargando...</div></div>
+              <div class="kpi"><div class="kpi-ico">💰</div><div class="kpi-label">Depósitos totales</div><div class="kpi-val" id="kpi-deposits">—</div><div class="kpi-sub up">Acumulado</div></div>
+              <div class="kpi"><div class="kpi-ico">🎟</div><div class="kpi-label">Apuestas activas</div><div class="kpi-val" id="kpi-open-bets">—</div><div class="kpi-sub" style="color:var(--yellow)">Pendientes resolución</div></div>
+              <div class="kpi"><div class="kpi-ico">📈</div><div class="kpi-label">Margen de la casa</div><div class="kpi-val" id="kpi-margin">—</div><div class="kpi-sub">Ganancia neta</div></div>
+            </div>
+            <div class="admin-card">
+              <div class="admin-card-hd">
+                <div class="admin-card-title">🕐 Actividad reciente</div>
+                <div class="admin-card-action" onclick="showOwnerPage('tx',document.getElementById('own-nav-tx'))">Ver todo →</div>
+              </div>
+              <div style="overflow-x:auto">
+                <table class="adm-table">
+                  <thead><tr><th>Hora</th><th>Usuario</th><th>Acción</th><th>Importe</th><th>Saldo</th></tr></thead>
+                  <tbody id="own-activity-body"><tr><td colspan="5" style="text-align:center;color:var(--text2);padding:24px">⏳ Cargando actividad...</td></tr></tbody>
+                </table>
+              </div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:0" id="own-dash-bottom">
+              <div class="admin-card">
+                <div class="admin-card-hd"><div class="admin-card-title">📊 Distribución de apuestas</div></div>
+                <div style="padding:16px;display:flex;flex-direction:column;gap:10px" id="own-bet-dist"></div>
+              </div>
+              <div class="admin-card">
+                <div class="admin-card-hd"><div class="admin-card-title">🏆 Top usuarios por volumen</div></div>
+                <div style="overflow-x:auto">
+                  <table class="adm-table" id="own-top-users-tbl">
+                    <thead><tr><th>#</th><th>Usuario</th><th>Apostado</th><th>Saldo</th></tr></thead>
+                    <tbody id="own-top-users-body"><tr><td colspan="4" style="text-align:center;color:var(--text2);padding:20px">⏳</td></tr></tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ── USUARIOS ── -->
+          <div class="owner-page" id="own-users">
+            <div style="padding-top:20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:20px">
+              <div><div class="ap-title">Gestión de Usuarios</div><div class="ap-sub">Todos los usuarios registrados en la plataforma</div></div>
+              <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+                <input type="text" id="user-search" placeholder="Buscar usuario..." oninput="filterOwnerUsers(this.value)"
+                  style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:7px 12px;color:var(--text);font-size:12px;outline:none;width:180px">
+                <select id="user-filter-role" onchange="filterOwnerUsers()" style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:7px 10px;color:var(--text2);font-size:12px;outline:none">
+                  <option value="all">Todos</option>
+                  <option value="user">Usuarios</option>
+                  <option value="owner">Owners</option>
+                  <option value="suspended">Suspendidos</option>
+                </select>
+              </div>
+            </div>
+            <div class="admin-card">
+              <div style="overflow-x:auto">
+                <table class="adm-table">
+                  <thead><tr><th>Usuario</th><th>País</th><th>Saldo</th><th>Apostado</th><th>Apuestas</th><th>Rol</th><th>Acciones</th></tr></thead>
+                  <tbody id="own-users-body"><tr><td colspan="7" style="text-align:center;color:var(--text2);padding:36px">⏳ Cargando usuarios...</td></tr></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- ── APUESTAS GLOBALES ── -->
+          <div class="owner-page" id="own-bets">
+            <div style="padding-top:20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:20px">
+              <div><div class="ap-title">Todas las Apuestas</div><div class="ap-sub">Gestión y resolución de apuestas de todos los usuarios</div></div>
+              <div style="display:flex;gap:6px;flex-wrap:wrap">
+                <button class="bet-badge open"  style="cursor:pointer;font-size:11px;padding:5px 12px" onclick="filterOwnerBets('open',this)">Activas</button>
+                <button class="bet-badge win"   style="cursor:pointer;font-size:11px;padding:5px 12px" onclick="filterOwnerBets('win',this)">Ganadas</button>
+                <button class="bet-badge loss"  style="cursor:pointer;font-size:11px;padding:5px 12px" onclick="filterOwnerBets('loss',this)">Perdidas</button>
+                <button class="bet-badge void"  style="cursor:pointer;font-size:11px;padding:5px 12px;border-color:var(--border2)" onclick="filterOwnerBets('all',this)">Todas</button>
+              </div>
+            </div>
+            <div class="stat-cards" style="grid-template-columns:repeat(3,1fr);margin-bottom:18px">
+              <div class="sc"><div class="sc-label">Total apostado</div><div class="sc-val" id="own-bets-total">—</div></div>
+              <div class="sc"><div class="sc-label">Pendientes</div><div class="sc-val" id="own-bets-open" style="color:var(--yellow)">—</div></div>
+              <div class="sc"><div class="sc-label">Exposición casa</div><div class="sc-val" id="own-bets-exposure" style="color:var(--red)">—</div></div>
+            </div>
+            <div class="admin-card">
+              <div style="overflow-x:auto">
+                <table class="adm-table">
+                  <thead><tr><th>Fecha</th><th>Usuario</th><th>Partido</th><th>Selección</th><th>Cuota</th><th>Apuesta</th><th>Retorno</th><th>Estado</th><th>Resolver</th></tr></thead>
+                  <tbody id="own-bets-body"><tr><td colspan="9" style="text-align:center;color:var(--text2);padding:36px">⏳ Cargando apuestas...</td></tr></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- ── TRANSACCIONES GLOBALES ── -->
+          <div class="owner-page" id="own-tx">
+            <div style="padding-top:20px;margin-bottom:20px">
+              <div class="ap-title">Transacciones Globales</div>
+              <div class="ap-sub">Todos los movimientos económicos de la plataforma</div>
+            </div>
+            <div class="stat-cards" style="grid-template-columns:repeat(4,1fr);margin-bottom:18px">
+              <div class="sc"><div class="sc-label">Total depósitos</div><div class="sc-val g" id="own-tx-dep">—</div></div>
+              <div class="sc"><div class="sc-label">Total retiradas</div><div class="sc-val r" id="own-tx-wit">—</div></div>
+              <div class="sc"><div class="sc-label">Apuestas cobradas</div><div class="sc-val" id="own-tx-bet">—</div></div>
+              <div class="sc"><div class="sc-label">Premios pagados</div><div class="sc-val" id="own-tx-win">—</div></div>
+            </div>
+            <div class="admin-card">
+              <div class="admin-card-hd">
+                <div class="admin-card-title">Historial completo</div>
+                <select style="background:var(--bg3);border:1px solid var(--border);border-radius:7px;color:var(--text2);font-size:12px;padding:5px 8px;outline:none" onchange="filterOwnerTx(this.value)">
+                  <option value="all">Todos los tipos</option>
+                  <option value="dep">Depósitos</option>
+                  <option value="wit">Retiradas</option>
+                  <option value="bet">Apuestas</option>
+                  <option value="win">Premios</option>
+                </select>
+              </div>
+              <div style="overflow-x:auto">
+                <table class="adm-table">
+                  <thead><tr><th>Fecha</th><th>Usuario</th><th>Descripción</th><th>Tipo</th><th>Importe</th></tr></thead>
+                  <tbody id="own-tx-body"><tr><td colspan="5" style="text-align:center;color:var(--text2);padding:36px">⏳ Cargando...</td></tr></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- ── CONFIGURACIÓN ── -->
+          <div class="owner-page" id="own-config">
+            <div style="padding-top:20px;margin-bottom:22px">
+              <div class="ap-title">Configuración del Sitio</div>
+              <div class="ap-sub">Ajustes globales de PredictX</div>
+            </div>
+
+            <div class="admin-card" style="margin-bottom:16px">
+              <div class="admin-card-hd"><div class="admin-card-title">🏦 Finanzas</div></div>
+              <div class="cfg-grid">
+                <div class="cfg-group">
+                  <div class="cfg-label">Bono bienvenida (%)</div>
+                  <input class="cfg-input" id="cfg-bonus-pct" type="number" value="100" min="0" max="200">
+                </div>
+                <div class="cfg-group">
+                  <div class="cfg-label">Bono máximo (€)</div>
+                  <input class="cfg-input" id="cfg-bonus-max" type="number" value="100" min="0">
+                </div>
+                <div class="cfg-group">
+                  <div class="cfg-label">Depósito mínimo (€)</div>
+                  <input class="cfg-input" id="cfg-dep-min" type="number" value="10" min="1">
+                </div>
+                <div class="cfg-group">
+                  <div class="cfg-label">Retirada mínima (€)</div>
+                  <input class="cfg-input" id="cfg-wit-min" type="number" value="20" min="1">
+                </div>
+                <div class="cfg-group">
+                  <div class="cfg-label">Saldo inicial nuevos usuarios (€)</div>
+                  <input class="cfg-input" id="cfg-initial-balance" type="number" value="0" min="0">
+                </div>
+                <div class="cfg-group">
+                  <div class="cfg-label">Comisión de la casa (%)</div>
+                  <input class="cfg-input" id="cfg-house-margin" type="number" value="5" min="0" max="50">
+                </div>
+              </div>
+              <div style="padding:14px 18px;border-top:1px solid var(--border);display:flex;justify-content:flex-end">
+                <button class="btn-save" onclick="saveOwnerConfig()">Guardar configuración</button>
+              </div>
+            </div>
+
+            <div class="admin-card" style="margin-bottom:16px">
+              <div class="admin-card-hd"><div class="admin-card-title">🔧 Funcionalidades</div></div>
+              <div class="cfg-toggle">
+                <div><div class="cfg-toggle-label">Registro de nuevos usuarios</div><div class="cfg-toggle-sub">Permitir que usuarios nuevos se registren</div></div>
+                <label class="toggle-switch"><input type="checkbox" id="cfg-allow-register" checked><span class="toggle-slider"></span></label>
+              </div>
+              <div class="cfg-toggle">
+                <div><div class="cfg-toggle-label">Depósitos activos</div><div class="cfg-toggle-sub">Permitir nuevos depósitos en la plataforma</div></div>
+                <label class="toggle-switch"><input type="checkbox" id="cfg-allow-deposits" checked><span class="toggle-slider"></span></label>
+              </div>
+              <div class="cfg-toggle">
+                <div><div class="cfg-toggle-label">Apuestas activas</div><div class="cfg-toggle-sub">Permitir realizar nuevas apuestas</div></div>
+                <label class="toggle-switch"><input type="checkbox" id="cfg-allow-bets" checked><span class="toggle-slider"></span></label>
+              </div>
+              <div class="cfg-toggle" style="border-bottom:none">
+                <div><div class="cfg-toggle-label">Modo mantenimiento</div><div class="cfg-toggle-sub">Muestra aviso de mantenimiento a los usuarios</div></div>
+                <label class="toggle-switch"><input type="checkbox" id="cfg-maintenance"><span class="toggle-slider"></span></label>
+              </div>
+            </div>
+
+            <div class="admin-card">
+              <div class="admin-card-hd"><div class="admin-card-title">👤 Promover / Degradar Owner</div></div>
+              <div style="padding:16px 18px;display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">
+                <div style="flex:1;min-width:200px">
+                  <div class="cfg-label" style="margin-bottom:6px">Email del usuario</div>
+                  <input class="cfg-input" id="cfg-promote-email" type="email" placeholder="usuario@email.com" style="width:100%">
+                </div>
+                <button class="btn-save" onclick="promoteUser()">⬆ Hacer Owner</button>
+                <button class="btn-ghost" onclick="demoteUser()">⬇ Hacer Usuario</button>
+              </div>
+            </div>
+          </div>
+
+        </div><!-- /owner-main -->
+      </div><!-- /owner-wrap -->
+    </div><!-- /view-owner -->
+
+    <!-- ── NOTIFICATION PANEL ── -->
+    <div id="notif-panel" style="display:none;position:fixed;top:var(--nav-h);right:16px;z-index:350;width:340px;background:var(--bg2);border:1px solid var(--bord2);border-radius:14px;box-shadow:0 8px 32px rgba(0,0,0,.35);overflow:hidden">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--border)">
+        <div style="font-size:14px;font-weight:600">🔔 Notificaciones</div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button onclick="clearAllNotifs()" style="font-size:11px;color:var(--text2);background:none;border:none;cursor:pointer">Limpiar</button>
+          <button onclick="toggleNotifPanel()" style="font-size:16px;color:var(--text2);background:none;border:none;cursor:pointer">✕</button>
+        </div>
+      </div>
+      <div id="notif-list" style="max-height:360px;overflow-y:auto">
+        <div style="padding:24px;text-align:center;color:var(--text2);font-size:13px">No hay notificaciones</div>
+      </div>
+      <div style="padding:10px 16px;border-top:1px solid var(--border);background:var(--bg3)">
+        <button onclick="requestNotifPermission()" id="notif-perm-btn" style="width:100%;padding:8px;border-radius:8px;background:var(--green);color:#000;font-weight:600;font-size:13px;border:none;cursor:pointer">
+          Activar notificaciones del navegador
+        </button>
+      </div>
+    </div>
+
+
+    <!-- ════ 2FA SETUP MODAL ════ -->
+    <div id="modal-2fa-setup" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:600;align-items:center;justify-content:center;padding:16px">
+      <div style="background:var(--bg2);border:1px solid var(--bord2);border-radius:16px;padding:28px;width:100%;max-width:400px;box-shadow:0 8px 40px rgba(0,0,0,.4)">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+          <div style="font-size:17px;font-weight:700">🔐 Activar verificación en 2 pasos</div>
+          <button onclick="close2FAModal()" style="font-size:18px;color:var(--text2);background:none;border:none;cursor:pointer">✕</button>
+        </div>
+
+        <!-- Step 1: QR -->
+        <div id="tfa-step1">
+          <p style="font-size:13px;color:var(--text2);margin-bottom:16px">
+            Escanea este código QR con <strong style="color:var(--text)">Google Authenticator</strong>, <strong style="color:var(--text)">Authy</strong> o cualquier app TOTP.
+          </p>
+          <div style="display:flex;justify-content:center;margin-bottom:16px;background:#fff;border-radius:10px;padding:12px">
+            <img id="totp-qr-img" src="" alt="QR Code" style="width:200px;height:200px;border-radius:6px" onerror="this.alt='Error cargando QR — usa la clave manual'">
+          </div>
+          <div style="font-size:11px;color:var(--text2);text-align:center;margin-bottom:4px">Clave manual (si no puedes escanear):</div>
+          <div id="totp-secret-display" style="font-size:12px;font-family:var(--mono);color:var(--green);text-align:center;background:var(--bg3);padding:8px;border-radius:8px;letter-spacing:2px;margin-bottom:20px;user-select:all"></div>
+          <button onclick="tfa2Step2()" style="width:100%;padding:12px;border-radius:10px;background:var(--green);color:#000;font-weight:700;font-size:14px;border:none;cursor:pointer">
+            Ya la escaneé → Verificar
+          </button>
+        </div>
+
+        <!-- Step 2: Verify -->
+        <div id="tfa-step2" style="display:none">
+          <p style="font-size:13px;color:var(--text2);margin-bottom:16px">
+            Introduce el código de 6 dígitos que muestra tu app para confirmar que todo funciona.
+          </p>
+          <input id="totp-verify-inp" type="tel" maxlength="6" placeholder="000000"
+            style="width:100%;text-align:center;font-size:28px;font-family:var(--mono);letter-spacing:8px;padding:14px;border-radius:10px;background:var(--bg3);border:1px solid var(--border);color:var(--text);outline:none;margin-bottom:14px"
+            oninput="this.value=this.value.replace(/\D/g,'');if(this.value.length===6)verify2FACode()">
+          <div id="totp-verify-status" style="font-size:12px;text-align:center;min-height:20px;margin-bottom:12px"></div>
+          <div style="display:flex;gap:8px">
+            <button onclick="tfa2Step1()" style="flex:1;padding:11px;border-radius:10px;background:var(--bg3);color:var(--text2);border:1px solid var(--border);cursor:pointer">← Volver</button>
+            <button onclick="verify2FACode()" style="flex:2;padding:11px;border-radius:10px;background:var(--green);color:#000;font-weight:700;border:none;cursor:pointer">Confirmar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- BETSLIP -->
+  <aside class="betslip" id="betslip">
+    <div class="slip-head">
+      <button class="slip-close-mobile" onclick="closeBetslip()" aria-label="Cerrar boleto">✕</button>
+      <div class="slip-title">🎟 Boleto</div>
+      <div class="slip-clear" onclick="clearSlip()">Limpiar</div>
+    </div>
+    <div class="slip-mode">
+      <div class="slip-mode-btn active" onclick="setSlipMode('single',this)">Simple</div>
+      <div class="slip-mode-btn" onclick="setSlipMode('combo',this)">Combinada</div>
+    </div>
+    <div id="slip-body" class="slip-body">
+      <div class="slip-empty">
+        <div class="slip-empty-ico">🎯</div>
+        <div class="slip-empty-txt">Selecciona cuotas del evento para añadirlas a tu boleto</div>
+      </div>
+    </div>
+    <div class="slip-foot" id="slip-foot" style="display:none">
+      <div class="slip-total-row"><span class="slip-total-key">Apuesta total</span><span class="slip-total-val" id="slip-ttl-stake">€0.00</span></div>
+      <div class="slip-total-row"><span class="slip-total-key">Ganancia potencial</span><span class="slip-total-val green" id="slip-ttl-ret">€0.00</span></div>
+      <button class="slip-bet-btn" onclick="placeBets()">Realizar Apuesta</button>
+      <div class="slip-disclaimer">Las cuotas pueden cambiar. Apuesta con responsabilidad. +18.</div>
+    </div>
+  </aside>
+
+</div><!-- /layout -->
+
+<!-- API MODAL -->
+<div class="modal-bg" id="modal" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <div class="modal-title">Seleccionar Liga / Deporte</div>
+    <div class="modal-sub">Elige la competición que quieres ver. Las cuotas se cargan automáticamente.</div>
+    <div class="modal-status" id="modal-status"></div>
+    <!-- API key is stored securely as a Netlify environment variable -->
+    <select class="modal-sel" id="modal-sport">
+      <option value="soccer_epl">⚽ Premier League</option>
+      <option value="soccer_spain_la_liga">⚽ La Liga</option>
+      <option value="soccer_uefa_champs_league">⚽ Champions League</option>
+      <option value="soccer_germany_bundesliga">⚽ Bundesliga</option>
+      <option value="soccer_italy_serie_a">⚽ Serie A</option>
+      <option value="soccer_france_ligue_one">⚽ Ligue 1</option>
+      <option value="soccer_usa_mls">⚽ MLS</option>
+      <option value="soccer_conmebol_copa_libertadores">🏆 Copa Libertadores</option>
+      <option value="soccer_fifa_world_cup">🌍 Copa Mundial FIFA</option>
+      <option value="soccer_saudi_premier_league">🇸🇦 Saudi Pro League</option>
+      <option value="basketball_nba">🏀 NBA</option>
+      <option value="basketball_euroleague">🏀 EuroLeague</option>
+      <option value="americanfootball_nfl">🏈 NFL</option>
+      <option value="baseball_mlb">⚾ MLB</option>
+      <option value="icehockey_nhl">🏒 NHL</option>
+      <option value="mma_mixed_martial_arts">🥊 MMA / UFC</option>
+    </select>
+    <div class="modal-btns">
+      <button class="modal-cancel" onclick="closeModal()">Cancelar</button>
+      <button class="modal-ok" onclick="connectAPI()">Cargar eventos</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- ════ BOTTOM NAV (mobile) ════ -->
+<nav class="bottom-nav" id="bottom-nav">
+  <div class="bottom-nav-inner">
+    <div class="bn-btn active" id="bn-home" onclick="bnHome(this)">
+      <div class="bn-ico">⚡</div>
+      <div class="bn-lbl">Inicio</div>
+    </div>
+    <div class="bn-btn" id="bn-search" onclick="bnSearch(this)">
+      <div class="bn-ico">🔍</div>
+      <div class="bn-lbl">Buscar</div>
+    </div>
+    <div class="bn-btn" id="bn-sports" onclick="bnSports(this)">
+      <div class="bn-ico">🏆</div>
+      <div class="bn-lbl">Deportes</div>
+    </div>
+    <div class="bn-btn bn-slip-wrap" id="bn-slip" onclick="bnSlip(this)">
+      <div class="bn-ico">🎟</div>
+      <div class="bn-lbl">Boleto</div>
+      <div class="bn-badge" id="bn-badge">0</div>
+    </div>
+    <div class="bn-btn" id="bn-theme" onclick="toggleTheme()">
+      <div class="bn-ico" id="bn-theme-ico">☀️</div>
+      <div class="bn-lbl">Tema</div>
+    </div>
+    <div class="bn-btn" id="bn-profile" onclick="bnProfile(this)">
+      <div class="bn-ico">👤</div>
+      <div class="bn-lbl">Mi cuenta</div>
+    </div>
+  </div>
+</nav>
+
+<!-- ════ AUTH GATE ════ -->
+<div id="auth-gate" onclick="if(event.target===this){const ag=document.getElementById('auth-gate');if(ag&&ag.classList.contains('show'))ag.classList.remove('show');}">
+  <div class="auth-box" id="auth-box">
+
+    <div class="auth-logo">
+      <div class="auth-logo-mark">P</div>
+      <div class="auth-logo-text">Predict<span>X</span></div>
+    </div>
+
+    <!-- Login / Register tabs -->
+    <div class="auth-tabs" id="auth-tabs">
+      <div class="auth-tab active" onclick="authTab('login',this)">Iniciar sesión</div>
+      <div class="auth-tab" onclick="authTab('register',this)">Registrarse</div>
+    </div>
+
+    <!-- Bonus banner (register only) -->
+    <div class="auth-bonus-banner" id="auth-bonus" style="display:none">
+      <div class="auth-bonus-ico">🎁</div>
+      <div>
+        <div class="auth-bonus-title">¡Regístrate gratis!</div>
+        <div class="auth-bonus-sub">Crea tu cuenta y recarga con Yape o Izipay para empezar a apostar. +18.</div>
+      </div>
+    </div>
+
+    <div class="auth-status" id="auth-status"></div>
+
+    <!-- ── LOGIN FORM ── -->
+    <div id="form-login" style="display:block">
+      <div class="auth-title">Bienvenido de vuelta</div>
+      <div class="auth-sub">Accede a tu cuenta para ver tus apuestas y saldo</div>
+      <div class="auth-field">
+        <div class="auth-label">Email o usuario</div>
+        <input class="auth-input" id="l-email" type="email" placeholder="tu@email.com" autocomplete="email">
+      </div>
+      <div class="auth-field">
+        <div class="auth-label">
+          Contraseña
+          <a onclick="authTab('forgot')">¿Olvidaste tu contraseña?</a>
+        </div>
+        <div class="auth-input-wrap">
+          <input class="auth-input" id="l-pass" type="password" placeholder="••••••••" autocomplete="current-password">
+          <span class="auth-eye" onclick="togglePw('l-pass',this)">👁</span>
+        </div>
+      </div>
+      <label class="auth-check">
+        <input type="checkbox" id="l-remember">
+        <span class="auth-check-lbl">Recordar mi sesión en este dispositivo</span>
+      </label>
+      <button class="auth-btn" onclick="doLogin()">Entrar →</button>
+      <div class="auth-divider">o continúa con</div>
+      <div class="auth-social">
+        <div class="auth-social-btn" onclick="socialLogin('Google')">🔵 Google</div>
+        <div class="auth-social-btn" onclick="socialLogin('Apple')">⚫ Apple</div>
+      </div>
+    </div>
+
+    <!-- ── REGISTER FORM ── -->
+    <div id="form-register" style="display:none">
+      <div class="auth-title">Crear cuenta gratis</div>
+      <div class="auth-sub">Empieza a apostar en menos de 2 minutos</div>
+      <div class="auth-field">
+        <div class="auth-label">Nombre completo</div>
+        <input class="auth-input" id="r-name" type="text" placeholder="Tu nombre y apellido" autocomplete="name">
+      </div>
+      <div class="auth-field">
+        <div class="auth-label">Email</div>
+        <input class="auth-input" id="r-email" type="email" placeholder="tu@email.com" autocomplete="email">
+      </div>
+      <div class="auth-field">
+        <div class="auth-label">Contraseña</div>
+        <div class="auth-input-wrap">
+          <input class="auth-input" id="r-pass" type="password" autocomplete="new-password" placeholder="Mínimo 8 caracteres" oninput="checkPwStrength(this.value)" autocomplete="new-password">
+          <span class="auth-eye" onclick="togglePw('r-pass',this)">👁</span>
+        </div>
+        <div class="pw-strength" id="pw-bars">
+          <div class="pw-bar" id="pw-b1"></div>
+          <div class="pw-bar" id="pw-b2"></div>
+          <div class="pw-bar" id="pw-b3"></div>
+          <div class="pw-bar" id="pw-b4"></div>
+        </div>
+        <div class="pw-label" id="pw-label">Introduce tu contraseña</div>
+      </div>
+      <div class="auth-field">
+        <div class="auth-label">País</div>
+        <select class="auth-input" id="r-country">
+          <option value="">Selecciona tu país…</option>
+          <option value="es">🇪🇸 España</option>
+          <option value="pe">🇵🇪 Perú</option>
+          <option value="mx">🇲🇽 México</option>
+          <option value="ar">🇦🇷 Argentina</option>
+          <option value="co">🇨🇴 Colombia</option>
+          <option value="cl">🇨🇱 Chile</option>
+          <option value="other">Otro país</option>
+        </select>
+      </div>
+      <label class="auth-check">
+        <input type="checkbox" id="r-terms">
+        <span class="auth-check-lbl">Acepto los <a>Términos y condiciones</a> y la <a>Política de privacidad</a>. Confirmo que tengo más de 18 años.</span>
+      </label>
+      <label class="auth-check">
+        <input type="checkbox" id="r-promo" checked>
+        <span class="auth-check-lbl">Quiero recibir ofertas especiales y bonos exclusivos por email</span>
+      </label>
+      <button class="auth-btn" onclick="doRegister()">Crear cuenta y recibir bono →</button>
+      <div class="auth-divider">o regístrate con</div>
+      <div class="auth-social">
+        <div class="auth-social-btn" onclick="socialLogin('Google')">🔵 Google</div>
+        <div class="auth-social-btn" onclick="socialLogin('Apple')">⚫ Apple</div>
+      </div>
+    </div>
+
+    <!-- ── 2FA FORM ── -->
+    <div id="form-2fa" style="display:none">
+      <div style="text-align:center;margin-bottom:16px">
+        <div style="font-size:40px;margin-bottom:10px">📱</div>
+        <div class="auth-title">Verificación en dos pasos</div>
+        <div class="auth-sub">Introduce el código de 6 dígitos enviado a <strong id="tfa-dest">tu email</strong></div>
+      </div>
+      <div class="otp-boxes">
+        <input class="otp-box" id="otp-0" maxlength="1" type="tel" oninput="otpNext(0,this)" onkeydown="otpBack(0,event)">
+        <input class="otp-box" id="otp-1" maxlength="1" type="tel" oninput="otpNext(1,this)" onkeydown="otpBack(1,event)">
+        <input class="otp-box" id="otp-2" maxlength="1" type="tel" oninput="otpNext(2,this)" onkeydown="otpBack(2,event)">
+        <input class="otp-box" id="otp-3" maxlength="1" type="tel" oninput="otpNext(3,this)" onkeydown="otpBack(3,event)">
+        <input class="otp-box" id="otp-4" maxlength="1" type="tel" oninput="otpNext(4,this)" onkeydown="otpBack(4,event)">
+        <input class="otp-box" id="otp-5" maxlength="1" type="tel" oninput="otpNext(5,this)" onkeydown="otpBack(5,event)">
+      </div>
+      <div class="otp-timer" id="otp-timer">Código válido por <strong id="otp-secs">60</strong>s</div>
+      <div class="otp-resend" id="otp-resend-btn" style="display:none" onclick="resendOTP()">Reenviar código</div>
+      <button class="auth-btn" onclick="verifyOTP()">Verificar →</button>
+      <div style="text-align:center;font-size:12px;color:var(--text2);margin-top:4px">
+        <span style="cursor:pointer;color:var(--green)" onclick="showAuthForm('login')">← Volver al inicio de sesión</span>
+      </div>
+    </div>
+
+    <!-- ── FORGOT PASSWORD ── -->
+    <div id="form-forgot" style="display:none">
+      <div style="text-align:center;margin-bottom:16px">
+        <div style="font-size:36px;margin-bottom:10px">🔑</div>
+        <div class="auth-title">Recuperar contraseña</div>
+        <div class="auth-sub">Introduce tu email y te enviaremos un enlace para restablecer tu contraseña</div>
+      </div>
+      <div class="auth-field">
+        <div class="auth-label">Email de tu cuenta</div>
+        <input class="auth-input" id="f-email" type="email" placeholder="tu@email.com">
+      </div>
+      <button class="auth-btn" onclick="doForgot()">Enviar enlace →</button>
+      <div style="text-align:center;margin-top:12px">
+        <span style="font-size:12px;color:var(--green);cursor:pointer;font-weight:500" onclick="showAuthForm('login')">← Volver</span>
+      </div>
+    </div>
+
+  </div>
+</div><!-- /auth-gate -->
+
+<!-- ════ PAYMENT MODAL ════ -->
+<div class="modal-bg" id="pay-modal" onclick="if(event.target===this)closePayModal()">
+  <div class="modal" style="max-width:460px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">
+      <div style="font-size:17px;font-weight:700" id="pay-modal-title">Depositar fondos</div>
+      <div style="cursor:pointer;color:var(--text3);font-size:20px;line-height:1" onclick="closePayModal()">×</div>
+    </div>
+    <div class="auth-status" id="pay-status"></div>
+
+    <!-- Step 1: choose method -->
+    <div id="pay-step1">
+      <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">Método de pago</div>
+      <div class="pay-methods">
+        <div class="pay-method selected" id="pm-yape" onclick="selectPayMethod('yape',this)">
+          <div class="pm-ico">🟣</div>
+          <div class="pm-info">
+            <div class="pm-name">Yape</div>
+            <div class="pm-sub">Pago instantáneo · Perú · Sin comisión</div>
+          </div>
+          <div class="pm-badge">Recomendado</div>
+        </div>
+
+        <div class="pay-method" id="pm-card" onclick="selectPayMethod('card',this)">
+          <div class="pm-ico">💳</div>
+          <div class="pm-info">
+            <div class="pm-name">Tarjeta Visa / Mastercard</div>
+            <div class="pm-sub">Internacional · Comisión 1.5%</div>
+          </div>
+        </div>
+        <div class="pay-method" id="pm-transfer" onclick="selectPayMethod('transfer',this)">
+          <div class="pm-ico">🏦</div>
+          <div class="pm-info">
+            <div class="pm-name">Transferencia bancaria</div>
+            <div class="pm-sub">1-2 días hábiles · Sin límite</div>
+          </div>
+        </div>
+      </div>
+      <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Importe</div>
+      <div class="pay-amount-row" id="quick-amts">
+        <div class="quick-amt" onclick="setQuickAmt(20,this)">S/20</div>
+        <div class="quick-amt" onclick="setQuickAmt(50,this)">S/50</div>
+        <div class="quick-amt" onclick="setQuickAmt(100,this)">S/100</div>
+        <div class="quick-amt" onclick="setQuickAmt(200,this)">S/200</div>
+        <div class="quick-amt" onclick="setQuickAmt(500,this)">S/500</div>
+      </div>
+      <div class="pay-field" style="margin-top:10px">
+        <div class="pay-label">Importe personalizado</div>
+        <div style="position:relative">
+          <input class="pay-input" id="pay-amount" type="number" min="10" placeholder="0.00" oninput="clearQuickAmt()">
+          <span style="position:absolute;right:13px;top:50%;transform:translateY(-50%);font-size:12px;color:var(--text3);font-family:var(--mono)" id="pay-currency-sym">S/</span>
+        </div>
+      </div>
+      <button class="auth-btn" onclick="payStep2()">Continuar →</button>
+    </div>
+
+    <!-- Step 2: method-specific details -->
+    <div id="pay-step2" style="display:none">
+      <!-- Yape -->
+      <div id="pay-yape">
+        <div style="text-align:center;margin-bottom:20px">
+          <div style="font-size:44px;margin-bottom:8px">🟣</div>
+          <div style="font-size:15px;font-weight:700;margin-bottom:4px">Pago con Yape</div>
+          <div style="font-size:12px;color:var(--text2)">Escanea el código QR o transfiere al número</div>
+        </div>
+        <!-- Fake QR -->
+        <div style="width:160px;height:160px;margin:0 auto 16px;border-radius:14px;overflow:hidden;border:2px solid var(--border2);background:#fff"><img id="yape-qr-img" src="https://api.qrserver.com/v1/create-qr-code/?size=160x160&format=png&data=%2B51999123456" alt="QR Yape" style="width:100%;height:100%;object-fit:cover;padding:4px;border-radius:8px" onerror="this.style.opacity='0'"></div>
+        <div style="text-align:center;background:var(--bg3);border-radius:10px;padding:12px;margin-bottom:14px">
+          <div style="font-size:11px;color:var(--text2);margin-bottom:4px">Número Yape</div>
+          <div id="yape-phone-display" style="font-size:20px;font-weight:700;font-family:var(--mono);color:var(--text);letter-spacing:2px">+51 999 123 456</div>
+          <div style="font-size:11px;color:var(--text2);margin-top:4px">A nombre de: PredictX S.A.C.</div>
+        </div>
+        <div class="pay-field">
+          <div class="pay-label">Tu número Yape (para confirmar)</div>
+          <input class="pay-input" id="yape-phone" type="tel" placeholder="+51 9XX XXX XXX">
+        </div>
+        <div class="pay-field">
+          <div class="pay-label">Código de operación Yape</div>
+          <input class="pay-input" id="yape-code" type="text" placeholder="Ej: YP-2025-XXXXX">
+        </div>
+      </div>
+      <!-- Card — Izipay Smart Form -->
+      <div id="pay-card" style="display:none">
+        <div class="izipay-wrap">
+          <div class="izipay-env-badge" id="iz-env-badge">🧪 Modo TEST — usa tarjeta de prueba</div>
+          <div id="izipay-amount-display">
+            <div class="iz-amt" id="iz-amt-show">S/ 0.00</div>
+            <div class="iz-lbl">a pagar con tarjeta</div>
+          </div>
+          <!-- Izipay embeds the form here automatically -->
+          <div class="kr-embedded" id="iz-form-container">
+            <div class="kr-pan"></div>
+            <div class="kr-expiry"></div>
+            <div class="kr-security-code"></div>
+            <button class="kr-payment-button">Pagar con tarjeta →</button>
+          </div>
+          <div class="iz-error" id="iz-error"></div>
+          <div style="font-size:11px;color:var(--text3);text-align:center;margin-top:10px">
+            🔒 Pago 100% seguro procesado por Izipay · PCI-DSS
+          </div>
+          <div style="font-size:11px;color:var(--text3);text-align:center;margin-top:4px" id="iz-test-hint">
+            Tarjeta test: <strong style="color:var(--text2)">4970 1000 0000 0055</strong> · Exp: 12/25 · CVV: 123
+          </div>
+        </div>
+      </div>
+
+      <!-- Transfer -->
+      <div id="pay-transfer" style="display:none">
+        <div style="background:var(--bg3);border-radius:12px;padding:16px;margin-bottom:14px">
+          <div style="font-size:11px;color:var(--text2);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px;font-weight:600">Datos bancarios</div>
+          <div style="display:flex;flex-direction:column;gap:8px;font-size:13px">
+            <div style="display:flex;justify-content:space-between"><span style="color:var(--text2)">Banco</span><span style="font-weight:600">BCP — Banco de Crédito</span></div>
+            <div style="display:flex;justify-content:space-between"><span style="color:var(--text2)">Cuenta</span><span style="font-family:var(--mono);font-weight:600">19412345678901</span></div>
+            <div style="display:flex;justify-content:space-between"><span style="color:var(--text2)">CCI</span><span style="font-family:var(--mono);font-weight:600">00219400123456789018</span></div>
+            <div style="display:flex;justify-content:space-between"><span style="color:var(--text2)">Titular</span><span style="font-weight:600">PredictX S.A.C.</span></div>
+          </div>
+        </div>
+        <div class="pay-field">
+          <div class="pay-label">Número de operación</div>
+          <input class="pay-input" id="tx-ref" type="text" placeholder="Ej: OP-2025-XXXXXXXX">
+        </div>
+      </div>
+
+      <div class="pay-secure" style="margin-bottom:14px">
+        🔒 <span>Pago 100% seguro · Cifrado SSL 256-bit · PCI DSS Level 1</span>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn-ghost" style="flex:1;padding:11px" onclick="payBackStep()">← Volver</button>
+        <button class="auth-btn" style="flex:2;margin:0" onclick="confirmPayment()" id="pay-confirm-btn">Confirmar depósito</button>
+      </div>
+    </div>
+
+    <!-- Step 3: success -->
+    <div id="pay-step3" style="display:none;text-align:center;padding:20px 0">
+      <div style="font-size:56px;margin-bottom:14px">✅</div>
+      <div style="font-size:18px;font-weight:700;margin-bottom:6px">¡Depósito registrado!</div>
+      <div style="font-size:13px;color:var(--text2);margin-bottom:20px;line-height:1.5" id="pay-success-msg">
+        Tu depósito ha sido recibido y está siendo procesado. El saldo se reflejará en tu cuenta en instantes.
+      </div>
+      <div style="background:var(--green-bg);border:1px solid var(--green-bd);border-radius:10px;padding:14px;margin-bottom:20px">
+        <div style="font-size:15px;font-weight:700;color:var(--green)" id="pay-bonus-txt">✅ Saldo acreditado</div>
+        <div style="font-size:11px;color:var(--text2);margin-top:4px">Ya puedes realizar tus apuestas</div>
+      </div>
+      <button class="auth-btn" style="margin:0" onclick="closePayModal()">Ir a apostar →</button>
+    </div>
+
+  </div>
+</div>
+
+  <script src="js/app.js"></script>
+</body>
+</html>
