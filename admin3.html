@@ -3259,9 +3259,7 @@ async function admSaveApiEventEdit(){
     if(newOverrides.total_under) payload.total_under = newOverrides.total_under;
   }
 
-  console.log('[save] updating api_events id:', _editingApiEvent.id, 'description:', payload.description);
-  const { error, data: updData } = await _SB.from('api_events').update(payload).eq('id', _editingApiEvent.id).select('id,description');
-  console.log('[save] result:', updData, 'error:', error);
+  const { error } = await _SB.from('api_events').update(payload).eq('id', _editingApiEvent.id);
   if(error){ showToast('❌ '+error.message,'error'); return; }
 
   const overrideCount = Object.keys(newOverrides).length;
@@ -3296,9 +3294,7 @@ async function admRestoreApiEvent(){
   if(orig.total_over  != null) payload.total_over  = orig.total_over;
   if(orig.total_under != null) payload.total_under = orig.total_under;
 
-  console.log('[save] updating api_events id:', _editingApiEvent.id, 'description:', payload.description);
-  const { error, data: updData } = await _SB.from('api_events').update(payload).eq('id', _editingApiEvent.id).select('id,description');
-  console.log('[save] result:', updData, 'error:', error);
+  const { error } = await _SB.from('api_events').update(payload).eq('id', _editingApiEvent.id);
   if(error){ showToast('❌ '+error.message,'error'); return; }
   showToast('↩ Datos originales restaurados','success');
   admCloseApiEventEdit();
