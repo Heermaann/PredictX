@@ -1358,18 +1358,11 @@ async function openDetail(idx) {
       if (d2?.description) desc = d2.description;
     }
     if (desc) {
-      let box = document.querySelector('.det-description');
-      if (box) {
-        box.querySelector('.det-desc-body').textContent = desc;
+      const box = document.getElementById('det-desc-box');
+      const body = document.getElementById('det-desc-body');
+      if (box && body) {
+        body.textContent = desc;
         box.style.display = 'block';
-      } else {
-        const mkt = document.getElementById('mkt-panel-main');
-        if (mkt) {
-          const div = document.createElement('div');
-          div.className = 'det-description';
-          div.innerHTML = '<div class="det-desc-title">📋 Contexto del partido</div><div class="det-desc-body">' + esc(desc) + '</div>';
-          mkt.parentNode.insertBefore(div, mkt);
-        }
       }
     }
   } catch(_) {}
@@ -1816,10 +1809,10 @@ function renderDetail(m) {
 
 
       <!-- Descripción/contexto del partido -->
-      ${m.description ? `<div class="det-description">
+      <div class="det-description" id="det-desc-box" style="display:${m.description?'block':'none'}">
         <div class="det-desc-title">📋 Contexto del partido</div>
-        <div class="det-desc-body">${esc(m.description)}</div>
-      </div>` : ''}
+        <div class="det-desc-body" id="det-desc-body">${esc(m.description||'')}</div>
+      </div>
     </div>
 
     <!-- Mercados adicionales -->
