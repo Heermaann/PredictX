@@ -20,7 +20,7 @@
 
 <!-- ════ NAV ════ -->
 <nav class="nav">
-  <button class="nav-hamburger" id="hamburger" onclick="toggleSidebar()" ontouchend="event.preventDefault();toggleSidebar()" aria-label="Menú">☰</button>
+  <button class="nav-hamburger" id="hamburger" onclick="toggleSidebar()" aria-label="Menú">☰</button>
   <div class="nav-logo" onclick="window.location.href='/'" style="cursor:pointer" title="Ir al inicio">
     <div class="nav-logo-mark">P</div>
     <div class="nav-logo-text">Predict<span>X</span></div>
@@ -70,7 +70,7 @@
 </nav>
 
 <!-- Overlay for sidebar + betslip on mobile -->
-<div class="overlay" id="overlay" onclick="closeSidebar()" ontouchend="event.preventDefault();closeSidebar()"></div>
+<div class="overlay" id="overlay" onclick="closeSidebar()"></div>
 <div class="overlay-slip" id="overlay-slip" onclick="closeBetslip()" ontouchend="event.preventDefault();closeBetslip()"></div>
 
 <!-- ── Mobile search overlay ── -->
@@ -937,7 +937,7 @@
 </div><!-- /layout -->
 
 <!-- API MODAL -->
-<div class="modal-bg" id="modal">
+<div class="modal-bg" id="modal" onclick="if(event.target===this)closeModal()">
   <div class="modal">
     <div class="modal-title">Seleccionar Liga / Deporte</div>
     <div class="modal-sub">Elige la competición que quieres ver. Las cuotas se cargan automáticamente.</div>
@@ -1002,7 +1002,7 @@
 </nav>
 
 <!-- ════ AUTH GATE ════ -->
-<div id="auth-gate">
+<div id="auth-gate" onclick="if(event.target===this){const ag=document.getElementById('auth-gate');if(ag&&ag.classList.contains('show'))ag.classList.remove('show');}">
   <div class="auth-box" id="auth-box">
 
     <div class="auth-logo">
@@ -1145,7 +1145,7 @@
 </div><!-- /auth-gate -->
 
 <!-- ════ PAYMENT MODAL ════ -->
-<div class="modal-bg" id="pay-modal">
+<div class="modal-bg" id="pay-modal" onclick="if(event.target===this)closePayModal()">
   <div class="modal" style="max-width:460px">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">
       <div style="font-size:17px;font-weight:700" id="pay-modal-title">Depositar fondos</div>
@@ -1292,7 +1292,7 @@
 <!-- ══════════════════════════════════════════
      MODAL DE RETIRO
 ══════════════════════════════════════════ -->
-<div class="modal-bg" id="withdraw-modal">
+<div class="modal-bg" id="withdraw-modal" onclick="if(event.target===this)closeWithdrawModal()">
   <div class="modal" style="max-width:460px">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">
       <div style="font-size:17px;font-weight:700">Retirar fondos</div>
