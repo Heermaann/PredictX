@@ -1340,13 +1340,16 @@ async function openDetail(idx) {
   setTimeout(updateSidebarVisibility, 50);
   document.getElementById('view-detail').style.display = 'block';
 
-  // Fetch fresh description BEFORE rendering
+  // Render first
+  renderDetail(m);
+
+  // Then fetch description and patch into DOM
   try {
     const table = m._manual ? 'manual_events' : 'api_events';
     const eid = String(m.id||'');
     let desc = null;
     if (eid) {
-      const { data: d1 } = await _SB.from(table).select('id,description').eq('id', eid).maybeSingle();
+      const { data: d1 } = await _SB.from(table).select('description').eq('id', eid).maybeSingle();
       if (d1?.description) desc = d1.description;
     }
     if (!desc && m.home_team) {
@@ -1354,10 +1357,22 @@ async function openDetail(idx) {
         .eq('home_team', m.home_team).eq('away_team', m.away_team).maybeSingle();
       if (d2?.description) desc = d2.description;
     }
-    if (desc) m = { ...m, description: desc };
+    if (desc) {
+      let box = document.querySelector('.det-description');
+      if (box) {
+        box.querySelector('.det-desc-body').textContent = desc;
+        box.style.display = 'block';
+      } else {
+        const mkt = document.getElementById('mkt-panel-main');
+        if (mkt) {
+          const div = document.createElement('div');
+          div.className = 'det-description';
+          div.innerHTML = '<div class="det-desc-title">📋 Contexto del partido</div><div class="det-desc-body">' + esc(desc) + '</div>';
+          mkt.parentNode.insertBefore(div, mkt);
+        }
+      }
+    }
   } catch(_) {}
-
-    renderDetail(m);
 }
 
 function closeDetail() {
