@@ -1787,7 +1787,7 @@ function renderDetail(m) {
           ${teamLogo(m.away_team,36)}
         </div>
         <div class="det-tags">
-          <span class="det-tag league" onclick="loadLeague('${m.sport_key}','${(m.league||m.sport_title||m.sport_key).replace(/'/g,'').replace(/\`/g,'')}',null);closeDetail()" style="cursor:pointer;text-decoration:underline dotted;text-underline-offset:2px" title="Ver partidos de esta liga">${esc(m.league||m.sport_title||"")}</span>
+          <span class="det-tag league" onclick="loadLeague('${m.sport_key}','${(m.league||m.sport_title||m.sport_key).replace(/['"]/g,'')}',null)" style="cursor:pointer;text-decoration:underline dotted;text-underline-offset:2px" title="Ver partidos de esta liga">${esc(m.league||m.sport_title||"")}</span>
           <span class="det-tag">📅 ${fDate(m.commence_time)}</span>
           <span class="det-tag">⏱ ${m.duration_minutes||sportDuration(m.sport_key)} min</span>
         </div>
@@ -3747,15 +3747,17 @@ async function supSubmit() {
   }
 
   // Insert ticket
-  const { error } = await _SB.from('support_tickets').insert({
-    user_email:  SESSION.email,
+  // Build payload without attachment_url if column doesn't exist
+  const ticketPayload = {
+    user_email: SESSION.email,
     subject,
     body,
-    attachment_url: attachmentUrl,
-    status:      'open',
-    priority:    'normal',
-    created_at:  new Date().toISOString()
-  });
+    status:     'open',
+    priority:   'normal',
+    created_at: new Date().toISOString()
+  };
+  if (attachmentUrl) ticketPayload.attachment_url = attachmentUrl;
+  const { error } = await _SB.from('support_tickets').insert(ticketPayload);
 
   if (error) return setStatus('❌ Error al enviar: ' + error.message);
 
