@@ -4,7 +4,7 @@
    STATE
 ════════════════════════════════════════════════════ */
 const S = {
-  sport:     localStorage.getItem('px_sport')  || 'all',
+  sport:     'all', // always start with all sports
   theme:     localStorage.getItem('px_theme')  || 'dark',
   markets:   [],
   filtered:  [],
@@ -2640,6 +2640,8 @@ function defaultTx()   { return []; }
 
 /* ── Boot: check saved session ── */
 document.addEventListener('DOMContentLoaded', async () => {
+  // S.sport always starts as 'all'
+  localStorage.removeItem('px_sport'); // clear stale sport filter
   applyTheme(S.theme);
   renderSlip();
   renderCatPills(); // load dynamic categories from Supabase
