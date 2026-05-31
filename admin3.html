@@ -2152,7 +2152,7 @@ async function admResolveEvent(id,result){
   let resolved=0;
   for(const bet of (openBets||[])){
     const won=bet.pick===result||(result==='1'&&bet.pick===e.home_team)||(result==='2'&&bet.pick===e.away_team)||(result==='X'&&(bet.pick==='Empate'||bet.pick==='X'));
-    const newStatus=won?'win':'loss'; const ret=won?+(+(bet.odds||bet.odd||0) * +(bet.stake||0)).toFixed(2):0;
+    const newStatus=won?'win':'loss'; const ret=won?+(+(bet.payout||bet.ret||(+(bet.odds||bet.odd||0) * +(bet.stake||0)))).toFixed(2):0;
     await _SB.from('bets').update({status:newStatus,ret}).eq('id',bet.id);
     if(won&&ret>0){
       const {data:prof}=await _SB.from('profiles').select('balance').eq('email',bet.user_email).maybeSingle();
@@ -2470,7 +2470,7 @@ async function admDeclareOutcome(id, source, result, homeTeam, awayTeam){
   for(const bet of (openBets||[])){
     const won = bet.pick===result||(result==='1'&&bet.pick===homeTeam)||(result==='2'&&bet.pick===awayTeam)||(result==='X'&&(bet.pick==='Empate'||bet.pick==='X'));
     const newStatus = won?'win':'loss';
-    const ret = won?+(+(bet.odds||bet.odd||0) * +(bet.stake||0)).toFixed(2):0;
+    const ret = won?+(+(bet.payout||bet.ret||(+(bet.odds||bet.odd||0) * +(bet.stake||0)))).toFixed(2):0;
     await _SB.from('bets').update({status:newStatus,ret}).eq('id',bet.id);
     if(won&&ret>0){
       // Call serverless function to pay winner (bypasses RLS)
