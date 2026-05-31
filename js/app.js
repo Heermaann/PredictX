@@ -1969,20 +1969,7 @@ async function loadLeague(sportKey, label, el) {
 
     if (apiError) throw new Error(apiError.message);
 
-    // Try to load featured events (show_in_home=true) if column exists
-    try {
-      const { data: featuredData, error: fErr } = await _SB.from('api_events').select('*')
-        .not('status','eq','finished').eq('show_in_home', true);
-      if (!fErr && featuredData && featuredData.length) {
-        const featuredIds = new Set(apiEvents.map(e=>e.id));
-        const newFeatured = featuredData
-          .filter(e => !featuredIds.has(e.id))
-          .map(e => { try { return processManualEvent({...e,_fromApi:true,_featured:true,sport_key:e.sport_key,league:e.league||e.sport_title}); } catch(_) { return null; } })
-          .filter(Boolean);
-        apiEvents = [...apiEvents, ...newFeatured];
-      }
-    } catch(_) {}
-
+    // Map api events (declare FIRST before using)
     const apiEvents = (apiData || []).map(e => { try { return processManualEvent({ ...e, _fromApi: true, sport_key: e.sport_key, league: e.league || e.sport_title }); } catch(err) { return null; } }).filter(Boolean);
 
     // Also load manual events for this sport
@@ -2001,13 +1988,13 @@ async function loadLeague(sportKey, label, el) {
       return new Date(a.commence_time) - new Date(b.commence_time);
     });
 
-    el.classList.remove('loading');
+    if (el) el.classList.remove('loading');
     updateAPIPill(true);
     applyFilters();
     const total = apiEvents.length + manualEvents.length;
     showToast(`✅ ${total} eventos de ${label}`);
   } catch(err) {
-    el.classList.remove('active', 'loading');
+    if (el) el.classList.remove('active', 'loading');
     _activeLeagueEl = null;
     renderEmpty('error', err.message);
     updateAPIPill(false);
@@ -3749,12 +3736,12 @@ async function supSubmit() {
   // Insert ticket
   // Build payload without attachment_url if column doesn't exist
   const ticketPayload = {
-    user_email: SESSION.email,
+    user_email:  SESSION.email,
     subject,
-    body,
-    status:     'open',
-    priority:   'normal',
-    created_at: new Date().toISOString()
+    description: body,
+    status:      'open',
+    priority:    'normal',
+    created_at:  new Date().toISOString()
   };
   if (attachmentUrl) ticketPayload.attachment_url = attachmentUrl;
   const { error } = await _SB.from('support_tickets').insert(ticketPayload);
