@@ -1414,13 +1414,15 @@ async function admEnterWithSession(session){
   } catch(err) {
     console.error('admEnterWithSession profiles error:', err);
   }
-  if(!prof || (prof.role !== 'owner' && session.user.email !== OWNER_EMAIL)){
+  // Grant access if: role='owner' in DB  OR  email matches OWNER_EMAIL hardcoded
+  const hasAccess = (prof && prof.role === 'owner') || session.user.email === OWNER_EMAIL;
+  if(!hasAccess){
     document.getElementById('adm-gate-loading').style.display='none';
     document.getElementById('adm-gate-err').textContent='No tienes permisos de administrador.';
     setTimeout(()=>window.location.href='/', 2000);
     return;
   }
-  SESSION = { email: session.user.email, name: prof.name || session.user.email.split('@')[0] };
+  SESSION = { email: session.user.email, name: (prof && prof.name) || session.user.email.split('@')[0] };
   const av = SESSION.name[0].toUpperCase();
   document.getElementById('adm-user-avatar').textContent   = av;
   document.getElementById('adm-user-name').textContent     = SESSION.name;
