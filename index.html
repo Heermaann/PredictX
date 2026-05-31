@@ -593,29 +593,46 @@
                 <div class="page-sub">Envía una consulta o reporte al equipo de soporte</div>
               </div>
             </div>
-            <div class="info-card" style="max-width:600px;margin-bottom:24px">
-              <div style="font-size:15px;font-weight:700;margin-bottom:16px">Nuevo ticket de soporte</div>
-              <div class="form-group">
-                <label class="form-label">Asunto</label>
-                <input type="text" id="sup-subject" class="form-input" placeholder="Describe brevemente tu problema..." maxlength="120">
+            <div style="max-width:600px;margin-bottom:24px">
+              <!-- Header -->
+              <div style="background:linear-gradient(135deg,var(--accent),#6366f1);border-radius:16px 16px 0 0;padding:24px 24px 20px;color:#fff">
+                <div style="font-size:22px;font-weight:800;margin-bottom:4px">Nuevo ticket de soporte</div>
+                <div style="font-size:13px;opacity:.85">Cuéntanos tu problema y te responderemos lo antes posible</div>
               </div>
-              <div class="form-group">
-                <label class="form-label">Descripción detallada</label>
-                <textarea id="sup-body" class="form-input" rows="5" style="resize:vertical" placeholder="Explica con detalle tu consulta, error o sugerencia..."></textarea>
-              </div>
-              <div class="form-group">
-                <label class="form-label">Adjuntar archivo (PNG, JPG, PDF) <span style="color:var(--text3);font-size:11px">— Opcional</span></label>
-                <input type="file" id="sup-file" accept=".png,.jpg,.jpeg,.pdf" style="display:none" onchange="supPreviewFile(this)">
-                <div onclick="document.getElementById('sup-file').click()" style="border:2px dashed var(--border2);border-radius:10px;padding:20px;text-align:center;cursor:pointer;color:var(--text2);font-size:13px" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border2)'">
-                  📎 Clic para adjuntar archivo
+              <!-- Form body -->
+              <div style="background:var(--bg2);border:1px solid var(--border);border-top:none;border-radius:0 0 16px 16px;padding:24px">
+                <!-- Subject -->
+                <div style="margin-bottom:20px">
+                  <label style="display:block;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text2);margin-bottom:8px">📌 Asunto</label>
+                  <input type="text" id="sup-subject" class="form-input" placeholder="¿En qué podemos ayudarte? (ej: Error al depositar)" maxlength="120" style="font-size:14px;padding:12px 14px">
                 </div>
-                <div id="sup-file-preview" style="display:none;margin-top:8px;padding:8px 12px;background:var(--bg3);border-radius:8px;font-size:12px;color:var(--text2);align-items:center;gap:8px">
-                  <span id="sup-file-name"></span>
-                  <button onclick="supClearFile()" style="background:none;border:none;cursor:pointer;color:var(--red);font-size:16px;padding:0;margin-left:auto">✕</button>
+                <!-- Description -->
+                <div style="margin-bottom:20px">
+                  <label style="display:block;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text2);margin-bottom:8px">📝 Descripción</label>
+                  <textarea id="sup-body" class="form-input" rows="6" style="resize:vertical;font-size:14px;padding:12px 14px;line-height:1.6" placeholder="Describe con detalle lo que ocurrió, qué pasos seguiste y cuál es el error que ves..."></textarea>
                 </div>
+                <!-- File upload -->
+                <div style="margin-bottom:24px">
+                  <label style="display:block;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text2);margin-bottom:8px">📎 Adjunto <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text3)">— Opcional (PNG, JPG, PDF · máx 5 MB)</span></label>
+                  <input type="file" id="sup-file" accept=".png,.jpg,.jpeg,.pdf" style="display:none" onchange="supPreviewFile(this)">
+                  <div onclick="document.getElementById('sup-file').click()" style="border:2px dashed var(--border2);border-radius:12px;padding:18px;text-align:center;cursor:pointer;color:var(--text2);font-size:13px;transition:all .15s" onmouseover="this.style.background='var(--bg3)';this.style.borderColor='var(--accent)'" onmouseout="this.style.background='transparent';this.style.borderColor='var(--border2)'">
+                    <div style="font-size:28px;margin-bottom:6px">📁</div>
+                    <div style="font-weight:600">Clic para seleccionar archivo</div>
+                    <div style="font-size:11px;margin-top:2px;color:var(--text3)">o arrastra y suelta aquí</div>
+                  </div>
+                  <div id="sup-file-preview" style="display:none;margin-top:10px;padding:10px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;font-size:13px;color:var(--text2);align-items:center;gap:10px">
+                    <span style="font-size:20px">📄</span>
+                    <span id="sup-file-name" style="flex:1"></span>
+                    <button onclick="supClearFile()" style="background:none;border:none;cursor:pointer;color:var(--red);font-size:18px;padding:0;line-height:1">✕</button>
+                  </div>
+                </div>
+                <!-- Status -->
+                <div class="auth-status" id="sup-status" style="display:none;margin-bottom:12px"></div>
+                <!-- Submit -->
+                <button class="btn btn-primary" onclick="supSubmit()" style="width:100%;padding:14px;font-size:15px;font-weight:700;border-radius:12px">
+                  📨 Enviar ticket de soporte
+                </button>
               </div>
-              <div class="auth-status" id="sup-status" style="display:none"></div>
-              <button class="btn btn-primary" onclick="supSubmit()" style="width:100%;margin-top:8px">📨 Enviar ticket</button>
             </div>
             <div class="info-card" style="max-width:600px">
               <div style="font-size:15px;font-weight:700;margin-bottom:16px">Mis tickets anteriores</div>
