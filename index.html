@@ -576,18 +576,18 @@
             </div>
             <div class="info-card" style="max-width:560px;margin-bottom:24px">
               <div style="font-size:15px;font-weight:700;margin-bottom:20px">Nuevo ticket</div>
-              <div style="margin-bottom:16px">
-                <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px">Asunto *</label>
-                <input type="text" id="sup-subject" class="form-input" placeholder="¿En qué podemos ayudarte?" maxlength="120">
-              </div>
-              <div style="margin-bottom:16px">
-                <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px">Descripción *</label>
-                <textarea id="sup-body" class="form-input" rows="5" style="resize:vertical" placeholder="Describe con detalle lo que ocurrió..."></textarea>
+              <div style="margin-bottom:20px">
+                <label style="display:block;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text2);margin-bottom:8px">Asunto *</label>
+                <input type="text" id="sup-subject" class="form-input" placeholder="¿En qué podemos ayudarte?" maxlength="120" style="font-size:14px">
               </div>
               <div style="margin-bottom:20px">
-                <label style="display:block;font-size:13px;font-weight:600;margin-bottom=6px">Adjunto <span style="font-weight:400;color:var(--text3);font-size:12px">PNG, JPG, PDF · máx 5MB (opcional)</span></label>
+                <label style="display:block;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text2);margin-bottom:8px">Descripción *</label>
+                <textarea id="sup-body" class="form-input" rows="5" style="resize:vertical;font-size:14px;line-height:1.6" placeholder="Describe con detalle lo que ocurrió, qué pasos seguiste y cuál es el error..."></textarea>
+              </div>
+              <div style="margin-bottom:24px">
+                <label style="display:block;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text2);margin-bottom:8px">Adjunto <span style="font-weight:400;text-transform:none;color:var(--text3)">PNG, JPG, PDF · máx 5MB (opcional)</span></label>
                 <input type="file" id="sup-file" accept=".png,.jpg,.jpeg,.pdf" style="display:none" onchange="supPreviewFile(this)">
-                <button type="button" onclick="document.getElementById(&apos;sup-file&apos;).click()" class="btn btn-ghost" style="width:100%;justify-content:center;border-style:dashed">📎 Seleccionar archivo</button>
+                <button type="button" onclick="document.getElementById('sup-file').click()" class="btn btn-ghost" style="width:100%;justify-content:center;gap:8px;border-style:dashed">📎 Adjuntar archivo</button>
                 <div id="sup-file-preview" style="display:none;margin-top:8px;padding:10px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;font-size:13px;align-items:center;gap:10px">
                   <span id="sup-file-name" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
                   <button onclick="supClearFile()" style="background:none;border:none;cursor:pointer;color:var(--red);font-size:18px;padding:0">✕</button>
