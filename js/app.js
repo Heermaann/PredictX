@@ -364,12 +364,22 @@ async function loadMarkets(force=false) {
       console.warn('Manual events fetch failed:', e.message);
     }
 
-    const total = apiEvents.length + manualMarkets.length;
+    // Merge FIRST, then filter and render
+    S.markets = [...manualMarkets, ...apiEvents].sort((a, b) => {
+      if (a._featured && !b._featured) return -1;
+      if (!a._featured && b._featured) return 1;
+      return new Date(a.commence_time) - new Date(b.commence_time);
+    });
+
+    _marketsLastLoaded = Date.now();
+    applyFilters();
+    updateAPIPill(true);
+    updateSidebarCounts();
+
+    const total = S.markets.length;
     if (total > 0) {
-      showToast(`✅ ${total} eventos cargados desde la base de datos`);
-  renderCatPills();
+      renderCatPills();
     } else {
-      // No events loaded - show helpful message without alarming toast
       const evList = document.getElementById('events-list');
       if (evList) {
         evList.innerHTML = `<div style="text-align:center;padding:60px 20px;color:var(--text2)">
@@ -379,18 +389,6 @@ async function loadMarkets(force=false) {
         </div>`;
       }
     }
-
-    // Merge: featured manual first, then by time
-    S.markets = [...manualMarkets, ...apiEvents].sort((a, b) => {
-      if (a._featured && !b._featured) return -1;
-      if (!a._featured && b._featured) return 1;
-      return new Date(a.commence_time) - new Date(b.commence_time);
-    });
-
-    _marketsLastLoaded = Date.now();
-    updateSidebarCounts();
-    applyFilters();
-    updateAPIPill(true);
   } catch(err) {
     const msg = err.message.includes('Failed to fetch') || err.message.includes('NetworkError')
       ? 'Sin conexión. Verifica tu red e intenta de nuevo.'
