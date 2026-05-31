@@ -1343,7 +1343,9 @@ async function openDetail(idx) {
   // Fetch fresh description BEFORE rendering
   try {
     const table = m._manual ? 'manual_events' : 'api_events';
+    console.log('[desc] fetching from', table, 'id:', m.id);
     const { data: d1 } = await _SB.from(table).select('description').eq('id', String(m.id)).maybeSingle();
+    console.log('[desc] result:', d1);
     if (d1?.description) {
       m = { ...m, description: d1.description };
     } else {
@@ -3548,6 +3550,7 @@ function openAdmin() {
   document.querySelectorAll('.bn-btn').forEach(b => b.classList.remove('active'));
   const bp = document.getElementById('bn-profile'); if (bp) bp.classList.add('active');
 }
+window.openAdmin = openAdmin;
 function closeAdmin() {
   showListView();
   updateSidebarVisibility();
