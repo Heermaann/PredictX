@@ -44,7 +44,7 @@
     <button class="slip-btn" onclick="toggleBetslip()" title="Boleto de apuestas">
       🎟 Boleto<span class="slip-count" id="slip-count">0</span>
     </button>
-    <button class="owner-nav-btn" id="owner-nav-btn" style="display:none" onclick="window.open('/admin','_blank')">⚡ Admin</button>
+    <button class="owner-nav-btn" id="owner-nav-btn" style="display:none" onclick="window.open('/admin3','_blank')">⚡ Admin</button>
     <button id="nav-deposit-btn" style="display:none;background:var(--accent);color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:13px;font-weight:700;cursor:pointer" onclick="openPayModal('deposit')">+ Depositar</button>
     <div id="nav-balance-display" style="display:none;align-items:center;gap:6px;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:6px 12px;font-size:13px;font-weight:700;color:var(--green);cursor:pointer" onclick="openPayModal('deposit')" title="Mi saldo">
       💰 <span id="nav-balance-val">$0.00</span>
@@ -79,75 +79,13 @@
     <div class="sb-divider"></div>
     <div class="sb-label">Ligas y Deportes</div>
 
-    <!-- FÚTBOL -->
-    <div class="sb-item sb-group" onclick="toggleGroup('g-soccer')">
-      <span class="sb-item-ico">⚽</span>Fútbol
-      <span class="sb-arrow" id="arr-g-soccer">›</span>
-    </div>
-    <div class="sb-leagues" id="g-soccer">
-      <div class="sb-league" onclick="loadLeague('soccer_epl','Premier League',this)">🏴󠁧󠁢󠁥󠁮󠁧󠁿 Premier League</div>
-      <div class="sb-league" onclick="loadLeague('soccer_spain_la_liga','La Liga',this)">🇪🇸 La Liga</div>
-      <div class="sb-league" onclick="loadLeague('soccer_uefa_champs_league','Champions League',this)">🏆 Champions League</div>
-      <div class="sb-league" onclick="loadLeague('soccer_germany_bundesliga','Bundesliga',this)">🇩🇪 Bundesliga</div>
-      <div class="sb-league" onclick="loadLeague('soccer_italy_serie_a','Serie A',this)">🇮🇹 Serie A</div>
-      <div class="sb-league" onclick="loadLeague('soccer_france_ligue_one','Ligue 1',this)">🇫🇷 Ligue 1</div>
-      <div class="sb-league" onclick="loadLeague('soccer_usa_mls','MLS',this)">🇺🇸 MLS</div>
-      <div class="sb-league" onclick="loadLeague('soccer_brazil_campeonato','Brasileirão',this)">🇧🇷 Brasileirão</div>
-      <div class="sb-league" onclick="loadLeague('soccer_conmebol_copa_libertadores','Copa Libertadores',this)">🏆 Copa Libertadores</div>
-      <div class="sb-league" onclick="loadLeague('soccer_fifa_world_cup','Copa Mundial FIFA',this)">🌍 Copa Mundial FIFA</div>
-      <div class="sb-league" onclick="loadLeague('soccer_saudi_premier_league','Saudi Pro League',this)">🇸🇦 Saudi Pro League</div>
+    <!-- Dynamic content populated by renderFullSidebar() from Supabase -->
+    <div id="sb-sports-wrap">
+      <div style="color:var(--text3);font-size:12px;padding:10px 16px;opacity:.7">⏳ Cargando ligas...</div>
     </div>
 
-    <!-- BALONCESTO -->
-    <div class="sb-item sb-group" onclick="toggleGroup('g-basketball')">
-      <span class="sb-item-ico">🏀</span>Baloncesto
-      <span class="sb-arrow" id="arr-g-basketball">›</span>
-    </div>
-    <div class="sb-leagues" id="g-basketball">
-      <div class="sb-league" onclick="loadLeague('basketball_nba','NBA',this)">🇺🇸 NBA</div>
-      <div class="sb-league" onclick="loadLeague('basketball_euroleague','EuroLeague',this)">🇪🇺 EuroLeague</div>
-      <div class="sb-league" onclick="loadLeague('basketball_ncaab','NCAA Basketball',this)">🎓 NCAA</div>
-    </div>
-
-    <!-- FÚTBOL AMERICANO -->
-    <div class="sb-item sb-group" onclick="toggleGroup('g-nfl')">
-      <span class="sb-item-ico">🏈</span>Fútbol Am.
-      <span class="sb-arrow" id="arr-g-nfl">›</span>
-    </div>
-    <div class="sb-leagues" id="g-nfl">
-      <div class="sb-league" onclick="loadLeague('americanfootball_nfl','NFL',this)">🇺🇸 NFL</div>
-      <div class="sb-league" onclick="loadLeague('americanfootball_ncaaf','NCAAF',this)">🎓 NCAAF</div>
-    </div>
-
-    <!-- BÉISBOL -->
-    <div class="sb-item sb-group" onclick="toggleGroup('g-baseball')">
-      <span class="sb-item-ico">⚾</span>Béisbol
-      <span class="sb-arrow" id="arr-g-baseball">›</span>
-    </div>
-    <div class="sb-leagues" id="g-baseball">
-      <div class="sb-league" onclick="loadLeague('baseball_mlb','MLB',this)">🇺🇸 MLB</div>
-    </div>
-
-    <!-- HOCKEY -->
-    <div class="sb-item sb-group" onclick="toggleGroup('g-hockey')">
-      <span class="sb-item-ico">🏒</span>Hockey
-      <span class="sb-arrow" id="arr-g-hockey">›</span>
-    </div>
-    <div class="sb-leagues" id="g-hockey">
-      <div class="sb-league" onclick="loadLeague('icehockey_nhl','NHL',this)">🇺🇸 NHL</div>
-      <div class="sb-league" onclick="loadLeague('icehockey_sweden_hockey_league','SHL',this)">🇸🇪 SHL</div>
-    </div>
-
-    <!-- MMA -->
-    <div class="sb-item sb-group" onclick="toggleGroup('g-mma')">
-      <span class="sb-item-ico">🥊</span>MMA / UFC
-      <span class="sb-arrow" id="arr-g-mma">›</span>
-    </div>
-    <div class="sb-leagues" id="g-mma">
-      <div class="sb-league" onclick="loadLeague('mma_mixed_martial_arts','MMA',this)">🥊 UFC / MMA</div>
-    </div>
-
-    <!-- GOLF -->
+    <!-- Custom sports/categories created by admin -->
+    <div id="sb-custom-sports"></div>
 
   </aside>
 
@@ -157,12 +95,8 @@
     <!-- LIST VIEW — Polymarket-style home -->
     <div id="view-list">
 
-      <!-- ── Nav tabs: Todos / Próximos / Mayor Volumen ─── -->
-      <div class="list-tabs" id="cat-pills-wrap" style="display:flex;gap:4px;padding:12px 16px 0;overflow-x:auto">
-        <button class="list-tab active" onclick="setNavMode('home',this)">Todos</button>
-        <button class="list-tab" onclick="setNavMode('upcoming',this)">Próximos</button>
-        <button class="list-tab" onclick="setNavMode('best',this)">Mayor Volumen</button>
-      </div>
+      <!-- Cat pills: hidden container for internal state tracking (categories shown only in sidebar) -->
+      <div id="cat-pills-wrap" style="display:none"></div>
 
       <!-- ── Sort / filter row ────────────────────── -->
       <div class="home-bar">

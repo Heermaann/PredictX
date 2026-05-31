@@ -1388,18 +1388,32 @@ function closeModal(id){ document.getElementById(id).classList.remove('open'); }
 
 // ── Auth ──
 async function initAdmin(){
-  const { data:{ session } } = await _SB.auth.getSession();
-  if(!session){
+  try {
+    const { data:{ session } } = await _SB.auth.getSession();
+    if(!session){
+      document.getElementById('adm-gate-loading').style.display='none';
+      document.getElementById('adm-login-form').style.display='block';
+      document.getElementById('adm-gate-err').textContent='Inicia sesión para acceder al panel.';
+      return;
+    }
+    await admEnterWithSession(session);
+  } catch(err) {
+    // Never leave user stuck on "Verificando sesión..."
     document.getElementById('adm-gate-loading').style.display='none';
     document.getElementById('adm-login-form').style.display='block';
-    document.getElementById('adm-gate-err').textContent='Inicia sesión para acceder al panel.';
-    return;
+    document.getElementById('adm-gate-err').textContent='Error al verificar sesión. Intenta de nuevo.';
+    console.error('initAdmin error:', err);
   }
-  await admEnterWithSession(session);
 }
 
 async function admEnterWithSession(session){
-  const { data: prof } = await _SB.from('profiles').select('role,name,email').eq('email', session.user.email).maybeSingle();
+  let prof = null;
+  try {
+    const { data } = await _SB.from('profiles').select('role,name,email').eq('email', session.user.email).maybeSingle();
+    prof = data;
+  } catch(err) {
+    console.error('admEnterWithSession profiles error:', err);
+  }
   if(!prof || (prof.role !== 'owner' && session.user.email !== OWNER_EMAIL)){
     document.getElementById('adm-gate-loading').style.display='none';
     document.getElementById('adm-gate-err').textContent='No tienes permisos de administrador.';
