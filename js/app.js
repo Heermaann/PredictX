@@ -1115,7 +1115,17 @@ function bnHome(btn) {
   document.querySelectorAll('.bn-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   closeSidebar();
-  closeDetail();
+  closeBetslip();
+  closeMobSearch();
+  // Close Mi Cuenta and show home list
+  const va = document.getElementById('view-admin');
+  const vo = document.getElementById('view-owner');
+  const vl = document.getElementById('view-list');
+  const vd = document.getElementById('view-detail');
+  if (va) va.style.cssText = '';
+  if (vo) vo.style.display = 'none';
+  if (vd) vd.style.display = 'none';
+  if (vl) vl.style.display = 'block';
 }
 function bnSearch(btn) {
   document.querySelectorAll('.bn-btn').forEach(b => b.classList.remove('active'));
