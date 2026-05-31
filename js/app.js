@@ -3746,26 +3746,32 @@ function supClearFile() {
 }
 
 async function supSubmit() {
-  if (!SESSION) { showToast('❌ Debes iniciar sesión'); return; }
+  if (!SESSION) { openAuthGate(); return; }
 
-  const subject = (document.getElementById('sup-subject')?.value || '').trim();
-  const body    = (document.getElementById('sup-body')?.value    || '').trim();
+  const subjectEl = document.getElementById('sup-subject');
+  const bodyEl    = document.getElementById('sup-body');
+  const subject   = (subjectEl?.value || '').trim();
+  const body      = (bodyEl?.value    || '').trim();
   const fileInput = document.getElementById('sup-file');
-  const file = fileInput?.files?.[0] || null;
+  const file      = fileInput?.files?.[0] || null;
+  const btn       = document.querySelector('[onclick="supSubmit()"]');
 
-  const statusEl = document.getElementById('sup-status');
+  const statusEl  = document.getElementById('sup-status');
   const setStatus = (msg, cls='err') => {
     if (!statusEl) return;
     statusEl.style.display = 'block';
-    statusEl.className = 'auth-status ' + cls;
+    statusEl.className = 'auth-status ' + (cls === 'ok' ? 'ok' : '');
     statusEl.textContent = msg;
   };
 
-  if (!subject) return setStatus('Introduce un asunto para el ticket.');
-  if (!body || body.length < 10) return setStatus('La descripción debe tener al menos 10 caracteres.');
+  // Validation
+  if (!subject)              return setStatus('⚠️ Introduce un asunto para el ticket.');
+  if (!body || body.length < 10) return setStatus('⚠️ La descripción debe tener al menos 10 caracteres.');
+
+  // Disable button while submitting
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Enviando...'; }
 
   let attachmentUrl = null;
-  // Upload file to Supabase Storage if provided
   if (file) {
     try {
       const ext = file.name.split('.').pop();
@@ -3778,8 +3784,7 @@ async function supSubmit() {
     } catch(_) {}
   }
 
-  // Insert ticket
-  // Build payload without attachment_url if column doesn't exist
+  // Build ticket — only include columns that exist in the table
   const ticketPayload = {
     user_email:  SESSION.email,
     subject,
@@ -3789,15 +3794,21 @@ async function supSubmit() {
     created_at:  new Date().toISOString()
   };
   if (attachmentUrl) ticketPayload.attachment_url = attachmentUrl;
+
   const { error } = await _SB.from('support_tickets').insert(ticketPayload);
 
-  if (error) return setStatus('❌ Error al enviar: ' + error.message);
+  if (btn) { btn.disabled = false; btn.textContent = '📨 Enviar ticket'; }
 
-  setStatus('✅ Ticket enviado correctamente. Te responderemos pronto.', 'ok');
-  document.getElementById('sup-subject').value = '';
-  document.getElementById('sup-body').value = '';
+  if (error) {
+    console.error('supSubmit error:', error);
+    return setStatus('❌ Error al enviar: ' + error.message);
+  }
+
+  setStatus('✅ Ticket enviado. Te responderemos pronto.', 'ok');
+  if (subjectEl) subjectEl.value = '';
+  if (bodyEl)    bodyEl.value    = '';
   supClearFile();
-  setTimeout(() => { if (statusEl) statusEl.style.display = 'none'; }, 5000);
+  setTimeout(() => { if (statusEl) statusEl.style.display = 'none'; }, 6000);
   supLoadMyTickets();
 }
 
