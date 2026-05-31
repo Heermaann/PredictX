@@ -1028,7 +1028,7 @@ input,select,textarea{font-family:var(--font)}
 ════════════════════════════════════════════════ */
 
 /* Category pill bar */
-.cat-bar{
+.cat-bar{ display:none !important;
   display:flex;align-items:center;gap:6px;
   padding:14px 20px 10px;
   overflow-x:auto;border-bottom:1px solid var(--border);
