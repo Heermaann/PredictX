@@ -1343,20 +1343,21 @@ async function openDetail(idx) {
   // Fetch fresh description BEFORE rendering
   try {
     const table = m._manual ? 'manual_events' : 'api_events';
-    console.log('[desc] fetching from', table, 'id:', m.id);
-    const { data: d1 } = await _SB.from(table).select('description').eq('id', String(m.id)).maybeSingle();
-    console.log('[desc] result:', d1);
-    if (d1?.description) {
-      m = { ...m, description: d1.description };
-    } else {
-      const { data: d2 } = await _SB.from(table).select('description')
-        .ilike('home_team', (m.home_team||'').replace(/'/g,"''"))
-        .ilike('away_team', (m.away_team||'').replace(/'/g,"''")).maybeSingle();
-      if (d2?.description) m = { ...m, description: d2.description };
+    const eid = String(m.id||'');
+    let desc = null;
+    if (eid) {
+      const { data: d1 } = await _SB.from(table).select('id,description').eq('id', eid).maybeSingle();
+      if (d1?.description) desc = d1.description;
     }
+    if (!desc && m.home_team) {
+      const { data: d2 } = await _SB.from(table).select('description')
+        .eq('home_team', m.home_team).eq('away_team', m.away_team).maybeSingle();
+      if (d2?.description) desc = d2.description;
+    }
+    if (desc) m = { ...m, description: desc };
   } catch(_) {}
 
-  renderDetail(m);
+    renderDetail(m);
 }
 
 function closeDetail() {
@@ -2514,15 +2515,19 @@ async function sbQuery(table, filter={}) {
 }
 async function sbUpsert(table, row) {
   try {
-    // Try update first, then insert if not found
-    const { data: existing } = await _SB.from(table).select('email').eq('email', row.email).maybeSingle();
     let data, error;
-    if (existing) {
-      ({data, error} = await _SB.from(table).update(row).eq('email', row.email).select());
-    } else {
-      ({data, error} = await _SB.from(table).insert(row).select());
+    if (table === 'profiles' && SESSION?.id) {
+      // Use auth user id for profiles
+      ({data, error} = await _SB.from(table).upsert({...row, id: SESSION.id}, {onConflict:'id'}).select());
+    } else if (row.email) {
+      const { data: existing } = await _SB.from(table).select('email').eq('email', row.email).maybeSingle();
+      if (existing) {
+        ({data, error} = await _SB.from(table).update(row).eq('email', row.email).select());
+      } else {
+        ({data, error} = await _SB.from(table).insert(row).select());
+      }
     }
-    if (error) { return null; }
+    if (error) { console.warn('sbUpsert error:', table, error.message); return null; }
     return data?.[0] || null;
   } catch(e) { return null; }
 }
@@ -3536,20 +3541,23 @@ function showListView() {
 /* ── Open user admin panel ── */
 function openAdmin() {
   if (!SESSION) { openAuthGate(); return; }
-  const vl = document.getElementById('view-list');
-  const vd = document.getElementById('view-detail');
+  // Hide all views
+  ['view-list','view-detail','view-owner'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+  });
+  // Show Mi Cuenta panel
   const va = document.getElementById('view-admin');
-  const vo = document.getElementById('view-owner');
-  if (vl) vl.style.display = 'none';
-  if (vd) vd.style.display = 'none';
-  if (va) va.style.display = 'block';
-  if (vo) vo.style.display = 'none';
+  if (va) { va.style.display = 'block'; va.style.visibility = 'visible'; }
+  // Scroll to top
+  window.scrollTo(0, 0);
   updateSidebarVisibility();
   refreshAdminData();
   showAdminPage('dashboard', document.getElementById('ap-nav-dashboard'));
   document.querySelectorAll('.bn-btn').forEach(b => b.classList.remove('active'));
   const bp = document.getElementById('bn-profile'); if (bp) bp.classList.add('active');
 }
+window.openAdmin = openAdmin;
 window.openAdmin = openAdmin;
 function closeAdmin() {
   showListView();
