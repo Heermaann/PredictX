@@ -2448,6 +2448,9 @@ function applyAdminOnlyVisibility() {
   document.querySelectorAll('.admin-only-el').forEach(el => {
     el.style.display = admin ? '' : 'none';
   });
+  // Also hide iz-env-badge for non-admins
+  const envBadge = document.getElementById('iz-env-badge');
+  if (envBadge) envBadge.style.display = admin ? '' : 'none';
   // Hide Izipay SDK bubble (Information / Test Methods)
   let style = document.getElementById('admin-only-style');
   if (!style) {
@@ -2457,7 +2460,13 @@ function applyAdminOnlyVisibility() {
   }
   style.textContent = admin
     ? ''
-    : '.kr-help-button, .kr-form-help, [class*="kr-help"], [class*="kr-info"] { display: none !important; }';
+    : `.kr-help-button, .kr-form-help, [class*="kr-help"], [class*="kr-info"],
+       .kr-popin-modal, .kr-popin-modal-overlay,
+       button[data-kr-help], .kr-toolbar, .kr-icon-help,
+       .kr-payment-method-list-extra, .kr-brand-shortlist-label,
+       .krtb-info, .krtb-test, [class*="krtb-"],
+       .kr-extra-card-brand, .kr-payment-method-help
+       { display: none !important; }`;
 }
 
 /* ════════════════════════════════════════════════════
@@ -2746,9 +2755,15 @@ async function doRegister() {
     if (btn) { btn.disabled = false; btn.textContent = 'Crear cuenta →'; }
   };
 
-  if (!name)                          return fail('Introduce tu nombre completo.');
-  if (!email || !email.includes('@')) return fail('El email no es válido.');
-  if (pass.length < 8)               return fail('La contraseña debe tener al menos 8 caracteres.');
+  if (!name) return fail('Introduce tu nombre completo.');
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) return fail('El email no es válido.');
+  // Block disposable/fake email domains
+  const _fakeDomains = ['mailinator','guerrillamail','tempmail','throwam','yopmail',
+    'sharklasers','spam4.me','trashmail','fakeinbox','dispostable','mailnull',
+    'spamgourmet','maildrop','example.com','test.com','mailnull.com'];
+  const _dom = email.split('@')[1] || '';
+  if (_fakeDomains.some(d => _dom.includes(d))) return fail('Por favor usa un email real.');
+  if (pass.length < 8) return fail('La contraseña debe tener al menos 8 caracteres.');
   if (!country)                       return fail('Selecciona tu país.');
   if (!terms)                         return fail('Debes aceptar los Términos y condiciones (+18).');
 
@@ -2978,13 +2993,35 @@ async function doLogout() {
   DB.del('session');
   SESSION = null;
   _pendingUser = null;
-  // Reset auth form to login tab but DON'T open the gate
+
+  // Reset nav UI
+  const avatarEl = document.getElementById('nav-avatar');
+  if (avatarEl) { avatarEl.style.display = 'none'; }
+  const depositBtn = document.getElementById('nav-deposit-btn');
+  if (depositBtn) depositBtn.style.display = 'none';
+  const loginBtn = document.getElementById('nav-login-btn');
+  if (loginBtn) loginBtn.style.display = '';
+  const navBal = document.getElementById('nav-balance-display');
+  if (navBal) navBal.style.display = 'none';
+  const ownerBtn = document.getElementById('owner-nav-btn');
+  if (ownerBtn) ownerBtn.style.display = 'none';
+
+  // Close any open user menu
+  const userMenu = document.getElementById('user-nav-menu');
+  if (userMenu) userMenu.style.display = 'none';
+
+  // Close admin/owner panels and show home
+  ['view-admin','view-owner','view-detail'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+  });
+  const vl = document.getElementById('view-list');
+  if (vl) vl.style.display = 'block';
+
+  // Reset auth form to login tab
   authTab('login', document.querySelector('.auth-tab'));
   document.querySelectorAll('.auth-tab').forEach((b,i)=>b.classList.toggle('active',i===0));
-  const avatarEl = document.getElementById('nav-avatar');
-  if (avatarEl) avatarEl.classList.remove('show');
-  // nav-bonus-badge removed
-  closeAdmin();
+
   showToast('👋 Sesión cerrada correctamente');
 }
 
@@ -3079,6 +3116,16 @@ function payStep2() {
   if (_currentPayMethod === 'card') {
     console.log('[Izipay] payStep2: calling initIzipayForm, method=', _currentPayMethod);
     setTimeout(() => initIzipayForm(), 100);
+  }
+  // If Yape selected, generate QR from phone number
+  if (_currentPayMethod === 'yape') {
+    const yapeNumEl = document.querySelector('#pay-yape [style*="mono"]');
+    const yapeNum = yapeNumEl ? yapeNumEl.textContent.replace(/\s+/g,'').replace('+51','51') : '';
+    const qrImg = document.getElementById('yape-qr-img');
+    if (qrImg && yapeNum) {
+      qrImg.src = 'https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=' + encodeURIComponent(yapeNum);
+      qrImg.style.display = 'block';
+    }
   }
 }
 function payBackStep() {
@@ -3274,6 +3321,12 @@ async function initIzipayForm() {
       formToken: formToken,
       'kr-public-key': publicKey,
       'kr-language': 'es-PE',
+    }).catch(err => {
+      const el = document.getElementById('iz-error');
+      if (el) {
+        el.textContent = '❌ Error al inicializar el formulario de pago. El contrato con Izipay puede no estar activo. Contacta al soporte.';
+        el.classList.add('show');
+      }
     }).then(() => {
         KR.onSubmit(async (paymentData) => {
           try {
