@@ -647,7 +647,7 @@ async function renderFullSidebar() {
   try {
     const [sportsRes, leaguesRes] = await Promise.all([
       _SB.from('sports').select('key,title,icon,active').eq('active', true).order('sort_order'),
-      _SB.from('leagues').select('key,name,icon,sport_key,active,api_key').eq('active', true)
+      _SB.from('leagues').select('key,name,icon,sport_key')
     ]);
     const sports  = sportsRes.data  || [];
     const leagues = leaguesRes.data || [];
@@ -692,7 +692,7 @@ async function renderFullSidebar() {
       const allLeagues = sLeagues.length ? sLeagues : fallbackLeagues;
       const leagueRows = allLeagues.length
         ? allLeagues.map(l =>
-            `<div class="sb-league" onclick="loadLeague('${l.api_key||l.key}','${esc(l.name)}',this)">${l.icon||''} ${esc(l.name)}</div>`
+            `<div class="sb-league" onclick="loadLeague('${l.key}','${esc(l.name)}',this)">${l.icon||''} ${esc(l.name)}</div>`
           ).join('')
         : `<div class="sb-league" style="color:var(--text3);font-size:11px;padding:6px 16px">Sin ligas configuradas</div>`;
 
@@ -2516,9 +2516,9 @@ async function sbQuery(table, filter={}) {
 async function sbUpsert(table, row) {
   try {
     let data, error;
-    if (table === 'profiles' && SESSION?.id) {
-      // Use auth user id for profiles
-      ({data, error} = await _SB.from(table).upsert({...row, id: SESSION.id}, {onConflict:'id'}).select());
+    if (table === 'profiles' && row.email) {
+      // profiles PK is email
+      ({data, error} = await _SB.from(table).upsert(row, {onConflict:'email'}).select());
     } else if (row.email) {
       const { data: existing } = await _SB.from(table).select('email').eq('email', row.email).maybeSingle();
       if (existing) {
@@ -3541,15 +3541,12 @@ function showListView() {
 /* ── Open user admin panel ── */
 function openAdmin() {
   if (!SESSION) { openAuthGate(); return; }
-  // Hide all views
   ['view-list','view-detail','view-owner'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.style.display = 'none';
   });
-  // Show Mi Cuenta panel
   const va = document.getElementById('view-admin');
-  if (va) { va.style.display = 'block'; va.style.visibility = 'visible'; }
-  // Scroll to top
+  if (va) { va.style.cssText = 'display:block!important'; }
   window.scrollTo(0, 0);
   updateSidebarVisibility();
   refreshAdminData();
