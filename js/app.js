@@ -564,10 +564,12 @@ function fVol(n) {
 function fDate(d) {
   if (!d) return '—';
   const dt = new Date(d), now = new Date(), diff = dt - now;
-  if (diff < 0) return 'En curso';
-  if (diff < 3600000) return 'En ' + Math.round(diff/60000) + 'min';
-  if (diff < 86400000) return 'En ' + Math.round(diff/3600000) + 'h';
-  return dt.toLocaleDateString('es',{weekday:'short',hour:'2-digit',minute:'2-digit'});
+  if (diff < 0 && diff > -7200000) return '🔴 En curso';
+  if (diff < 0) return dt.toLocaleString('es',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
+  if (diff < 3600000) return '⏰ En ' + Math.round(diff/60000) + 'min';
+  if (diff < 86400000) return '🕐 Hoy ' + dt.toLocaleTimeString('es',{hour:'2-digit',minute:'2-digit'});
+  if (diff < 172800000) return '📅 Mañana ' + dt.toLocaleTimeString('es',{hour:'2-digit',minute:'2-digit'});
+  return '📅 ' + dt.toLocaleString('es',{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
 }
 
 function sportIco(key) {
@@ -891,7 +893,7 @@ function applyFilters() {
   if (S.searchQ) {
     const q = S.searchQ.toLowerCase();
     list = list.filter(m =>
-      ((m.home_team||'') + (m.away_team||'') + (m.sport_title||''))
+      ((m.home_team||'') + ' ' + (m.away_team||'') + ' ' + (m.sport_title||'') + ' ' + (m.league||''))
       .toLowerCase().includes(q)
     );
   }
@@ -932,7 +934,7 @@ function updateMeta() {
   const titleEl = document.getElementById('list-title');
   if (titleEl) titleEl.textContent = title;
   const subEl = document.getElementById('list-sub');
-  if (subEl) subEl.textContent = `${S.markets.length} mercado${S.markets.length!==1?'s':''} · Cuotas decimales`;
+  if (subEl) subEl.textContent = `${n} evento${n!==1?'s':''}`;  // just show event count
   // Debug: log markets/filtered count in console
   if (S.markets.length && !n) console.warn('Markets loaded but filtered is empty. sport_cat:', S.sport_cat, 'catMode:', S.catMode, 'tab:', S.tab, 'filter:', S.filter);
 }
@@ -967,7 +969,7 @@ function buildCard(m, i) {
         <div class="mc-title">${esc(m.home_team)} vs ${esc(m.away_team)}</div>
         <div class="mc-meta">
           ${live ? '<span class="mc-live-badge">EN VIVO</span>' : ''}
-          <span>${esc(m.league||m.sport_title||m.sport_key)}</span>
+          <span class="mc-league-link" onclick="event.stopPropagation();loadLeague('${esc(m.sport_key)}','${esc(m.league||m.sport_title||m.sport_key)}',null)" style="cursor:pointer;text-decoration:underline dotted;text-underline-offset:2px">${esc(m.league||m.sport_title||m.sport_key)}</span>
           <span class="mc-dot"></span>
           <span>${fDate(m.commence_time)}</span>
           <span class="mc-dot"></span>
@@ -1006,9 +1008,6 @@ function buildCard(m, i) {
       </div>
     </div>
 
-    <div class="mc-foot">
-      <span class="mc-vol">${fVol(m.vol)} Vol.</span>
-    </div>
   </div>`;
 }
 
@@ -1933,8 +1932,8 @@ async function loadLeague(sportKey, label, el) {
 
   // Mark active
   if (_activeLeagueEl) _activeLeagueEl.classList.remove('active', 'loading');
-  _activeLeagueEl = el;
-  el.classList.add('active', 'loading');
+  _activeLeagueEl = el || null;
+  if (el) el.classList.add('active', 'loading');
   closeSidebar();
 
   // Update title immediately
