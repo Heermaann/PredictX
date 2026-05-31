@@ -648,7 +648,7 @@ async function renderFullSidebar() {
   try {
     const [sportsRes, leaguesRes] = await Promise.all([
       _SB.from('sports').select('key,title,icon,active').eq('active', true).order('sort_order'),
-      _SB.from('leagues').select('key,name,icon,sport_key')
+      _SB.from('leagues').select('id,name,icon,sport_key,api_key')
     ]);
     const sports  = sportsRes.data  || [];
     const leagues = leaguesRes.data || [];
@@ -660,32 +660,32 @@ async function renderFullSidebar() {
       // If no leagues in DB, use hardcoded defaults for built-in sports
       const defaultLeagues = {
         'soccer': [
-          {key:'soccer_epl',name:'Premier League',icon:'🏴'},
-          {key:'soccer_spain_la_liga',name:'La Liga',icon:'🇪🇸'},
-          {key:'soccer_uefa_champs_league',name:'Champions League',icon:'⭐'},
-          {key:'soccer_germany_bundesliga',name:'Bundesliga',icon:'🇩🇪'},
-          {key:'soccer_italy_serie_a',name:'Serie A',icon:'🇮🇹'},
-          {key:'soccer_france_ligue_one',name:'Ligue 1',icon:'🇫🇷'},
-          {key:'soccer_usa_mls',name:'MLS',icon:'🇺🇸'},
-          {key:'soccer_brazil_campeonato',name:'Brasileirão',icon:'🇧🇷'},
-          {key:'soccer_conmebol_copa_libertadores',name:'Copa Libertadores',icon:'🏆'},
+          {api_key:'soccer_epl',name:'Premier League',icon:'🏴'},
+          {api_key:'soccer_spain_la_liga',name:'La Liga',icon:'🇪🇸'},
+          {api_key:'soccer_uefa_champs_league',name:'Champions League',icon:'⭐'},
+          {api_key:'soccer_germany_bundesliga',name:'Bundesliga',icon:'🇩🇪'},
+          {api_key:'soccer_italy_serie_a',name:'Serie A',icon:'🇮🇹'},
+          {api_key:'soccer_france_ligue_one',name:'Ligue 1',icon:'🇫🇷'},
+          {api_key:'soccer_usa_mls',name:'MLS',icon:'🇺🇸'},
+          {api_key:'soccer_brazil_campeonato',name:'Brasileirão',icon:'🇧🇷'},
+          {api_key:'soccer_conmebol_copa_libertadores',name:'Copa Libertadores',icon:'🏆'},
         ],
         'basketball': [
-          {key:'basketball_nba',name:'NBA',icon:'🏀'},
-          {key:'basketball_euroleague',name:'EuroLeague',icon:'🇪🇺'},
+          {api_key:'basketball_nba',name:'NBA',icon:'🏀'},
+          {api_key:'basketball_euroleague',name:'EuroLeague',icon:'🇪🇺'},
         ],
         'americanfootball': [
-          {key:'americanfootball_nfl',name:'NFL',icon:'🏈'},
-          {key:'americanfootball_ncaaf',name:'NCAAF',icon:'🎓'},
+          {api_key:'americanfootball_nfl',name:'NFL',icon:'🏈'},
+          {api_key:'americanfootball_ncaaf',name:'NCAAF',icon:'🎓'},
         ],
         'baseball': [
-          {key:'baseball_mlb',name:'MLB',icon:'⚾'},
+          {api_key:'baseball_mlb',name:'MLB',icon:'⚾'},
         ],
         'icehockey': [
-          {key:'icehockey_nhl',name:'NHL',icon:'🏒'},
+          {api_key:'icehockey_nhl',name:'NHL',icon:'🏒'},
         ],
         'mma': [
-          {key:'mma_mixed_martial_arts',name:'UFC / MMA',icon:'🥊'},
+          {api_key:'mma_mixed_martial_arts',name:'UFC / MMA',icon:'🥊'},
         ],
       };
       const prefix = s.key.split('_')[0];
@@ -693,7 +693,7 @@ async function renderFullSidebar() {
       const allLeagues = sLeagues.length ? sLeagues : fallbackLeagues;
       const leagueRows = allLeagues.length
         ? allLeagues.map(l =>
-            `<div class="sb-league" onclick="loadLeague('${l.key}','${esc(l.name)}',this)">${l.icon||''} ${esc(l.name)}</div>`
+            `<div class="sb-league" onclick="loadLeague('${l.api_key||l.sport_key}','${esc(l.name)}',this)">${l.icon||''} ${esc(l.name)}</div>`
           ).join('')
         : `<div class="sb-league" style="color:var(--text3);font-size:11px;padding:6px 16px">Sin ligas configuradas</div>`;
 
@@ -762,7 +762,7 @@ async function renderCustomSidebar() {
         </div>
         <div class="sb-leagues" id="${gid}">
           ${sportLeagues.length
-            ? sportLeagues.map(l => `<div class="sb-league" onclick="loadLeague('${l.key}','${l.name}',this)">${l.icon||''} ${l.name}</div>`).join('')
+            ? sportLeagues.map(l => `<div class="sb-league" onclick="loadLeague('${l.api_key||l.sport_key}','${l.name}',this)">${l.icon||''} ${l.name}</div>`).join('')
             : `<div class="sb-league" onclick="setCat('${s.key}',null)">${s.icon||''} Ver todos</div>`
           }
         </div>`;
