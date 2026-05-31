@@ -1122,7 +1122,7 @@ function bnHome(btn) {
   const vo = document.getElementById('view-owner');
   const vl = document.getElementById('view-list');
   const vd = document.getElementById('view-detail');
-  if (va) va.style.cssText = '';
+  if (va) va.style.display = 'none';
   if (vo) vo.style.display = 'none';
   if (vd) vd.style.display = 'none';
   if (vl) vl.style.display = 'block';
@@ -3530,7 +3530,13 @@ function updateSidebarVisibility() {
   const vd = document.getElementById('view-detail');
   const inHome   = vl && vl.style.display !== 'none';
   const inDetail = vd && vd.style.display !== 'none';
-  sidebar.style.display = (inHome || inDetail) ? '' : 'none';
+  const va = document.getElementById('view-admin');
+  const vo = document.getElementById('view-owner');
+  const inAdmin  = va && va.style.display !== 'none';
+  const inOwner  = vo && vo.style.display !== 'none';
+  // On mobile, sidebar is always available via hamburger regardless of view
+  const isMobile = window.innerWidth <= 900;
+  sidebar.style.display = (inHome || inDetail || inAdmin || inOwner || isMobile) ? '' : 'none';
 }
 
 function isOwner() {
@@ -3564,7 +3570,7 @@ function openAdmin() {
     if (el) el.style.display = 'none';
   });
   const va = document.getElementById('view-admin');
-  if (va) { va.style.cssText = 'display:block!important'; }
+  if (va) { va.style.display = 'block'; }
   window.scrollTo(0, 0);
   updateSidebarVisibility();
   refreshAdminData();
