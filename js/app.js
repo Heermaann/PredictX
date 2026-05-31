@@ -2460,13 +2460,30 @@ function applyAdminOnlyVisibility() {
   }
   style.textContent = admin
     ? ''
-    : `.kr-help-button, .kr-form-help, [class*="kr-help"], [class*="kr-info"],
-       .kr-popin-modal, .kr-popin-modal-overlay,
-       button[data-kr-help], .kr-toolbar, .kr-icon-help,
-       .kr-payment-method-list-extra, .kr-brand-shortlist-label,
-       .krtb-info, .krtb-test, [class*="krtb-"],
-       .kr-extra-card-brand, .kr-payment-method-help
-       { display: none !important; }`;
+    : `
+      .kr-help-button, .kr-form-help, [class*="kr-help"], [class*="kr-info"],
+      .kr-popin-modal, .kr-popin-modal-overlay,
+      button[data-kr-help], .kr-toolbar, .kr-icon-help,
+      .kr-payment-method-list-extra, .kr-brand-shortlist-label,
+      .krtb-info, .krtb-test, [class*="krtb-"],
+      .kr-extra-card-brand, .kr-payment-method-help,
+      [id*="kr-help"], [id*="kr-info"], [id*="krtb"],
+      .kr-popin, .kr-popin-button, .kr-form-info,
+      iframe[id*="lyra"], iframe[src*="information"], iframe[src*="test-methods"]
+      { display: none !important; visibility: hidden !important; pointer-events: none !important; }
+    `;
+  // MutationObserver to hide Izipay elements injected after page load
+  if (!admin && !window._krObserver) {
+    window._krObserver = new MutationObserver(() => {
+      document.querySelectorAll(
+        '[class*="kr-help"],[class*="kr-info"],[class*="krtb-"],.kr-popin,.kr-popin-button,.kr-form-info'
+      ).forEach(el => { el.style.cssText += ';display:none!important;visibility:hidden!important'; });
+    });
+    window._krObserver.observe(document.body, { childList: true, subtree: true });
+  } else if (admin && window._krObserver) {
+    window._krObserver.disconnect();
+    window._krObserver = null;
+  }
 }
 
 /* ════════════════════════════════════════════════════
@@ -3119,11 +3136,11 @@ function payStep2() {
   }
   // If Yape selected, generate QR from phone number
   if (_currentPayMethod === 'yape') {
-    const yapeNumEl = document.querySelector('#pay-yape [style*="mono"]');
-    const yapeNum = yapeNumEl ? yapeNumEl.textContent.replace(/\s+/g,'').replace('+51','51') : '';
     const qrImg = document.getElementById('yape-qr-img');
+    const yapePhoneEl = document.getElementById('yape-phone-display');
+    const yapeNum = yapePhoneEl ? yapePhoneEl.textContent.trim() : '';
     if (qrImg && yapeNum) {
-      qrImg.src = 'https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=' + encodeURIComponent(yapeNum);
+      qrImg.src = 'https://api.qrserver.com/v1/create-qr-code/?size=160x160&format=png&data=' + encodeURIComponent(yapeNum);
       qrImg.style.display = 'block';
     }
   }
