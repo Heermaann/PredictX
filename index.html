@@ -19,9 +19,12 @@
 <!-- ════ NAV ════ -->
 <nav class="nav">
   <button class="nav-hamburger" id="hamburger" onclick="toggleSidebar()" aria-label="Menú">☰</button>
-  <div class="nav-logo">
-    <div class="nav-logo-mark">P</div>
-    <div class="nav-logo-text">Predict<span>X</span></div>
+  <div class="nav-logo" id="nav-logo-wrap" onclick="location.reload()">
+    <img id="nav-logo-img" src="" alt="Logo" style="display:none;height:36px;max-width:140px;object-fit:contain">
+    <div id="nav-logo-default" style="display:flex;align-items:center;gap:6px">
+      <div class="nav-logo-mark">P</div>
+      <div class="nav-logo-text">Predict<span>X</span></div>
+    </div>
   </div>
   <div class="nav-search" id="search-wrap">
     <span class="nav-search-ico">⌕</span>
@@ -34,13 +37,17 @@
     <div class="search-drop" id="search-drop" style="display:none"></div>
   </div>
   <div class="nav-right">
+    <div class="api-pill" onclick="openModal()" id="api-pill">
+      <div class="api-dot" id="api-dot"></div>
+      <span class="api-pill-txt" id="api-pill-txt">Cargando…</span>
+    </div>
     <button class="theme-btn" onclick="toggleTheme()" title="Cambiar tema">
       <span class="ico-d">🌙</span><span class="ico-l">☀️</span>
     </button>
     <button class="slip-btn" onclick="toggleBetslip()" title="Boleto de apuestas">
       🎟 Boleto<span class="slip-count" id="slip-count">0</span>
     </button>
-    <button class="owner-nav-btn" id="owner-nav-btn" onclick="window.open('/admin','_blank')">⚡ Admin</button>
+    <button class="owner-nav-btn" id="owner-nav-btn" style="display:none" onclick="window.open('/admin','_blank')">⚡ Admin</button>
     <button id="nav-deposit-btn" style="display:none;background:var(--accent);color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:13px;font-weight:700;cursor:pointer" onclick="openPayModal('deposit')">+ Depositar</button>
     <div id="nav-balance-display" style="display:none;align-items:center;gap:6px;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:6px 12px;font-size:13px;font-weight:700;color:var(--green);cursor:pointer" onclick="openPayModal('deposit')" title="Mi saldo">
       💰 <span id="nav-balance-val">$0.00</span>
@@ -75,13 +82,75 @@
     <div class="sb-divider"></div>
     <div class="sb-label">Ligas y Deportes</div>
 
-    <!-- Dynamic content populated by renderFullSidebar() from Supabase -->
-    <div id="sb-sports-wrap">
-      <div style="color:var(--text3);font-size:12px;padding:10px 16px;opacity:.7">⏳ Cargando ligas...</div>
+    <!-- FÚTBOL -->
+    <div class="sb-item sb-group" onclick="toggleGroup('g-soccer')">
+      <span class="sb-item-ico">⚽</span>Fútbol
+      <span class="sb-arrow" id="arr-g-soccer">›</span>
+    </div>
+    <div class="sb-leagues" id="g-soccer">
+      <div class="sb-league" onclick="loadLeague('soccer_epl','Premier League',this)">🏴󠁧󠁢󠁥󠁮󠁧󠁿 Premier League</div>
+      <div class="sb-league" onclick="loadLeague('soccer_spain_la_liga','La Liga',this)">🇪🇸 La Liga</div>
+      <div class="sb-league" onclick="loadLeague('soccer_uefa_champs_league','Champions League',this)">🏆 Champions League</div>
+      <div class="sb-league" onclick="loadLeague('soccer_germany_bundesliga','Bundesliga',this)">🇩🇪 Bundesliga</div>
+      <div class="sb-league" onclick="loadLeague('soccer_italy_serie_a','Serie A',this)">🇮🇹 Serie A</div>
+      <div class="sb-league" onclick="loadLeague('soccer_france_ligue_one','Ligue 1',this)">🇫🇷 Ligue 1</div>
+      <div class="sb-league" onclick="loadLeague('soccer_usa_mls','MLS',this)">🇺🇸 MLS</div>
+      <div class="sb-league" onclick="loadLeague('soccer_brazil_campeonato','Brasileirão',this)">🇧🇷 Brasileirão</div>
+      <div class="sb-league" onclick="loadLeague('soccer_conmebol_copa_libertadores','Copa Libertadores',this)">🏆 Copa Libertadores</div>
+      <div class="sb-league" onclick="loadLeague('soccer_fifa_world_cup','Copa Mundial FIFA',this)">🌍 Copa Mundial FIFA</div>
+      <div class="sb-league" onclick="loadLeague('soccer_saudi_premier_league','Saudi Pro League',this)">🇸🇦 Saudi Pro League</div>
     </div>
 
-    <!-- Custom sports/categories created by admin -->
-    <div id="sb-custom-sports"></div>
+    <!-- BALONCESTO -->
+    <div class="sb-item sb-group" onclick="toggleGroup('g-basketball')">
+      <span class="sb-item-ico">🏀</span>Baloncesto
+      <span class="sb-arrow" id="arr-g-basketball">›</span>
+    </div>
+    <div class="sb-leagues" id="g-basketball">
+      <div class="sb-league" onclick="loadLeague('basketball_nba','NBA',this)">🇺🇸 NBA</div>
+      <div class="sb-league" onclick="loadLeague('basketball_euroleague','EuroLeague',this)">🇪🇺 EuroLeague</div>
+      <div class="sb-league" onclick="loadLeague('basketball_ncaab','NCAA Basketball',this)">🎓 NCAA</div>
+    </div>
+
+    <!-- FÚTBOL AMERICANO -->
+    <div class="sb-item sb-group" onclick="toggleGroup('g-nfl')">
+      <span class="sb-item-ico">🏈</span>Fútbol Am.
+      <span class="sb-arrow" id="arr-g-nfl">›</span>
+    </div>
+    <div class="sb-leagues" id="g-nfl">
+      <div class="sb-league" onclick="loadLeague('americanfootball_nfl','NFL',this)">🇺🇸 NFL</div>
+      <div class="sb-league" onclick="loadLeague('americanfootball_ncaaf','NCAAF',this)">🎓 NCAAF</div>
+    </div>
+
+    <!-- BÉISBOL -->
+    <div class="sb-item sb-group" onclick="toggleGroup('g-baseball')">
+      <span class="sb-item-ico">⚾</span>Béisbol
+      <span class="sb-arrow" id="arr-g-baseball">›</span>
+    </div>
+    <div class="sb-leagues" id="g-baseball">
+      <div class="sb-league" onclick="loadLeague('baseball_mlb','MLB',this)">🇺🇸 MLB</div>
+    </div>
+
+    <!-- HOCKEY -->
+    <div class="sb-item sb-group" onclick="toggleGroup('g-hockey')">
+      <span class="sb-item-ico">🏒</span>Hockey
+      <span class="sb-arrow" id="arr-g-hockey">›</span>
+    </div>
+    <div class="sb-leagues" id="g-hockey">
+      <div class="sb-league" onclick="loadLeague('icehockey_nhl','NHL',this)">🇺🇸 NHL</div>
+      <div class="sb-league" onclick="loadLeague('icehockey_sweden_hockey_league','SHL',this)">🇸🇪 SHL</div>
+    </div>
+
+    <!-- MMA -->
+    <div class="sb-item sb-group" onclick="toggleGroup('g-mma')">
+      <span class="sb-item-ico">🥊</span>MMA / UFC
+      <span class="sb-arrow" id="arr-g-mma">›</span>
+    </div>
+    <div class="sb-leagues" id="g-mma">
+      <div class="sb-league" onclick="loadLeague('mma_mixed_martial_arts','MMA',this)">🥊 UFC / MMA</div>
+    </div>
+
+    <!-- GOLF -->
 
   </aside>
 
@@ -91,8 +160,12 @@
     <!-- LIST VIEW — Polymarket-style home -->
     <div id="view-list">
 
-      <!-- Cat pills: hidden container for internal state tracking (categories shown only in sidebar) -->
-      <div id="cat-pills-wrap" style="display:none"></div>
+      <!-- ── Nav tabs: Todos / Próximos / Mayor Volumen ─── -->
+      <div class="list-tabs" id="cat-pills-wrap" style="display:flex;gap:4px;padding:12px 16px 0;overflow-x:auto">
+        <button class="list-tab active" onclick="setNavMode('home',this)">Todos</button>
+        <button class="list-tab" onclick="setNavMode('upcoming',this)">Próximos</button>
+        <button class="list-tab" onclick="setNavMode('best',this)">Mayor Volumen</button>
+      </div>
 
       <!-- ── Sort / filter row ────────────────────── -->
       <div class="home-bar">
@@ -181,13 +254,11 @@
         <div class="admin-main">
 
           <!-- Mobile tab bar -->
-          <div class="admin-tab-bar" style="overflow-x:auto;display:flex;flex-wrap:nowrap;-webkit-overflow-scrolling:touch">
+          <div class="admin-tab-bar">
             <div class="admin-tab active" onclick="showAdminPage('dashboard',null,this)">📊 Dashboard</div>
             <div class="admin-tab" onclick="showAdminPage('bets',null,this)">🎟 Apuestas</div>
             <div class="admin-tab" onclick="showAdminPage('tx',null,this)">💳 Transacciones</div>
-            <div class="admin-tab" onclick="showAdminPage('support',null,this)">🆘 Soporte</div>
             <div class="admin-tab" onclick="showAdminPage('profile',null,this)">👤 Perfil</div>
-            <div class="admin-tab" onclick="doLogout()" style="color:var(--red);flex-shrink:0">🚪 Salir</div>
           </div>
 
           <!-- ── DASHBOARD ── -->
@@ -201,7 +272,7 @@
               <div class="sc">
                 <div class="sc-ico g">💰</div>
                 <div class="sc-label">Saldo</div>
-                <div class="sc-val" id="sc-balance">$0.00</div>
+                <div class="sc-val" id="sc-balance">€0.00</div>
                 <div class="sc-delta pos">↑ Disponible</div>
               </div>
               <div class="sc">
@@ -275,15 +346,15 @@
             <div class="stat-cards" style="grid-template-columns:repeat(3,1fr);margin-bottom:18px">
               <div class="sc">
                 <div class="sc-label">Total apostado</div>
-                <div class="sc-val" id="bets-total-stake">$0.00</div>
+                <div class="sc-val" id="bets-total-stake">€0.00</div>
               </div>
               <div class="sc">
                 <div class="sc-label">Retornos</div>
-                <div class="sc-val" id="bets-total-ret">$0.00</div>
+                <div class="sc-val" id="bets-total-ret">€0.00</div>
               </div>
               <div class="sc">
                 <div class="sc-label">P&amp;G neto</div>
-                <div class="sc-val" id="bets-pnl">$0.00</div>
+                <div class="sc-val" id="bets-pnl">€0.00</div>
               </div>
             </div>
 
@@ -319,17 +390,17 @@
               <div class="sc">
                 <div class="sc-ico g">💳</div>
                 <div class="sc-label">Saldo disponible</div>
-                <div class="sc-val" id="tx-balance">$0.00</div>
+                <div class="sc-val" id="tx-balance">€0.00</div>
               </div>
               <div class="sc">
                 <div class="sc-ico b">📥</div>
                 <div class="sc-label">Total depositado</div>
-                <div class="sc-val" id="tx-deposited">$0.00</div>
+                <div class="sc-val" id="tx-deposited">€0.00</div>
               </div>
               <div class="sc">
                 <div class="sc-ico r">📤</div>
                 <div class="sc-label">Total retirado</div>
-                <div class="sc-val" id="tx-withdrawn">$0.00</div>
+                <div class="sc-val" id="tx-withdrawn">€0.00</div>
               </div>
             </div>
 
@@ -426,7 +497,7 @@
                 <div class="pf-group">
                   <div class="pf-label">Moneda preferida</div>
                   <select class="pf-input" id="pf-currency">
-                    <option value="EUR">$ Dólar</option>
+                    <option value="EUR">€ Euro</option>
                     <option value="USD">$ Dólar</option>
                     <option value="MXN">$ Peso MX</option>
                   </select>
@@ -470,11 +541,11 @@
               <div class="profile-grid">
                 <div class="pf-group">
                   <div class="pf-label">Límite diario de apuestas</div>
-                  <input class="pf-input" type="number" placeholder="$ Sin límite" id="pf-daily-limit">
+                  <input class="pf-input" type="number" placeholder="€ Sin límite" id="pf-daily-limit">
                 </div>
                 <div class="pf-group">
                   <div class="pf-label">Límite semanal</div>
-                  <input class="pf-input" type="number" placeholder="$ Sin límite" id="pf-weekly-limit">
+                  <input class="pf-input" type="number" placeholder="€ Sin límite" id="pf-weekly-limit">
                 </div>
               </div>
               <div class="profile-foot">
@@ -493,17 +564,13 @@
             </div>
             <div class="info-card" style="max-width:560px;margin-bottom:24px">
               <div style="font-size:15px;font-weight:700;margin-bottom:20px">Nuevo ticket</div>
-              <div style="margin-bottom:16px">
-                <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--text2);margin-bottom:6px">Asunto <span style="color:var(--red)">*</span></label>
-                <input type="text" id="sup-subject" class="form-input" placeholder="¿En qué podemos ayudarte?" maxlength="120"
-                  style="font-size:14px;padding:11px 14px;border-radius:10px;background:var(--bg3);border:1.5px solid var(--border);color:var(--text);outline:none;width:100%;box-sizing:border-box;transition:border .15s"
-                  onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'">
+              <div style="margin-bottom:20px">
+                <label style="display:block;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text2);margin-bottom:8px">Asunto *</label>
+                <input type="text" id="sup-subject" class="form-input" placeholder="¿En qué podemos ayudarte?" maxlength="120" style="font-size:14px">
               </div>
               <div style="margin-bottom:20px">
-                <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--text2);margin-bottom:6px">Descripción <span style="color:var(--red)">*</span></label>
-                <textarea id="sup-body" class="form-input" rows="5" placeholder="Describe con detalle lo que ocurrió, qué pasos seguiste y cuál es el error..."
-                  style="font-size:14px;line-height:1.6;padding:11px 14px;border-radius:10px;background:var(--bg3);border:1.5px solid var(--border);color:var(--text);outline:none;width:100%;box-sizing:border-box;resize:vertical;font-family:inherit;transition:border .15s"
-                  onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'"></textarea>
+                <label style="display:block;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text2);margin-bottom:8px">Descripción *</label>
+                <textarea id="sup-body" class="form-input" rows="5" style="resize:vertical;font-size:14px;line-height:1.6" placeholder="Describe con detalle lo que ocurrió, qué pasos seguiste y cuál es el error..."></textarea>
               </div>
               <div style="margin-bottom:24px">
                 <label style="display:block;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text2);margin-bottom:8px">Adjunto <span style="font-weight:400;text-transform:none;color:var(--text3)">PNG, JPG, PDF · máx 5MB (opcional)</span></label>
@@ -700,19 +767,19 @@
                   <input class="cfg-input" id="cfg-bonus-pct" type="number" value="100" min="0" max="200">
                 </div>
                 <div class="cfg-group">
-                  <div class="cfg-label">Bono máximo ($)</div>
+                  <div class="cfg-label">Bono máximo (€)</div>
                   <input class="cfg-input" id="cfg-bonus-max" type="number" value="100" min="0">
                 </div>
                 <div class="cfg-group">
-                  <div class="cfg-label">Depósito mínimo ($)</div>
+                  <div class="cfg-label">Depósito mínimo (€)</div>
                   <input class="cfg-input" id="cfg-dep-min" type="number" value="10" min="1">
                 </div>
                 <div class="cfg-group">
-                  <div class="cfg-label">Retirada mínima ($)</div>
+                  <div class="cfg-label">Retirada mínima (€)</div>
                   <input class="cfg-input" id="cfg-wit-min" type="number" value="20" min="1">
                 </div>
                 <div class="cfg-group">
-                  <div class="cfg-label">Saldo inicial nuevos usuarios ($)</div>
+                  <div class="cfg-label">Saldo inicial nuevos usuarios (€)</div>
                   <input class="cfg-input" id="cfg-initial-balance" type="number" value="0" min="0">
                 </div>
                 <div class="cfg-group">
@@ -842,8 +909,8 @@
       </div>
     </div>
     <div class="slip-foot" id="slip-foot" style="display:none">
-      <div class="slip-total-row"><span class="slip-total-key">Apuesta total</span><span class="slip-total-val" id="slip-ttl-stake">$0.00</span></div>
-      <div class="slip-total-row"><span class="slip-total-key">Ganancia potencial</span><span class="slip-total-val green" id="slip-ttl-ret">$0.00</span></div>
+      <div class="slip-total-row"><span class="slip-total-key">Apuesta total</span><span class="slip-total-val" id="slip-ttl-stake">€0.00</span></div>
+      <div class="slip-total-row"><span class="slip-total-key">Ganancia potencial</span><span class="slip-total-val green" id="slip-ttl-ret">€0.00</span></div>
       <button class="slip-bet-btn" onclick="placeBets()">Realizar Apuesta</button>
       <div class="slip-disclaimer">Las cuotas pueden cambiar. Apuesta con responsabilidad. +18.</div>
     </div>
@@ -921,8 +988,11 @@
   <div class="auth-box" id="auth-box">
 
     <div class="auth-logo">
-      <div class="auth-logo-mark">P</div>
-      <div class="auth-logo-text">Predict<span>X</span></div>
+      <img id="auth-logo-img" src="" alt="Logo" style="display:none;height:48px;max-width:160px;object-fit:contain;margin:0 auto">
+      <div id="auth-logo-default" style="display:flex;align-items:center;justify-content:center;gap:6px">
+        <div class="auth-logo-mark">P</div>
+        <div class="auth-logo-text">Predict<span>X</span></div>
+      </div>
     </div>
 
     <!-- Login / Register tabs -->
