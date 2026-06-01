@@ -673,15 +673,18 @@ input,select,textarea{font-family:var(--font)}
     display:flex;overflow-x:auto;gap:0;
     border-bottom:1px solid var(--border);
     background:var(--bg2);
-    scrollbar-width:none;padding:0 12px;
+    scrollbar-width:none;padding:0 4px;
+    position:sticky;top:0;z-index:10;
   }
   .admin-tab-bar::-webkit-scrollbar{display:none}
   .admin-tab{
     font-size:12px;font-weight:500;color:var(--text2);
-    padding:10px 14px;border-bottom:2px solid transparent;
+    padding:11px 13px;border-bottom:2px solid transparent;
     margin-bottom:-1px;cursor:pointer;white-space:nowrap;transition:all .15s;
+    flex-shrink:0;
   }
-  .admin-tab.active{color:var(--green);border-bottom-color:var(--green)}
+  .admin-tab.active{color:var(--accent);border-bottom-color:var(--accent);font-weight:700}
+  .admin-tab:last-child{color:var(--red)}
 }
 @media (min-width:601px){
   .admin-tab-bar{display:none}
