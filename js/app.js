@@ -3711,7 +3711,7 @@ function showListView() {
 }
 
 /* ── Open user admin panel ── */
-function openAdmin() {
+function openAdmin(forcePage) {
   if (!SESSION) { openAuthGate(); return; }
   ['view-list','view-detail','view-owner'].forEach(id => {
     const el = document.getElementById(id);
@@ -3722,7 +3722,9 @@ function openAdmin() {
   window.scrollTo(0, 0);
   updateSidebarVisibility();
   refreshAdminData();
-  showAdminPage('dashboard', document.getElementById('ap-nav-dashboard'));
+  // Restore last visited tab (default dashboard)
+  const lastTab = forcePage || (() => { try { return localStorage.getItem('px_last_admin_tab') || 'dashboard'; } catch(e){ return 'dashboard'; } })();
+  showAdminPage(lastTab, document.getElementById('ap-nav-' + lastTab));
   document.querySelectorAll('.bn-btn').forEach(b => b.classList.remove('active'));
   const bp = document.getElementById('bn-profile'); if (bp) bp.classList.add('active');
 }
@@ -3912,6 +3914,8 @@ function showAdminPage(page, sidebarBtn, tabBtn) {
   if (sId) sId.classList.add('active');
   if (sidebarBtn) sidebarBtn.classList.add('active');
   if (tabBtn) tabBtn.classList.add('active');
+  // Persist last visited tab
+  try { localStorage.setItem('px_last_admin_tab', page); } catch(e){}
   if (page === 'dashboard') renderDashboard();
   if (page === 'bets')      renderBets('all');
   if (page === 'tx')        renderTx('all');
