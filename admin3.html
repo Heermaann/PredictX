@@ -894,6 +894,55 @@ tbody td { padding: 12px 16px; font-size: 13px; color: var(--text1); vertical-al
               <label class="form-check"><input type="checkbox" id="cfg-maintenance"><div><div style="font-size:13px;font-weight:600;color:var(--red)">Modo mantenimiento</div><div style="font-size:12px;color:var(--text2)">Muestra aviso a los usuarios</div></div></label>
             </div>
           </div>
+          <!-- Logo del sitio -->
+          <div class="table-card" style="padding:20px;grid-column:1/-1">
+            <div style="font-size:15px;font-weight:700;margin-bottom:6px">🖼️ Logo del sitio</div>
+            <p style="font-size:12px;color:var(--text2);margin-bottom:18px">Se muestra en la barra superior del home y en la pantalla de inicio de sesión. Recomendado: PNG o SVG con fondo transparente, mínimo 200px de ancho.</p>
+            <div style="display:flex;gap:20px;align-items:flex-start;flex-wrap:wrap">
+              <!-- Preview -->
+              <div style="flex-shrink:0">
+                <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text2);margin-bottom:8px">Vista previa</div>
+                <div style="width:160px;height:70px;border:1.5px dashed var(--border);border-radius:10px;background:var(--bg3);display:flex;align-items:center;justify-content:center;overflow:hidden">
+                  <img id="logo-preview-img" src="" alt="" style="display:none;max-width:140px;max-height:56px;object-fit:contain">
+                  <span id="logo-preview-placeholder" style="font-size:12px;color:var(--text2)">Sin logo</span>
+                </div>
+              </div>
+              <!-- Controls -->
+              <div style="flex:1;min-width:240px;display:flex;flex-direction:column;gap:14px">
+
+                <!-- Opción A: subir archivo -->
+                <div>
+                  <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text2);margin-bottom:8px">Opción A — Subir archivo</div>
+                  <input type="file" id="logo-file-input" accept="image/png,image/jpeg,image/svg+xml,image/webp" style="display:none" onchange="admPreviewLogo(this)">
+                  <div style="display:flex;gap:8px;flex-wrap:wrap">
+                    <button class="btn btn-ghost btn-sm" onclick="document.getElementById('logo-file-input').click()">📁 Elegir archivo</button>
+                    <button class="btn btn-primary btn-sm" id="logo-upload-btn" onclick="admUploadLogo()" style="display:none">☁️ Subir y aplicar</button>
+                  </div>
+                  <div id="logo-file-name" style="font-size:11px;color:var(--text2);margin-top:6px"></div>
+                  <div style="font-size:11px;color:var(--text2);margin-top:4px">Requiere bucket <strong>assets</strong> público en Supabase Storage.</div>
+                </div>
+
+                <!-- Opción B: pegar URL -->
+                <div>
+                  <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text2);margin-bottom:8px">Opción B — Pegar URL de imagen</div>
+                  <div style="display:flex;gap:8px">
+                    <input type="url" id="logo-url-input" placeholder="https://ejemplo.com/logo.png"
+                      style="flex:1;padding:8px 12px;border-radius:8px;border:1.5px solid var(--border);background:var(--bg3);color:var(--text);font-size:12px;outline:none"
+                      onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'"
+                      oninput="admPreviewLogoUrl(this.value)">
+                    <button class="btn btn-primary btn-sm" onclick="admSaveLogoUrl()">✓ Aplicar</button>
+                  </div>
+                </div>
+
+                <!-- Remove + status -->
+                <div style="display:flex;gap:8px;align-items:center">
+                  <button class="btn btn-danger btn-sm" id="logo-remove-btn" onclick="admRemoveLogo()" style="display:none">🗑 Quitar logo</button>
+                </div>
+                <div id="logo-upload-status" style="display:none;padding:8px 12px;border-radius:8px;font-size:12px;font-weight:600"></div>
+              </div>
+            </div>
+          </div>
+
           <!-- Gestión de Roles -->
           <div class="table-card" style="padding:20px;grid-column:1/-1">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px">
@@ -1591,7 +1640,7 @@ function admShowPage(page, btn){
   if(page==='sports')    renderSports();
   if(page==='leagues')   renderLeagues();
   if(page==='events')    renderEvents();
-  if(page==='config')    { loadAdmConfig(); admLoadRolesTable(); }
+  if(page==='config')    { loadAdmConfig(); admLoadRolesTable(); admInitLogo(); }
   if(page==='teams')     renderTeams();
   if(page==='outcomes')  renderOutcomes();
   if(page==='api-events') renderApiEvents();
@@ -2513,6 +2562,146 @@ async function admResolveEvent(id,result){
 }
 
 // ── Configuración ──
+// ── Logo management ────────────────────────────────────────
+let _logoFile = null;
+
+async function admInitLogo() {
+  const { data } = await _SB.from('site_config').select('logo_url').eq('id', 1).maybeSingle();
+  const url = data?.logo_url || '';
+  const previewImg  = document.getElementById('logo-preview-img');
+  const placeholder = document.getElementById('logo-preview-placeholder');
+  const removeBtn   = document.getElementById('logo-remove-btn');
+  if (url && previewImg) {
+    previewImg.src = url; previewImg.style.display = 'block';
+    if (placeholder) placeholder.style.display = 'none';
+    if (removeBtn)   removeBtn.style.display = 'inline-flex';
+  } else {
+    if (previewImg)  previewImg.style.display = 'none';
+    if (placeholder) placeholder.style.display = '';
+    if (removeBtn)   removeBtn.style.display = 'none';
+  }
+}
+
+function admPreviewLogo(input) {
+  const file = input.files[0]; if (!file) return;
+  if (file.size > 2 * 1024 * 1024) { showToast('El archivo no puede superar 2MB','error'); input.value=''; return; }
+  _logoFile = file;
+  const nameEl = document.getElementById('logo-file-name');
+  if (nameEl) nameEl.textContent = file.name + ' (' + (file.size/1024).toFixed(0) + ' KB)';
+  const uploadBtn = document.getElementById('logo-upload-btn');
+  if (uploadBtn) uploadBtn.style.display = 'inline-flex';
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const img = document.getElementById('logo-preview-img');
+    const ph  = document.getElementById('logo-preview-placeholder');
+    if (img) { img.src = e.target.result; img.style.display = 'block'; }
+    if (ph)    ph.style.display = 'none';
+  };
+  reader.readAsDataURL(file);
+}
+
+async function admUploadLogo() {
+  if (!_logoFile) return;
+  const statusEl  = document.getElementById('logo-upload-status');
+  const uploadBtn = document.getElementById('logo-upload-btn');
+  const setStatus = (msg, ok) => {
+    if (!statusEl) return;
+    statusEl.style.display = 'block';
+    statusEl.style.background = ok ? '#d4edda' : '#f8d7da';
+    statusEl.style.color      = ok ? '#155724' : '#721c24';
+    statusEl.textContent = msg;
+  };
+  if (uploadBtn) { uploadBtn.disabled = true; uploadBtn.textContent = '⏳ Subiendo...'; }
+  try {
+    const ext  = _logoFile.name.split('.').pop().toLowerCase();
+    const path = 'brand/logo.' + ext;
+    const { data: upData, error: upErr } = await _SB.storage
+      .from('assets')
+      .upload(path, _logoFile, { upsert: true, contentType: _logoFile.type });
+    if (upErr) {
+      // Bucket may not exist — guide user to Option B
+      throw new Error('Storage: ' + upErr.message + '. Usa la Opción B (pegar URL) si el bucket "assets" no existe aún en Supabase Storage.');
+    }
+    const { data: urlData } = _SB.storage.from('assets').getPublicUrl(path);
+    const publicUrl = urlData?.publicUrl;
+    if (!publicUrl) throw new Error('No se pudo obtener la URL pública del archivo.');
+    await admApplyLogoUrl(publicUrl);
+    setStatus('✅ Logo subido y aplicado correctamente.', true);
+    if (uploadBtn) { uploadBtn.disabled = false; uploadBtn.textContent = '☁️ Subir y aplicar'; }
+    _logoFile = null;
+    document.getElementById('logo-file-input').value = '';
+    const nameEl = document.getElementById('logo-file-name');
+    if (nameEl) nameEl.textContent = '';
+  } catch(err) {
+    console.error('Logo upload error:', err);
+    setStatus('❌ ' + (err.message || 'Error al subir. Usa la Opción B.'), false);
+    if (uploadBtn) { uploadBtn.disabled = false; uploadBtn.textContent = '☁️ Subir y aplicar'; }
+  }
+}
+
+// Shared function: save URL to DB and update preview
+async function admApplyLogoUrl(url) {
+  const { error } = await _SB.from('site_config').update({ logo_url: url }).eq('id', 1);
+  if (error) throw new Error('DB: ' + error.message);
+  // Update preview
+  const previewImg  = document.getElementById('logo-preview-img');
+  const placeholder = document.getElementById('logo-preview-placeholder');
+  const removeBtn   = document.getElementById('logo-remove-btn');
+  if (previewImg)  { previewImg.src = url; previewImg.style.display = 'block'; }
+  if (placeholder)   placeholder.style.display = 'none';
+  if (removeBtn)     removeBtn.style.display = 'inline-flex';
+  showToast('✅ Logo aplicado', 'success');
+}
+
+function admPreviewLogoUrl(url) {
+  const previewImg  = document.getElementById('logo-preview-img');
+  const placeholder = document.getElementById('logo-preview-placeholder');
+  if (!url) {
+    if (previewImg)  previewImg.style.display = 'none';
+    if (placeholder) placeholder.style.display = '';
+    return;
+  }
+  if (previewImg) { previewImg.src = url; previewImg.style.display = 'block'; }
+  if (placeholder) placeholder.style.display = 'none';
+}
+
+async function admSaveLogoUrl() {
+  const input = document.getElementById('logo-url-input');
+  const url   = (input?.value || '').trim();
+  const statusEl = document.getElementById('logo-upload-status');
+  const setStatus = (msg, ok) => {
+    if (!statusEl) return;
+    statusEl.style.display = 'block';
+    statusEl.style.background = ok ? '#d4edda' : '#f8d7da';
+    statusEl.style.color      = ok ? '#155724' : '#721c24';
+    statusEl.textContent = msg;
+  };
+  if (!url) return setStatus('❌ Pega una URL válida primero.', false);
+  if (!url.startsWith('http')) return setStatus('❌ La URL debe empezar con http/https.', false);
+  try {
+    await admApplyLogoUrl(url);
+    setStatus('✅ Logo aplicado correctamente.', true);
+    if (input) input.value = '';
+  } catch(err) {
+    setStatus('❌ ' + err.message, false);
+  }
+}
+
+async function admRemoveLogo() {
+  if (!confirm('Quitar el logo personalizado y volver al logo de texto?')) return;
+  const { error } = await _SB.from('site_config').update({ logo_url: null }).eq('id', 1);
+  if (error) { showToast('Error: ' + error.message, 'error'); return; }
+  const previewImg  = document.getElementById('logo-preview-img');
+  const placeholder = document.getElementById('logo-preview-placeholder');
+  const removeBtn   = document.getElementById('logo-remove-btn');
+  const uploadBtn   = document.getElementById('logo-upload-btn');
+  if (previewImg)  { previewImg.src = ''; previewImg.style.display = 'none'; }
+  if (placeholder)   placeholder.style.display = '';
+  if (removeBtn)     removeBtn.style.display = 'none';
+  if (uploadBtn)     uploadBtn.style.display = 'none';
+  showToast('Logo eliminado', 'success');
+}
+
 async function loadAdmConfig(){
   try {
     const {data} = await _SB.from('site_config').select('*').eq('id',1).maybeSingle();

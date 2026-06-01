@@ -19,9 +19,12 @@
 <!-- ════ NAV ════ -->
 <nav class="nav">
   <button class="nav-hamburger" id="hamburger" onclick="toggleSidebar()" aria-label="Menú">☰</button>
-  <div class="nav-logo">
-    <div class="nav-logo-mark">P</div>
-    <div class="nav-logo-text">Predict<span>X</span></div>
+  <div class="nav-logo" id="nav-logo-wrap" onclick="showListView()">
+    <img id="site-logo-img" src="" alt="Logo" style="display:none;height:32px;width:auto;object-fit:contain;border-radius:6px">
+    <div id="site-logo-default" style="display:flex;align-items:center;gap:8px">
+      <div class="nav-logo-mark">P</div>
+      <div class="nav-logo-text">Predict<span>X</span></div>
+    </div>
   </div>
   <div class="nav-search" id="search-wrap">
     <span class="nav-search-ico">⌕</span>
@@ -921,8 +924,11 @@
   <div class="auth-box" id="auth-box">
 
     <div class="auth-logo">
-      <div class="auth-logo-mark">P</div>
-      <div class="auth-logo-text">Predict<span>X</span></div>
+      <img id="auth-logo-img" src="" alt="Logo" style="display:none;height:52px;width:auto;object-fit:contain;border-radius:8px;margin-bottom:4px">
+      <div id="auth-logo-default">
+        <div class="auth-logo-mark">P</div>
+        <div class="auth-logo-text">Predict<span>X</span></div>
+      </div>
     </div>
 
     <!-- Login / Register tabs -->
