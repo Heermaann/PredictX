@@ -19,10 +19,12 @@
 <!-- ════ NAV ════ -->
 <nav class="nav">
   <button class="nav-hamburger" id="hamburger" onclick="toggleSidebar()" aria-label="Menú">☰</button>
-  <div class="nav-logo" id="nav-logo-wrap" onclick="showListView()">
-    <img id="site-logo-img" src="" alt="Logo" style="display:none;height:32px;width:auto;object-fit:contain;border-radius:6px">
+  <div class="nav-logo" id="nav-logo-wrap" onclick="showListView()" style="display:flex;align-items:center;gap:8px;cursor:pointer">
+    <img id="site-logo-img" src="" alt="Logo" style="display:none;height:30px;width:auto;object-fit:contain">
     <div id="site-logo-default" style="display:flex;align-items:center;gap:8px">
-      <div class="nav-logo-mark">P</div>
+      <div style="width:28px;height:28px;border-radius:8px;background:linear-gradient(145deg,#00e676,#00b248);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+        <span style="font-size:13px;font-weight:900;color:#000;font-family:Arial,sans-serif">P</span>
+      </div>
       <div class="nav-logo-text">Predict<span>X</span></div>
     </div>
   </div>
@@ -924,10 +926,12 @@
   <div class="auth-box" id="auth-box">
 
     <div class="auth-logo">
-      <img id="auth-logo-img" src="" alt="Logo" style="display:none;height:52px;width:auto;object-fit:contain;border-radius:8px;margin-bottom:4px">
-      <div id="auth-logo-default">
-        <div class="auth-logo-mark">P</div>
-        <div class="auth-logo-text">Predict<span>X</span></div>
+      <img id="auth-logo-img" src="" alt="Logo" style="display:none;height:52px;width:auto;object-fit:contain;margin-bottom:8px">
+      <div id="auth-logo-default" style="display:flex;flex-direction:column;align-items:center;gap:4px">
+        <div style="width:56px;height:56px;border-radius:18px;background:linear-gradient(145deg,#00e676,#00b248);display:flex;align-items:center;justify-content:center;box-shadow:0 8px 24px rgba(0,200,100,.35);margin-bottom:2px">
+          <span style="font-size:26px;font-weight:900;color:#000;letter-spacing:-1px;font-family:Arial,sans-serif">P</span>
+        </div>
+        <div style="font-size:22px;font-weight:800;letter-spacing:-.5px;color:var(--text);font-family:Arial,sans-serif">Predict<span style="color:var(--green)">X</span></div>
       </div>
     </div>
 
