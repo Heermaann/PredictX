@@ -1664,7 +1664,7 @@ function renderDashboard(){
   const staked=bets.reduce((a,b)=>a+(+b.stake||0),0);
   const deposits=txs.filter(t=>t.type==='deposit').reduce((a,t)=>a+(+t.amount||0),0);
   const withdrawals=txs.filter(t=>t.type==='withdraw').reduce((a,t)=>a+(+t.amount||0),0);
-  const exposure=openBets.reduce((a,b)=>a+((+b.odd||1)*(+b.stake||0)-(+b.stake||0)),0);
+  const exposure=openBets.reduce((a,b)=>a+((+(b.odds||b.odd)||1)*(+b.stake||0)-(+b.stake||0)),0);
   document.getElementById('k-users').textContent       = users.length;
   document.getElementById('k-active').textContent      = users.filter(u=>!u.is_suspended).length;
   document.getElementById('k-bets-open').textContent   = openBets.length;
@@ -1900,7 +1900,7 @@ function admViewUser(email){
     <tr>
       <td style="font-size:11px;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(b.match_name||'--')}</td>
       <td style="font-size:12px;font-weight:600">${esc(b.pick||'--')}</td>
-      <td style="font-size:12px">${fOdd(b.odd)}</td>
+      <td style="font-size:12px">${fOdd(b.odds||b.odd)}</td>
       <td>${fMoney(b.stake)}</td>
       <td>${badgeHtml(b.status)}</td>
     </tr>`).join('');
@@ -1957,7 +1957,7 @@ function admViewUserBets(email){
   if(sub) sub.textContent='Apuestas de @'+username+' \u00b7 '+bets.length+' registros';
   const total=bets.reduce((a,b)=>a+(+b.stake||0),0);
   const openBets=bets.filter(b=>b.status==='open');
-  const exposure=openBets.reduce((a,b)=>a+((+b.odd||1)*(+b.stake||0)-(+b.stake||0)),0);
+  const exposure=openBets.reduce((a,b)=>a+((+(b.odds||b.odd)||1)*(+b.stake||0)-(+b.stake||0)),0);
   const el=id=>document.getElementById(id);
   if(el('bets-k-total'))    el('bets-k-total').textContent=fMoney(total);
   if(el('bets-k-open'))     el('bets-k-open').textContent=openBets.length;
@@ -1968,14 +1968,14 @@ function admViewUserBets(email){
     <td><span style="font-size:12px;color:var(--blue);cursor:pointer;font-weight:600" onclick="admViewUserBets('${esc(b.user_email||'')}')">@${esc((b.user_email||'').split('@')[0])}</span></td>
     <td style="font-size:11px;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(b.match_name||b.match||'--')}</td>
     <td style="font-weight:600;font-size:12px">${esc(b.pick||'--')}</td>
-    <td style="font-size:12px">${fOdd(b.odd)}</td>
+    <td style="font-size:12px">${fOdd(b.odds||b.odd)}</td>
     <td><div class="amount-cell"><span class="amount-icon">&#128142;</span>${fMoney(b.stake)}</div></td>
     <td><div class="amount-cell">${b.ret?'<span class="amount-icon">&#128142;</span>'+fMoney(b.ret):'--'}</div></td>
     <td>${b.type==='combo'?'<span class="badge badge-purple">Combinada</span>':'<span class="badge badge-green">Simple</span>'}</td>
     <td>${badgeHtml(b.status)}</td>
     <td><div class="action-group">${b.status==='open'?`
-      <button class="btn btn-success btn-sm" onclick="admResolveBet('${b.id}','${esc(b.user_email)}',${+b.stake||0},${+b.odd||1},'win')">&#10003; Ganada</button>
-      <button class="btn btn-danger btn-sm" onclick="admResolveBet('${b.id}','${esc(b.user_email)}',${+b.stake||0},${+b.odd||1},'loss')">&#10007; Perdida</button>`:'--'}</div></td>
+      <button class="btn btn-success btn-sm" onclick="admResolveBet('${b.id}','${esc(b.user_email)}',${+b.stake||0},${+(b.odds||b.odd)||1},'win')">&#10003; Ganada</button>
+      <button class="btn btn-danger btn-sm" onclick="admResolveBet('${b.id}','${esc(b.user_email)}',${+b.stake||0},${+(b.odds||b.odd)||1},'loss')">&#10007; Perdida</button>`:'--'}</div></td>
   </tr>`).join('');
   const card=document.querySelector('#adm-bets .table-card');
   if(card&&!document.getElementById('bets-filter-banner')){
@@ -2072,7 +2072,7 @@ function renderBets(filter){
   if(filter!=='all') bets=bets.filter(b=>b.status===filter);
   const total=_cache.bets.reduce((a,b)=>a+(+b.stake||0),0);
   const open=_cache.bets.filter(b=>b.status==='open');
-  const exposure=open.reduce((a,b)=>a+((+b.odd||1)*(+b.stake||0)-(+b.stake||0)),0);
+  const exposure=open.reduce((a,b)=>a+((+(b.odds||b.odd)||1)*(+b.stake||0)-(+b.stake||0)),0);
   const el=id=>document.getElementById(id);
   if(el('bets-k-total')) el('bets-k-total').textContent=fMoney(total);
   if(el('bets-k-open'))  el('bets-k-open').textContent=open.length;
@@ -2084,14 +2084,14 @@ function renderBets(filter){
     <td><span style="font-size:12px;color:var(--blue);cursor:pointer;font-weight:600" onclick="admViewUserBets('${esc(b.user_email||'')}')" title="Ver apuestas de este usuario">@${esc((b.user_email||'').split('@')[0])}</span></td>
     <td style="font-size:11px;max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(b.match_name||b.match||'—')}</td>
     <td style="font-weight:600;font-size:12px">${esc(b.pick||'—')}</td>
-    <td style="font-size:12px">${fOdd(b.odd)}</td>
+    <td style="font-size:12px">${fOdd(b.odds||b.odd)}</td>
     <td><div class="amount-cell">${fMoney(b.stake)}</div></td>
     <td><div class="amount-cell">${b.ret?`${fMoney(b.ret)}`:'—'}</div></td>
     <td>${b.type==='combo'?'<span class="badge badge-purple">Combinada</span>':'<span class="badge badge-green">Simple</span>'}</td>
     <td>${badgeHtml(b.status)}</td>
     <td><div class="action-group">${b.status==='open'?`
-      <button class="btn btn-success btn-sm" onclick="admResolveBet('${b.id}','${esc(b.user_email)}',${+b.stake||0},${+b.odd||1},'win')">✓ Ganada</button>
-      <button class="btn btn-danger btn-sm"  onclick="admResolveBet('${b.id}','${esc(b.user_email)}',${+b.stake||0},${+b.odd||1},'loss')">✗ Perdida</button>`
+      <button class="btn btn-success btn-sm" onclick="admResolveBet('${b.id}','${esc(b.user_email)}',${+b.stake||0},${+(b.odds||b.odd)||1},'win')">✓ Ganada</button>
+      <button class="btn btn-danger btn-sm"  onclick="admResolveBet('${b.id}','${esc(b.user_email)}',${+b.stake||0},${+(b.odds||b.odd)||1},'loss')">✗ Perdida</button>`
     :'—'}</div></td>
   </tr>`).join('');
 }
