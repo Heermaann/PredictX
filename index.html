@@ -181,11 +181,13 @@
         <div class="admin-main">
 
           <!-- Mobile tab bar -->
-          <div class="admin-tab-bar">
+          <div class="admin-tab-bar" style="overflow-x:auto;display:flex;flex-wrap:nowrap;-webkit-overflow-scrolling:touch">
             <div class="admin-tab active" onclick="showAdminPage('dashboard',null,this)">📊 Dashboard</div>
             <div class="admin-tab" onclick="showAdminPage('bets',null,this)">🎟 Apuestas</div>
             <div class="admin-tab" onclick="showAdminPage('tx',null,this)">💳 Transacciones</div>
+            <div class="admin-tab" onclick="showAdminPage('support',null,this)">🆘 Soporte</div>
             <div class="admin-tab" onclick="showAdminPage('profile',null,this)">👤 Perfil</div>
+            <div class="admin-tab" onclick="doLogout()" style="color:var(--red);flex-shrink:0">🚪 Salir</div>
           </div>
 
           <!-- ── DASHBOARD ── -->
