@@ -1992,6 +1992,7 @@ async function loadLeague(sportKey, label, el) {
 
   S.sport = sportKey;
   localStorage.setItem('px_sport', sportKey);
+  localStorage.setItem('px_last_league', JSON.stringify({ sportKey, label }));
   S.tab = 'all'; S.filter = 'all'; S.navMode = 'home';
   S.sport_cat = 'all'; S.catMode = 'all'; S.sort = 'vol';
 
@@ -2685,8 +2686,6 @@ function defaultTx()   { return []; }
 
 /* ── Boot: check saved session ── */
 document.addEventListener('DOMContentLoaded', async () => {
-  // S.sport always starts as 'all'
-  localStorage.removeItem('px_sport'); // clear stale sport filter
   applyTheme(S.theme);
   renderSlip();
   renderCatPills(); // load dynamic categories from Supabase
@@ -2728,6 +2727,22 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
   loadMarkets();
+  // Restore last selected league after markets load
+  const _savedLeague = (() => { try { const v = localStorage.getItem('px_last_league'); return v ? JSON.parse(v) : null; } catch(e){ return null; } })();
+  if (_savedLeague?.sportKey) {
+    // Wait for sidebar to render then highlight the active league
+    setTimeout(() => {
+      const leagueEls = document.querySelectorAll('.sb-league');
+      let matched = null;
+      leagueEls.forEach(el => {
+        const oc = el.getAttribute('onclick') || '';
+        if (oc.includes("'" + _savedLeague.sportKey + "'") || oc.includes('"' + _savedLeague.sportKey + '"')) {
+          matched = el;
+        }
+      });
+      loadLeague(_savedLeague.sportKey, _savedLeague.label, matched);
+    }, 400);
+  }
   // Load site config from Supabase (for config enforcement)
   await loadSiteConfig();
   // Apply admin-only visibility rules
