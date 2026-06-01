@@ -4822,10 +4822,28 @@ async function loadSiteConfig() {
         allowBets:      data.allow_bets,
         maintenance:    data.maintenance,
         odds_margin:    apiData?.odds_margin ?? 0,
+        logoUrl:        data.logo_url || '',
       };
       DB.set('site_config', cfg);
+      // Apply logo immediately
+      if (data.logo_url) applySiteLogo(data.logo_url);
     }
   } catch(_) { /* use localStorage fallback */ }
+}
+
+/* Apply logo across all logo placements */
+function applySiteLogo(url) {
+  if (!url) return;
+  // Navbar logo
+  const navImg = document.getElementById('site-logo-img');
+  const navDef = document.getElementById('site-logo-default');
+  if (navImg) { navImg.src = url; navImg.style.display = 'block'; }
+  if (navDef) navDef.style.display = 'none';
+  // Auth/login logo
+  const authImg = document.getElementById('auth-logo-img');
+  const authDef = document.getElementById('auth-logo-default');
+  if (authImg) { authImg.src = url; authImg.style.display = 'block'; }
+  if (authDef) authDef.style.display = 'none';
 }
 
 /* Get current site config (always from cache) */
