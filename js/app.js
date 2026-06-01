@@ -642,6 +642,38 @@ async function renderCatPills() {
 
 
 // ── Render full sidebar from Supabase (sports + leagues) ──
+// Default hardcoded sports/leagues shown when Supabase sports table is empty
+const DEFAULT_SIDEBAR_SPORTS = [
+  { key:'soccer',             title:'Fútbol',           icon:'⚽', leagues:[
+    {api_key:'soccer_epl',                       name:'Premier League',     icon:'🏴'},
+    {api_key:'soccer_spain_la_liga',             name:'La Liga',            icon:'🇪🇸'},
+    {api_key:'soccer_uefa_champs_league',        name:'Champions League',   icon:'⭐'},
+    {api_key:'soccer_germany_bundesliga',        name:'Bundesliga',         icon:'🇩🇪'},
+    {api_key:'soccer_italy_serie_a',             name:'Serie A',            icon:'🇮🇹'},
+    {api_key:'soccer_france_ligue_one',          name:'Ligue 1',            icon:'🇫🇷'},
+    {api_key:'soccer_usa_mls',                   name:'MLS',                icon:'🇺🇸'},
+    {api_key:'soccer_brazil_campeonato',         name:'Brasileirão',        icon:'🇧🇷'},
+    {api_key:'soccer_conmebol_copa_libertadores',name:'Copa Libertadores',  icon:'🏆'},
+  ]},
+  { key:'basketball',         title:'Baloncesto',       icon:'🏀', leagues:[
+    {api_key:'basketball_nba',       name:'NBA',       icon:'🏀'},
+    {api_key:'basketball_euroleague',name:'EuroLeague',icon:'🇪🇺'},
+  ]},
+  { key:'americanfootball',   title:'Fútbol Am.',       icon:'🏈', leagues:[
+    {api_key:'americanfootball_nfl', name:'NFL',  icon:'🏈'},
+    {api_key:'americanfootball_ncaaf',name:'NCAAF',icon:'🎓'},
+  ]},
+  { key:'baseball',           title:'Béisbol',          icon:'⚾', leagues:[
+    {api_key:'baseball_mlb',name:'MLB',icon:'⚾'},
+  ]},
+  { key:'icehockey',          title:'Hockey',           icon:'🏒', leagues:[
+    {api_key:'icehockey_nhl',name:'NHL',icon:'🏒'},
+  ]},
+  { key:'mma',                title:'MMA / UFC',        icon:'🥊', leagues:[
+    {api_key:'mma_mixed_martial_arts',name:'UFC / MMA',icon:'🥊'},
+  ]},
+];
+
 async function renderFullSidebar() {
   const wrap = document.getElementById('sb-sports-wrap');
   if (!wrap) return;
@@ -652,7 +684,22 @@ async function renderFullSidebar() {
     ]);
     const sports  = sportsRes.data  || [];
     const leagues = leaguesRes.data || [];
-    if (!sports.length) return;
+    // If no sports configured in Supabase, use hardcoded defaults
+    if (!sports.length) {
+      wrap.innerHTML = DEFAULT_SIDEBAR_SPORTS.map(s => {
+        const gid = 'g-dyn-' + s.key;
+        const leagueRows = s.leagues.map(l =>
+          `<div class="sb-league" onclick="loadLeague('${l.api_key}','${esc(l.name)}',this)">${l.icon||''} ${esc(l.name)}</div>`
+        ).join('');
+        return `
+          <div class="sb-item sb-group" onclick="toggleSportGroup('${gid}','${s.key}')">
+            <span class="sb-item-ico">${s.icon}</span>${s.title}
+            <span class="sb-arrow" id="arr-${gid}">›</span>
+          </div>
+          <div class="sb-leagues" id="${gid}">${leagueRows}</div>`;
+      }).join('');
+      return;
+    }
 
     wrap.innerHTML = sports.map(s => {
       const gid = 'g-dyn-' + s.key;
@@ -1945,6 +1992,7 @@ async function loadLeague(sportKey, label, el) {
 
   S.sport = sportKey;
   localStorage.setItem('px_sport', sportKey);
+  localStorage.setItem('px_last_league', JSON.stringify({ sportKey, label }));
   S.tab = 'all'; S.filter = 'all'; S.navMode = 'home';
   S.sport_cat = 'all'; S.catMode = 'all'; S.sort = 'vol';
 
@@ -2579,9 +2627,20 @@ async function sbUpdate(table, match, values) {
 
 /* ── Profile helpers (sync with Supabase + local cache) ── */
 async function loadProfile(email) {
-  const rows = await sbQuery('profiles', {email});
-  _sbProfile = rows[0] || null;
-  return _sbProfile;
+  // Use direct query — never cached — to always get fresh is_suspended value
+  try {
+    const { data, error } = await _SB
+      .from('profiles')
+      .select('*')
+      .eq('email', email)
+      .maybeSingle();
+    if (error) { console.error('loadProfile error:', error); return null; }
+    _sbProfile = data || null;
+    return _sbProfile;
+  } catch(e) {
+    console.error('loadProfile exception:', e);
+    return null;
+  }
 }
 function defaultAdmin(s) {
   return {
@@ -2627,8 +2686,6 @@ function defaultTx()   { return []; }
 
 /* ── Boot: check saved session ── */
 document.addEventListener('DOMContentLoaded', async () => {
-  // S.sport always starts as 'all'
-  localStorage.removeItem('px_sport'); // clear stale sport filter
   applyTheme(S.theme);
   renderSlip();
   renderCatPills(); // load dynamic categories from Supabase
@@ -2641,10 +2698,19 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (sbSession?.user) {
     const email = sbSession.user.email;
     const profile = await loadProfile(email);
-    const name = profile?.name || email.split('@')[0];
-    SESSION = { id: sbSession.user.id, email, name, role: profile?.role || 'user' };
-    setTimeout(applyAdminOnlyVisibility, 200);
-    onLoginSuccess(false);
+    // If suspended: revoke session immediately and keep user out
+    if (profile?.is_suspended) {
+      await _SB.auth.signOut(); // revoke Supabase session token
+      DB.remove('session');     // clear any local cache
+      SESSION = null;
+      // Show suspended message after a brief delay (let page finish loading)
+      setTimeout(() => showToast('🚫 Tu cuenta ha sido suspendida. Contacta con soporte si crees que es un error.', 'error'), 800);
+    } else {
+      const name = profile?.name || email.split('@')[0];
+      SESSION = { id: sbSession.user.id, email, name, role: profile?.role || 'user' };
+      setTimeout(applyAdminOnlyVisibility, 200);
+      onLoginSuccess(false);
+    }
   } else {
     // Fallback: check localStorage session — only restore if Supabase has a live token
     const saved = DB.get('session');
@@ -2661,6 +2727,22 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
   loadMarkets();
+  // Restore last selected league after markets load
+  const _savedLeague = (() => { try { const v = localStorage.getItem('px_last_league'); return v ? JSON.parse(v) : null; } catch(e){ return null; } })();
+  if (_savedLeague?.sportKey) {
+    // Wait for sidebar to render then highlight the active league
+    setTimeout(() => {
+      const leagueEls = document.querySelectorAll('.sb-league');
+      let matched = null;
+      leagueEls.forEach(el => {
+        const oc = el.getAttribute('onclick') || '';
+        if (oc.includes("'" + _savedLeague.sportKey + "'") || oc.includes('"' + _savedLeague.sportKey + '"')) {
+          matched = el;
+        }
+      });
+      loadLeague(_savedLeague.sportKey, _savedLeague.label, matched);
+    }, 400);
+  }
   // Load site config from Supabase (for config enforcement)
   await loadSiteConfig();
   // Apply admin-only visibility rules
@@ -2823,6 +2905,13 @@ async function doLogin() {
   // Load profile from Supabase
   const profile = await loadProfile(email);
   const name = profile?.name || authData.user?.user_metadata?.name || email.split('@')[0];
+
+  // Block suspended users immediately — sign them out and show error
+  if (profile?.is_suspended) {
+    await _SB.auth.signOut();
+    if (btn) { btn.disabled = false; btn.textContent = 'Entrar →'; }
+    return fail('🚫 Tu cuenta ha sido suspendida. Contacta con soporte si crees que es un error.');
+  }
 
   SESSION = { id: authData.user?.id, email, name, role: profile?.role || 'user' };
   if (remember) DB.set('session', SESSION);
@@ -3622,7 +3711,7 @@ function showListView() {
 }
 
 /* ── Open user admin panel ── */
-function openAdmin() {
+function openAdmin(forcePage) {
   if (!SESSION) { openAuthGate(); return; }
   ['view-list','view-detail','view-owner'].forEach(id => {
     const el = document.getElementById(id);
@@ -3633,7 +3722,9 @@ function openAdmin() {
   window.scrollTo(0, 0);
   updateSidebarVisibility();
   refreshAdminData();
-  showAdminPage('dashboard', document.getElementById('ap-nav-dashboard'));
+  // Restore last visited tab (default dashboard)
+  const lastTab = forcePage || (() => { try { return localStorage.getItem('px_last_admin_tab') || 'dashboard'; } catch(e){ return 'dashboard'; } })();
+  showAdminPage(lastTab, document.getElementById('ap-nav-' + lastTab));
   document.querySelectorAll('.bn-btn').forEach(b => b.classList.remove('active'));
   const bp = document.getElementById('bn-profile'); if (bp) bp.classList.add('active');
 }
@@ -3699,26 +3790,32 @@ function supClearFile() {
 }
 
 async function supSubmit() {
-  if (!SESSION) { showToast('❌ Debes iniciar sesión'); return; }
+  if (!SESSION) { openAuthGate(); return; }
 
-  const subject = (document.getElementById('sup-subject')?.value || '').trim();
-  const body    = (document.getElementById('sup-body')?.value    || '').trim();
+  const subjectEl = document.getElementById('sup-subject');
+  const bodyEl    = document.getElementById('sup-body');
+  const subject   = (subjectEl?.value || '').trim();
+  const body      = (bodyEl?.value    || '').trim();
   const fileInput = document.getElementById('sup-file');
-  const file = fileInput?.files?.[0] || null;
+  const file      = fileInput?.files?.[0] || null;
+  const btn       = document.querySelector('[onclick="supSubmit()"]');
 
-  const statusEl = document.getElementById('sup-status');
+  const statusEl  = document.getElementById('sup-status');
   const setStatus = (msg, cls='err') => {
     if (!statusEl) return;
     statusEl.style.display = 'block';
-    statusEl.className = 'auth-status ' + cls;
+    statusEl.className = 'auth-status ' + (cls === 'ok' ? 'ok' : '');
     statusEl.textContent = msg;
   };
 
-  if (!subject) return setStatus('Introduce un asunto para el ticket.');
-  if (!body || body.length < 10) return setStatus('La descripción debe tener al menos 10 caracteres.');
+  // Validation
+  if (!subject)              return setStatus('⚠️ Introduce un asunto para el ticket.');
+  if (!body || body.length < 10) return setStatus('⚠️ La descripción debe tener al menos 10 caracteres.');
+
+  // Disable button while submitting
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Enviando...'; }
 
   let attachmentUrl = null;
-  // Upload file to Supabase Storage if provided
   if (file) {
     try {
       const ext = file.name.split('.').pop();
@@ -3731,26 +3828,32 @@ async function supSubmit() {
     } catch(_) {}
   }
 
-  // Insert ticket
-  // Build payload without attachment_url if column doesn't exist
+  // Build ticket — only include columns that exist in the table
   const ticketPayload = {
     user_email:  SESSION.email,
     subject,
+    message:     body,
     description: body,
     status:      'open',
     priority:    'normal',
     created_at:  new Date().toISOString()
   };
   if (attachmentUrl) ticketPayload.attachment_url = attachmentUrl;
+
   const { error } = await _SB.from('support_tickets').insert(ticketPayload);
 
-  if (error) return setStatus('❌ Error al enviar: ' + error.message);
+  if (btn) { btn.disabled = false; btn.textContent = '📨 Enviar ticket'; }
 
-  setStatus('✅ Ticket enviado correctamente. Te responderemos pronto.', 'ok');
-  document.getElementById('sup-subject').value = '';
-  document.getElementById('sup-body').value = '';
+  if (error) {
+    console.error('supSubmit error:', error);
+    return setStatus('❌ Error al enviar: ' + error.message);
+  }
+
+  setStatus('✅ Ticket enviado. Te responderemos pronto.', 'ok');
+  if (subjectEl) subjectEl.value = '';
+  if (bodyEl)    bodyEl.value    = '';
   supClearFile();
-  setTimeout(() => { if (statusEl) statusEl.style.display = 'none'; }, 5000);
+  setTimeout(() => { if (statusEl) statusEl.style.display = 'none'; }, 6000);
   supLoadMyTickets();
 }
 
@@ -3759,7 +3862,7 @@ async function supLoadMyTickets() {
   const container = document.getElementById('sup-my-tickets');
   if (!container) return;
   const { data, error } = await _SB.from('support_tickets')
-    .select('id,subject,status,priority,created_at')
+    .select('id,subject,status,priority,created_at,response,updated_at')
     .eq('user_email', SESSION.email)
     .order('created_at', { ascending: false })
     .limit(10);
@@ -3768,15 +3871,36 @@ async function supLoadMyTickets() {
     return;
   }
   const statusLabel = { open:'🔴 Abierto', in_progress:'🟡 En proceso', closed:'🟢 Cerrado' };
-  container.innerHTML = data.map(t => `
-    <div style="padding:12px;border:1px solid var(--border);border-radius:10px;margin-bottom:10px">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
-        <div style="font-weight:600;font-size:13px">${esc(t.subject)}</div>
-        <span style="font-size:12px;white-space:nowrap">${statusLabel[t.status]||t.status}</span>
+  const statusBg    = { open:'#ffebee', in_progress:'#fff8e1', closed:'#e8f5e9' };
+  const statusColor = { open:'#c62828', in_progress:'#f9a825', closed:'#2e7d32' };
+  container.innerHTML = data.map(t => {
+    const hasReply = t.response && t.response.trim().length > 0;
+    const st = t.status || 'open';
+    return `
+    <div style="border:1px solid var(--border);border-radius:12px;margin-bottom:12px;overflow:hidden;${hasReply?'border-color:#4caf50;':''}">
+      <!-- Ticket header -->
+      <div style="padding:12px 14px;display:flex;justify-content:space-between;align-items:flex-start;gap:8px;background:var(--bg3)">
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:700;font-size:13px;color:var(--text);margin-bottom:2px">${esc(t.subject)}</div>
+          <div style="font-size:11px;color:var(--text2)">${fDate(t.created_at)}</div>
+        </div>
+        <span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;white-space:nowrap;background:${statusBg[st]||'#f5f5f5'};color:${statusColor[st]||'#555'}">${statusLabel[st]||st}</span>
       </div>
-      <div style="font-size:11px;color:var(--text2);margin-top:4px">${fDate(t.created_at)}</div>
-    </div>
-  `).join('');
+      <!-- Admin reply (if any) -->
+      ${hasReply ? `
+      <div style="padding:12px 14px;background:linear-gradient(135deg,#e8f5e9,#f1f8e9);border-top:1px solid #c8e6c9">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+          <span style="font-size:13px">⚡</span>
+          <span style="font-size:11px;font-weight:700;color:#2e7d32;text-transform:uppercase;letter-spacing:.5px">Respuesta del Admin</span>
+          ${t.updated_at ? `<span style="font-size:10px;color:#66bb6a;margin-left:auto">${fDate(t.updated_at)}</span>` : ''}
+        </div>
+        <div style="font-size:13px;color:#1b5e20;line-height:1.5">${esc(t.response)}</div>
+      </div>` : `
+      <div style="padding:10px 14px;font-size:12px;color:var(--text2);font-style:italic">
+        ⏳ Esperando respuesta del equipo de soporte...
+      </div>`}
+    </div>`;
+  }).join('');
 }
 
 /* ══════════════════════════════════════════════════ */
@@ -3790,6 +3914,8 @@ function showAdminPage(page, sidebarBtn, tabBtn) {
   if (sId) sId.classList.add('active');
   if (sidebarBtn) sidebarBtn.classList.add('active');
   if (tabBtn) tabBtn.classList.add('active');
+  // Persist last visited tab
+  try { localStorage.setItem('px_last_admin_tab', page); } catch(e){}
   if (page === 'dashboard') renderDashboard();
   if (page === 'bets')      renderBets('all');
   if (page === 'tx')        renderTx('all');
@@ -4412,8 +4538,10 @@ function clearEventForm() {
     const el = document.getElementById(id);
     if (el) el.value = '';
   });
-  document.getElementById('ev-featured').checked = false;
-  null.checked = false;
+  const evFeatured = document.getElementById('ev-featured');
+  if (evFeatured) evFeatured.checked = false;
+  const evLive = document.getElementById('ev-live');
+  if (evLive) evLive.checked = false;
   document.getElementById('ev-sport').value = 'soccer_epl';
   onEvSportChange();
 }
@@ -4437,8 +4565,8 @@ async function saveManualEvent() {
   const home     = document.getElementById('ev-home').value.trim();
   const away     = document.getElementById('ev-away').value.trim();
   const dt       = document.getElementById('ev-datetime').value;
-  const featured = document.getElementById('ev-featured').checked;
-  const isLiveChk = null.checked;
+  const featured = document.getElementById('ev-featured')?.checked || false;
+  const isLiveChk = document.getElementById('ev-live')?.checked || false;
 
   if (!league || !home || !away || !dt) { showToast('❌ Completa todos los campos obligatorios'); return; }
 
@@ -4694,21 +4822,8 @@ async function loadSiteConfig() {
         allowBets:      data.allow_bets,
         maintenance:    data.maintenance,
         odds_margin:    apiData?.odds_margin ?? 0,
-        logo_url:       data.logo_url || null,
       };
       DB.set('site_config', cfg);
-
-      // Apply custom logo immediately
-      if (data.logo_url) {
-        const navImg = document.getElementById('nav-logo-img');
-        const navDef = document.getElementById('nav-logo-default');
-        const authImg = document.getElementById('auth-logo-img');
-        const authDef = document.getElementById('auth-logo-default');
-        if (navImg)  { navImg.src = data.logo_url; navImg.style.display = 'block'; }
-        if (navDef)  navDef.style.display = 'none';
-        if (authImg) { authImg.src = data.logo_url; authImg.style.display = 'block'; }
-        if (authDef) authDef.style.display = 'none';
-      }
     }
   } catch(_) { /* use localStorage fallback */ }
 }
@@ -4726,19 +4841,27 @@ function getSiteConfig() {
 ════════════════════════════════════════════════ */
 function checkOwnerAccess() {
   const btn = document.getElementById('owner-nav-btn');
-  if (btn) btn.classList.toggle('show', isOwner());
+  const showBtn = () => { if (btn) { btn.style.display = 'flex'; btn.classList.add('show'); } };
+  const hideBtn = () => { if (btn) { btn.style.display = 'none'; btn.classList.remove('show'); } };
+
+  if (SESSION && SESSION.email === OWNER_EMAIL) {
+    showBtn();
+    return;
+  }
+  if (isOwner()) {
+    showBtn();
+  } else {
+    hideBtn();
+  }
   if (SESSION) {
-    // Also check role from Supabase profile
     _SB.from('profiles').select('role').eq('email', SESSION.email).maybeSingle()
       .then(({ data }) => {
         if (data?.role === 'owner') {
           SESSION.role = 'owner';
-          if (btn) btn.classList.add('show');
+          showBtn();
         }
-      });
+      }).catch(() => {});
   }
-  const ownerEmailEl = document.getElementById('owner-email-display');
-  if (ownerEmailEl && SESSION) ownerEmailEl.textContent = SESSION.email;
 }
 
 /* ════════════════════════════════════════════════
