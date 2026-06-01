@@ -708,16 +708,38 @@ tbody td { padding: 12px 16px; font-size: 13px; color: var(--text1); vertical-al
         <div class="page-hd">
           <div class="page-hd-left"><div class="page-title">Usuarios</div><div class="page-sub">Gestión de cuentas de usuarios</div></div>
         </div>
-        <div class="table-card">
+        <!-- Active users table -->
+        <div class="table-card" id="adm-users-active-card">
           <div class="table-card-hd">
-            <div class="table-card-title">Todos los usuarios</div>
-            <div class="table-search"><span>🔍</span><input type="text" placeholder="Search..." id="search-users" name="search-users" oninput="admFilterUsers(this.value)"></div>
+            <div class="table-card-title">👥 Usuarios activos</div>
+            <div class="table-search"><span>🔍</span><input type="text" placeholder="Buscar..." id="search-users" name="search-users" oninput="admFilterUsers(this.value)"></div>
           </div>
           <div style="overflow-x:auto">
             <table>
-              <thead><tr><th>Apostador</th><th>País</th><th>Saldo</th><th>Depositado</th><th>Apuestas</th><th>Rol</th><th>Estado</th><th>Acción</th></tr></thead>
-              <tbody id="adm-users-body"><tr><td colspan="8" class="table-empty">⏳ Cargando...</td></tr></tbody>
+              <thead><tr><th>Usuario</th><th>País</th><th>Saldo</th><th>Depositado</th><th>Apuestas</th><th>Rol</th><th>Acción</th></tr></thead>
+              <tbody id="adm-users-body"><tr><td colspan="7" class="table-empty">⏳ Cargando...</td></tr></tbody>
             </table>
+          </div>
+        </div>
+
+        <!-- Suspended users — separate card, always visible if any -->
+        <div id="adm-users-suspended-card" style="margin-top:20px;display:none">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+            <div style="flex:1;height:1px;background:#ef9a9a"></div>
+            <div style="display:flex;align-items:center;gap:8px;padding:6px 16px;background:#ffebee;border:1.5px solid #ef9a9a;border-radius:20px">
+              <span style="font-size:14px">🚫</span>
+              <span style="font-size:12px;font-weight:700;color:#c62828;letter-spacing:.3px">CUENTAS SUSPENDIDAS</span>
+              <span id="adm-suspended-count" style="background:#c62828;color:#fff;font-size:11px;font-weight:700;padding:1px 8px;border-radius:10px">0</span>
+            </div>
+            <div style="flex:1;height:1px;background:#ef9a9a"></div>
+          </div>
+          <div class="table-card" style="border:1.5px solid #ef9a9a;border-radius:12px;overflow:hidden">
+            <div style="overflow-x:auto">
+              <table>
+                <thead style="background:#ffebee"><tr><th style="color:#c62828">Usuario</th><th style="color:#c62828">País</th><th style="color:#c62828">Saldo</th><th style="color:#c62828">Apuestas</th><th style="color:#c62828">Rol</th><th style="color:#c62828">Acción</th></tr></thead>
+                <tbody id="adm-suspended-body"><tr><td colspan="6" class="table-empty">Sin usuarios suspendidos</td></tr></tbody>
+              </table>
+            </div>
           </div>
         </div>
       </div>
@@ -1655,54 +1677,84 @@ function renderDashChart(){
 
 // ── Usuarios ──
 function renderUsers(users){
-  const userBets={};
-  _cache.bets.forEach(b=>{ userBets[b.user_email]=(userBets[b.user_email]||0)+1; });
-  const body=document.getElementById('adm-users-body');
-  if(!users.length){ body.innerHTML='<tr><td colspan="8" class="table-empty">Sin usuarios registrados</td></tr>'; return; }
+  const userBets = {};
+  _cache.bets.forEach(b => { userBets[b.user_email] = (userBets[b.user_email]||0)+1; });
 
-  // Sort: active users first, suspended at bottom
-  const active    = users.filter(u=>!u.is_suspended);
-  const suspended = users.filter(u=> u.is_suspended);
-  const sorted    = [...active, ...suspended];
+  const active    = users.filter(u => !u.is_suspended);
+  const suspended = users.filter(u =>  u.is_suspended);
 
-  let html = '';
-  sorted.forEach((u, idx) => {
-    // Insert section divider before first suspended user
-    if(suspended.length > 0 && idx === active.length){
-      html += `<tr><td colspan="8" style="background:#fff3f3;border-top:2px solid #ef9a9a;border-bottom:1px solid #ef9a9a;padding:8px 16px;font-size:11px;font-weight:700;color:#c62828;letter-spacing:.5px;text-transform:uppercase">🚫 Suspendidos — ${suspended.length} cuenta${suspended.length!==1?'s':''}</td></tr>`;
+  // ── Active users table ──────────────────────────────
+  const activeBody = document.getElementById('adm-users-body');
+  if(activeBody){
+    if(!active.length){
+      activeBody.innerHTML = '<tr><td colspan="7" class="table-empty">Sin usuarios activos</td></tr>';
+    } else {
+      activeBody.innerHTML = active.map(u => {
+        const color = avatarColor(u.email);
+        const rk = u.role||'user';
+        const rMap = {owner:['badge-purple','⚡ Owner'],admin:['badge-orange','🛡 Admin'],editor:['badge-blue','✏️ Editor'],user:['badge-green','👤 Cliente']};
+        const [cls,lbl] = rMap[rk]||['badge-green','👤 Cliente'];
+        const roleBadge = `<span class="badge ${cls}" style="cursor:pointer" onclick="admFilterUsersByRole('${rk}')" title="Ver todos con este rol">${lbl}</span>`;
+        return `<tr>
+          <td><div class="user-chip" style="cursor:pointer" onclick="admViewUser('${esc(u.email)}')" title="Ver detalle">
+            <div class="user-chip-avatar" style="background:${color}">${(u.name||u.email||'?')[0].toUpperCase()}</div>
+            <div><div class="user-chip-name" style="color:var(--blue)">${esc(u.name||'Sin nombre')}</div><div class="user-chip-email">${esc(u.email)}</div></div>
+          </div></td>
+          <td>${esc(u.country||'—')}</td>
+          <td>${fMoney(u.balance)}</td>
+          <td style="color:var(--green)">${fMoney(u.deposited)}</td>
+          <td style="text-align:center"><span class="badge badge-purple">${userBets[u.email]||0}</span></td>
+          <td>${roleBadge}</td>
+          <td><div class="action-group">
+            <button class="btn btn-outline btn-sm" onclick="admViewUser('${esc(u.email)}')">👁 Detalle</button>
+            <button class="btn btn-primary btn-sm" onclick="admEditUser('${esc(u.email)}')">✏️ Editar</button>
+            <button class="btn btn-outline btn-sm" onclick="admResetUserPassword('${esc(u.email)}')">🔑 Reset</button>
+            ${u.role!=='owner'&&u.role!=='admin'
+              ? `<button class="btn btn-danger btn-sm" onclick="admToggleSuspend('${esc(u.email)}',true)">🚫 Suspender</button>`
+              : ''}
+          </div></td>
+        </tr>`;
+      }).join('');
     }
+  }
 
-    const color = avatarColor(u.email);
-    const rk = u.role||'user';
-    const rMap = {owner:['badge-purple','⚡ Owner'],admin:['badge-orange','🛡 Admin'],editor:['badge-blue','✏️ Editor'],user:['badge-green','👤 Cliente']};
-    const [cls,lbl] = rMap[rk]||['badge-green','👤 Cliente'];
-    const roleBadge = `<span class="badge ${cls}" style="cursor:pointer" onclick="admFilterUsersByRole('${rk}')" title="Ver todos con este rol">${lbl}</span>`;
-
-    html += `<tr style="${u.is_suspended?'opacity:.65;background:#fff8f8;':''}">
-      <td><div class="user-chip" style="cursor:pointer" onclick="admViewUser('${esc(u.email)}')" title="Ver detalle">
-        <div class="user-chip-avatar" style="background:${color}">${(u.name||u.email||'?')[0].toUpperCase()}</div>
-        <div><div class="user-chip-name" style="color:var(--blue)">${esc(u.name||'Sin nombre')}</div><div class="user-chip-email">@${esc(u.email.split('@')[0])}</div></div>
-      </div></td>
-      <td>${esc(u.country||'—')}</td>
-      <td><div class="amount-cell">${fMoney(u.balance)}</div></td>
-      <td><div class="amount-cell" style="color:var(--green)">${fMoney(u.deposited)}</div></td>
-      <td style="text-align:center"><span class="badge badge-purple">${userBets[u.email]||0}</span></td>
-      <td>${roleBadge}</td>
-      <td>${u.is_suspended?'<span class="badge badge-red">🚫 Suspendido</span>':'<span class="badge badge-green">Activo</span>'}</td>
-      <td><div class="action-group">
-        <button class="btn btn-outline btn-sm" onclick="admViewUser('${esc(u.email)}')">👁 Detalle</button>
-        <button class="btn btn-primary btn-sm" onclick="admEditUser('${esc(u.email)}')">✏️ Editar</button>
-        <button class="btn btn-outline btn-sm" onclick="admResetUserPassword('${esc(u.email)}')" title="Enviar email de reseteo">🔑 Reset</button>
-        ${u.is_suspended
-          ? `<button class="btn btn-success btn-sm" onclick="admToggleSuspend('${esc(u.email)}',false)">✅ Activar</button>`
-          : u.role!=='owner'&&u.role!=='admin'
-            ? `<button class="btn btn-danger btn-sm" onclick="admToggleSuspend('${esc(u.email)}',true)">🚫 Suspender</button>`
-            : ''}
-      </div></td>
-    </tr>`;
-  });
-  body.innerHTML = html;
+  // ── Suspended users table ───────────────────────────
+  const suspCard  = document.getElementById('adm-users-suspended-card');
+  const suspBody  = document.getElementById('adm-suspended-body');
+  const suspCount = document.getElementById('adm-suspended-count');
+  if(suspCard) suspCard.style.display = suspended.length ? 'block' : 'none';
+  if(suspCount) suspCount.textContent = suspended.length;
+  if(suspBody){
+    if(!suspended.length){
+      suspBody.innerHTML = '<tr><td colspan="6" class="table-empty">Sin usuarios suspendidos</td></tr>';
+    } else {
+      suspBody.innerHTML = suspended.map(u => {
+        const color = avatarColor(u.email);
+        const rk = u.role||'user';
+        const rMap = {owner:['badge-purple','⚡ Owner'],admin:['badge-orange','🛡 Admin'],editor:['badge-blue','✏️ Editor'],user:['badge-green','👤 Cliente']};
+        const [cls,lbl] = rMap[rk]||['badge-green','👤 Cliente'];
+        return `<tr style="background:#fff8f8">
+          <td><div class="user-chip" style="cursor:pointer;opacity:.8" onclick="admViewUser('${esc(u.email)}')" title="Ver detalle">
+            <div class="user-chip-avatar" style="background:#ccc;filter:grayscale(1)">${(u.name||u.email||'?')[0].toUpperCase()}</div>
+            <div>
+              <div class="user-chip-name" style="color:#999;text-decoration:line-through">${esc(u.name||'Sin nombre')}</div>
+              <div class="user-chip-email">${esc(u.email)}</div>
+            </div>
+          </div></td>
+          <td style="color:#bbb">${esc(u.country||'—')}</td>
+          <td style="color:#bbb">${fMoney(u.balance)}</td>
+          <td style="text-align:center"><span class="badge badge-purple">${userBets[u.email]||0}</span></td>
+          <td><span class="badge ${cls}" style="filter:grayscale(.6)">${lbl}</span></td>
+          <td><div class="action-group">
+            <button class="btn btn-success btn-sm" onclick="admToggleSuspend('${esc(u.email)}',false)">✅ Reactivar</button>
+            <button class="btn btn-outline btn-sm" onclick="admViewUser('${esc(u.email)}')">👁 Detalle</button>
+          </div></td>
+        </tr>`;
+      }).join('');
+    }
+  }
 }
+
 
 function admFilterUsers(q){
   const filtered=q?_cache.users.filter(u=>(u.name||'').toLowerCase().includes(q.toLowerCase())||(u.email||'').toLowerCase().includes(q.toLowerCase())):_cache.users;
@@ -2717,7 +2769,8 @@ function admOpenTeamModal(){
   document.getElementById('team-short').value='';
   document.getElementById('team-country').value='';
   document.getElementById('team-active').checked=true;
-  populateTeamSportSelect('soccer');
+  document.getElementById('team-sport').value='soccer';
+  populateTeamLeagueSelect();
   openModal('team-modal-overlay');
 }
 function admOpenEditTeam(id){
@@ -2728,19 +2781,67 @@ function admOpenEditTeam(id){
   document.getElementById('team-short').value=t.short_name||'';
   document.getElementById('team-country').value=t.country||'';
   document.getElementById('team-active').checked=!!t.active;
-  populateTeamSportSelect(t.sport_key||'soccer');
+  document.getElementById('team-sport').value=t.sport_key||'soccer';
+  populateTeamLeagueSelect(t.league_id||t.league||'');
   openModal('team-modal-overlay');
 }
 function admCloseTeamModal(){ closeModal('team-modal-overlay'); }
 
+function populateTeamLeagueSelect(currentVal=''){
+  const sport = document.getElementById('team-sport')?.value || 'soccer';
+  const sel   = document.getElementById('team-league');
+  if(!sel) return;
+  // Filter leagues by selected sport
+  const filtered = (_leagues||[]).filter(l => l.sport_key === sport || l.sport_key?.startsWith(sport));
+  sel.innerHTML = '<option value="">— Sin liga asignada —</option>';
+  filtered.forEach(l => {
+    const val = l.id + '::' + (l.name||'');
+    const opt = document.createElement('option');
+    opt.value = val;
+    opt.textContent = (l.icon||'') + ' ' + (l.name||l.api_key||'Liga');
+    // Pre-select if matches current team league
+    if(String(l.id) === String(currentVal) || l.name === currentVal || l.api_key === currentVal){
+      opt.selected = true;
+    }
+    sel.appendChild(opt);
+  });
+  // If no leagues for this sport, load from Supabase
+  if(!filtered.length){
+    _SB.from('leagues').select('id,name,icon,sport_key,api_key').eq('sport_key', sport)
+      .then(({data}) => {
+        if(!data?.length) return;
+        data.forEach(l => {
+          const val = l.id + '::' + (l.name||'');
+          const opt = document.createElement('option');
+          opt.value = val;
+          opt.textContent = (l.icon||'') + ' ' + (l.name||'');
+          sel.appendChild(opt);
+        });
+      }).catch(()=>{});
+  }
+}
+
 async function admSaveTeam(){
-  const name  = document.getElementById('team-name').value.trim();
-  const short = document.getElementById('team-short').value.trim();
-  const sport = document.getElementById('team-sport').value;
+  const name    = document.getElementById('team-name').value.trim();
+  const short   = document.getElementById('team-short').value.trim();
+  const sport   = document.getElementById('team-sport').value;
   const country = document.getElementById('team-country').value.trim();
   const active  = document.getElementById('team-active').checked;
+  const leagueSel = document.getElementById('team-league');
+  const leagueVal = leagueSel?.value || '';
+  // leagueVal is "id::name" format — split it
+  const [leagueIdStr, leagueName] = leagueVal ? leagueVal.split('::') : ['',''];
+  const leagueId = leagueIdStr ? parseInt(leagueIdStr) : null;
   if(!name){ showToast('❌ El nombre es obligatorio','error'); return; }
-  const payload = { name, short_name:short||null, sport_key:sport, country:country||null, active };
+  const payload = {
+    name,
+    short_name: short||null,
+    sport_key:  sport,
+    country:    country||null,
+    active,
+    league_id:   leagueId||null,
+    league:      leagueName||null,
+  };
   let error;
   if(_editingTeamId){ ({error}=await _SB.from('teams').update(payload).eq('id',_editingTeamId)); }
   else { ({error}=await _SB.from('teams').insert(payload)); }
@@ -3784,15 +3885,22 @@ document.addEventListener('DOMContentLoaded', () => initAdmin());
       </div>
       <div class="form-row">
         <div class="form-group"><label class="form-label" for="team-sport">Categoría</label>
-          <select id="team-sport" class="form-select">
+          <select id="team-sport" class="form-select" onchange="populateTeamLeagueSelect()">
             <option value="soccer">⚽ Fútbol</option>
             <option value="basketball">🏀 Baloncesto</option>
-            <option value="americanfootball">🏈 NFL</option>
+            <option value="americanfootball">🏈 Fútbol Americano</option>
             <option value="baseball">⚾ Béisbol</option>
             <option value="icehockey">🏒 Hockey</option>
             <option value="mma">🥊 MMA</option>
           </select>
         </div>
+        <div class="form-group"><label class="form-label" for="team-league">Liga</label>
+          <select id="team-league" class="form-select">
+            <option value="">— Sin liga asignada —</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
         <div class="form-group"><label class="form-label" for="team-country">País</label><input type="text" id="team-country" class="form-input" placeholder="ej: España"></div>
       </div>
       <label class="form-check"><input type="checkbox" id="team-active" checked><span style="font-size:13px">✅ Activo</span></label>
