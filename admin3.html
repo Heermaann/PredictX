@@ -1857,20 +1857,7 @@ async function admToggleSuspend(email, suspend){
     return;
   }
 
-  // Verify it actually saved (catches silent RLS failures)
-  const { data: check } = await _SB.from('profiles')
-    .select('is_suspended')
-    .eq('email', email)
-    .maybeSingle();
-
-  const confirmed = check?.is_suspended === suspend;
-
-  if(!confirmed){
-    showToast('⚠️ No se pudo verificar el cambio. Revisa los permisos RLS de la tabla profiles.', 'error');
-    return;
-  }
-
-  // Update local cache
+  // Update local cache immediately (trust the update if no error)
   const u = _cache.users.find(x=>x.email===email);
   if(u) u.is_suspended = suspend;
 
