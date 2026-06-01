@@ -1844,21 +1844,37 @@ function admFilterUsersByRole(role){
 async function admToggleSuspend(email, suspend){
   if(suspend && !confirm(`¿Suspender la cuenta de ${email}? No podrá iniciar sesión hasta que lo reactives.`)) return;
 
-  // Update the profile
+  // Update Supabase
   const {error} = await _SB.from('profiles').update({is_suspended: suspend}).eq('email', email);
   if(error){
     console.error('admToggleSuspend error:', error);
-    showToast('❌ Error al actualizar: '+error.message,'error');
+    // Column may not exist yet — show clear instruction
+    if(error.message.includes('column') && error.message.includes('is_suspended')){
+      showToast('❌ Falta la columna is_suspended. Ejecuta el SQL indicado en Supabase.', 'error');
+    } else {
+      showToast('❌ ' + error.message, 'error');
+    }
     return;
   }
 
-  // Update local cache immediately — do NOT re-fetch (fetchAll overwrites with stale DB data)
+  // Verify it actually saved (catches silent RLS failures)
+  const { data: check } = await _SB.from('profiles')
+    .select('is_suspended')
+    .eq('email', email)
+    .maybeSingle();
+
+  const confirmed = check?.is_suspended === suspend;
+
+  if(!confirmed){
+    showToast('⚠️ No se pudo verificar el cambio. Revisa los permisos RLS de la tabla profiles.', 'error');
+    return;
+  }
+
+  // Update local cache
   const u = _cache.users.find(x=>x.email===email);
   if(u) u.is_suspended = suspend;
 
   showToast(suspend ? '🚫 '+email+' suspendido' : '✅ '+email+' reactivado', suspend?'error':'success');
-
-  // Render immediately from updated local cache
   renderUsers(_cache.users);
 }
 
