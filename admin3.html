@@ -779,14 +779,6 @@ tbody td { padding: 12px 16px; font-size: 13px; color: var(--text1); vertical-al
 
       <!-- Categorías (Deportes) -->
       <div class="adm-page" id="adm-sports">
-        <!-- Reorder info banner -->
-        <div style="background:linear-gradient(135deg,#667eea18,#764ba218);border:1px solid var(--accent);border-radius:12px;padding:14px 18px;margin-bottom:16px;display:flex;align-items:flex-start;gap:12px">
-          <div style="font-size:22px;flex-shrink:0">↕️</div>
-          <div>
-            <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:3px">Orden de la barra lateral del home</div>
-            <div style="font-size:12px;color:var(--text2);line-height:1.5">Usa los botones <strong>▲ ▼</strong> de cada fila para mover las categorías arriba o abajo. El orden aquí se refleja directamente en la barra izquierda del sitio para todos los usuarios. Lo mismo aplica para las ligas dentro de cada categoría.</div>
-          </div>
-        </div>
         <div class="page-hd">
           <div class="page-hd-left"><div class="page-title">Categorías</div><div class="page-sub">Gestiona los deportes visibles en la plataforma</div></div>
           <div class="page-hd-right"><button class="btn btn-primary" onclick="admOpenSportModal()">+ Añadir categoría</button></div>
@@ -796,7 +788,7 @@ tbody td { padding: 12px 16px; font-size: 13px; color: var(--text1); vertical-al
           <div class="table-card-hd"><div class="table-card-title">Todas las categorías</div></div>
           <div style="overflow-x:auto">
             <table>
-              <thead><tr><th>Nombre</th><th>Clave API</th><th>Icono</th><th>Ligas</th><th>Orden</th><th>Estado</th><th>Acción</th></tr></thead>
+              <thead><tr><th>Nombre</th><th>Clave API</th><th>Icono</th><th>Ligas</th><th>Estado</th><th>Acción</th></tr></thead>
               <tbody id="adm-sports-body"><tr><td colspan="7" class="table-empty">⏳ Cargando...</td></tr></tbody>
             </table>
           </div>
@@ -816,7 +808,7 @@ tbody td { padding: 12px 16px; font-size: 13px; color: var(--text1); vertical-al
         <div class="table-card">
           <div style="overflow-x:auto">
             <table>
-              <thead><tr><th>Nombre</th><th>Categoría</th><th>País</th><th>API Key</th><th>Orden</th><th>Estado</th><th>Acción</th></tr></thead>
+              <thead><tr><th>Nombre</th><th>Categoría</th><th>País</th><th>API Key</th><th>Estado</th><th>Acción</th></tr></thead>
               <tbody id="adm-leagues-body"><tr><td colspan="7" class="table-empty">⏳ Cargando...</td></tr></tbody>
             </table>
           </div>
@@ -2014,24 +2006,13 @@ async function renderSports(){
     });
     if(!_sports.length){ body.innerHTML=`<tr><td colspan="7" class="table-empty">Sin categorías. Crea la primera con "+ Añadir categoría"</td></tr>`; return; }
     body.innerHTML=_sports.map((s,i)=>`<tr id="sport-row-${esc(s.key)}">
-      <td>
-        <div style="display:flex;align-items:center;gap:8px">
-          <div style="display:flex;flex-direction:column;gap:2px">
-            <button title="Subir" onclick="admMoveSport('${esc(s.key)}',-1)"
-              style="width:22px;height:22px;border:1px solid var(--border);border-radius:5px;background:var(--bg3);cursor:pointer;font-size:11px;color:var(--text2);display:flex;align-items:center;justify-content:center;padding:0;${i===0?'opacity:.3;pointer-events:none':''}">▲</button>
-            <button title="Bajar" onclick="admMoveSport('${esc(s.key)}',1)"
-              style="width:22px;height:22px;border:1px solid var(--border);border-radius:5px;background:var(--bg3);cursor:pointer;font-size:11px;color:var(--text2);display:flex;align-items:center;justify-content:center;padding:0;${i===_sports.length-1?'opacity:.3;pointer-events:none':''}">▼</button>
-          </div>
-          <strong>${esc(s.title)}</strong>
-        </div>
-      </td>
+      <td><strong>${esc(s.title)}</strong></td>
       <td style="font-family:var(--mono);font-size:12px;color:var(--text2)">${esc(s.key)}</td>
       <td style="font-size:20px">${esc(s.icon||'⚽')}</td>
       <td>
         <span class="badge badge-blue" onclick="admGoToLeaguesBySport('${esc(s.key)}')" style="cursor:pointer" title="Ver ligas">${leagueCount[s.key]||0} ligas →</span>
         <span class="badge badge-green" onclick="admGoToEventsBySport('${esc(s.key)}')" style="cursor:pointer;margin-left:4px">${eventCount[s.key.split('_')[0]]||0} partidos →</span>
       </td>
-      <td style="text-align:center;font-size:12px;color:var(--text2)">${i+1}</td>
       <td>${s.active?'<span class="badge badge-green">Activo</span>':'<span class="badge badge-orange">Inactivo</span>'}</td>
       <td><div class="action-group">
         <button class="btn btn-outline btn-sm" onclick="admOpenEditSport('${esc(s.key)}')">✏️ Editar</button>
@@ -2165,24 +2146,13 @@ async function renderLeagues(){
     if(_leagueSportFilter) { list=list.filter(l=>l.sport_key===_leagueSportFilter); _leagueSportFilter=''; }
     const sportIcons={soccer:'⚽',basketball:'🏀',americanfootball:'🏈',baseball:'⚾',icehockey:'🏒',mma:'🥊'};
     if(!list.length){ body.innerHTML=`<tr><td colspan="7" class="table-empty">Sin ligas. Crea la primera con "+ Nueva liga"</td></tr>`; return; }
-    body.innerHTML=list.map((l,i)=>`<tr>
-      <td>
-        <div style="display:flex;align-items:center;gap:6px">
-          <div style="display:flex;flex-direction:column;gap:2px">
-            <button title="Subir" onclick="admMoveLeague(${l.id},-1)"
-              style="width:22px;height:22px;border:1px solid var(--border);border-radius:5px;background:var(--bg3);cursor:pointer;font-size:11px;color:var(--text2);display:flex;align-items:center;justify-content:center;padding:0;${i===0?'opacity:.3;pointer-events:none':''}">▲</button>
-            <button title="Bajar" onclick="admMoveLeague(${l.id},1)"
-              style="width:22px;height:22px;border:1px solid var(--border);border-radius:5px;background:var(--bg3);cursor:pointer;font-size:11px;color:var(--text2);display:flex;align-items:center;justify-content:center;padding:0;${i===list.length-1?'opacity:.3;pointer-events:none':''}">▼</button>
-          </div>
-          <div style="display:flex;align-items:center;gap:6px"><span style="font-size:18px">${esc(l.icon||'🏆')}</span><strong style="cursor:pointer;color:var(--accent)" onclick="admGoToEventsByLeague('${esc(l.api_key||l.key)}','${esc(l.name)}')" title="Ver partidos de esta liga">${esc(l.name)} →</strong></div>
-        </div>
-      </td>
+    body.innerHTML=list.map(l=>`<tr>
+      <td><div style="display:flex;align-items:center;gap:8px"><span style="font-size:18px">${esc(l.icon||'🏆')}</span><strong style="cursor:pointer;color:var(--accent)" onclick="admGoToEventsByLeague('${esc(l.api_key||l.key)}','${esc(l.name)}')" title="Ver partidos de esta liga">${esc(l.name)} →</strong></div></td>
       <td>
         <span class="badge badge-purple" onclick="admGoToLeaguesBySport('${esc(l.sport_key)}')" style="cursor:pointer" title="Ver todas las ligas de esta categoría">${((_sports.find(s=>s.key===l.sport_key)||{}).icon||sportIcons[l.sport_key]||'🏅')} ${esc((_sports.find(s=>s.key===l.sport_key)||{}).title||l.sport_key)}</span>
       </td>
       <td>${esc(l.country||'—')}</td>
       <td style="font-family:var(--mono);font-size:11px;color:var(--text2)">${esc(l.api_key||'—')}</td>
-      <td style="text-align:center;font-size:12px;color:var(--text2)">${i+1}</td>
       <td>${l.active?'<span class="badge badge-green">Activa</span>':'<span class="badge badge-orange">Inactiva</span>'}</td>
       <td><div class="action-group">
         <button class="btn btn-outline btn-sm" onclick="admOpenEditLeague(${l.id})">✏️ Editar</button>
