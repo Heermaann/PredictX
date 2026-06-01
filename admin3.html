@@ -1797,14 +1797,13 @@ async function admToggleSuspend(email, suspend){
     return;
   }
 
-  // Update local cache immediately so UI reflects change without waiting
+  // Update local cache immediately — do NOT re-fetch (fetchAll overwrites with stale DB data)
   const u = _cache.users.find(x=>x.email===email);
   if(u) u.is_suspended = suspend;
 
   showToast(suspend ? '🚫 '+email+' suspendido' : '✅ '+email+' reactivado', suspend?'error':'success');
 
-  // Re-fetch from Supabase to confirm the change persisted
-  await fetchAll();
+  // Render immediately from updated local cache
   renderUsers(_cache.users);
 }
 
@@ -2769,7 +2768,7 @@ function admOpenTeamModal(){
   document.getElementById('team-short').value='';
   document.getElementById('team-country').value='';
   document.getElementById('team-active').checked=true;
-  document.getElementById('team-sport').value='soccer';
+  populateTeamSportSelect('soccer');   // fills sport select from _sports (admin-created)
   populateTeamLeagueSelect();
   openModal('team-modal-overlay');
 }
@@ -2781,45 +2780,49 @@ function admOpenEditTeam(id){
   document.getElementById('team-short').value=t.short_name||'';
   document.getElementById('team-country').value=t.country||'';
   document.getElementById('team-active').checked=!!t.active;
-  document.getElementById('team-sport').value=t.sport_key||'soccer';
-  populateTeamLeagueSelect(t.league_id||t.league||'');
+  populateTeamSportSelect(t.sport_key||'soccer');  // fills from _sports
+  populateTeamLeagueSelect(t.league_id||'');
   openModal('team-modal-overlay');
 }
 function admCloseTeamModal(){ closeModal('team-modal-overlay'); }
 
 function populateTeamLeagueSelect(currentVal=''){
-  const sport = document.getElementById('team-sport')?.value || 'soccer';
+  const sport = document.getElementById('team-sport')?.value || '';
   const sel   = document.getElementById('team-league');
   if(!sel) return;
-  // Filter leagues by selected sport
-  const filtered = (_leagues||[]).filter(l => l.sport_key === sport || l.sport_key?.startsWith(sport));
-  sel.innerHTML = '<option value="">— Sin liga asignada —</option>';
-  filtered.forEach(l => {
-    const val = l.id + '::' + (l.name||'');
-    const opt = document.createElement('option');
-    opt.value = val;
-    opt.textContent = (l.icon||'') + ' ' + (l.name||l.api_key||'Liga');
-    // Pre-select if matches current team league
-    if(String(l.id) === String(currentVal) || l.name === currentVal || l.api_key === currentVal){
-      opt.selected = true;
+
+  const fill = (leagues) => {
+    const filtered = sport
+      ? leagues.filter(l => l.sport_key === sport || (l.sport_key||'').startsWith(sport))
+      : leagues;
+    sel.innerHTML = '<option value="">— Sin liga asignada —</option>';
+    filtered.forEach(l => {
+      const opt = document.createElement('option');
+      opt.value = l.id;
+      opt.textContent = (l.icon||'') + ' ' + (l.name || l.api_key || 'Liga');
+      if(String(l.id) === String(currentVal)) opt.selected = true;
+      sel.appendChild(opt);
+    });
+    if(filtered.length === 0){
+      sel.innerHTML += '<option disabled>Sin ligas para esta categoría</option>';
     }
-    sel.appendChild(opt);
-  });
-  // If no leagues for this sport, load from Supabase
-  if(!filtered.length){
-    _SB.from('leagues').select('id,name,icon,sport_key,api_key').eq('sport_key', sport)
+  };
+
+  // Use cached leagues if available, otherwise fetch
+  if(_leagues && _leagues.length){
+    fill(_leagues);
+  } else {
+    sel.innerHTML = '<option disabled>Cargando ligas...</option>';
+    _SB.from('leagues').select('id,name,icon,sport_key,api_key').order('name')
       .then(({data}) => {
-        if(!data?.length) return;
-        data.forEach(l => {
-          const val = l.id + '::' + (l.name||'');
-          const opt = document.createElement('option');
-          opt.value = val;
-          opt.textContent = (l.icon||'') + ' ' + (l.name||'');
-          sel.appendChild(opt);
-        });
-      }).catch(()=>{});
+        _leagues = data || [];
+        fill(_leagues);
+      }).catch(() => {
+        sel.innerHTML = '<option value="">— Sin liga asignada —</option>';
+      });
   }
 }
+
 
 async function admSaveTeam(){
   const name    = document.getElementById('team-name').value.trim();
@@ -2839,8 +2842,7 @@ async function admSaveTeam(){
     sport_key:  sport,
     country:    country||null,
     active,
-    league_id:   leagueId||null,
-    league:      leagueName||null,
+    league_id:   leagueId||null,   // only column that exists in teams table
   };
   let error;
   if(_editingTeamId){ ({error}=await _SB.from('teams').update(payload).eq('id',_editingTeamId)); }
@@ -3886,12 +3888,7 @@ document.addEventListener('DOMContentLoaded', () => initAdmin());
       <div class="form-row">
         <div class="form-group"><label class="form-label" for="team-sport">Categoría</label>
           <select id="team-sport" class="form-select" onchange="populateTeamLeagueSelect()">
-            <option value="soccer">⚽ Fútbol</option>
-            <option value="basketball">🏀 Baloncesto</option>
-            <option value="americanfootball">🏈 Fútbol Americano</option>
-            <option value="baseball">⚾ Béisbol</option>
-            <option value="icehockey">🏒 Hockey</option>
-            <option value="mma">🥊 MMA</option>
+            <option value="">Cargando categorías...</option>
           </select>
         </div>
         <div class="form-group"><label class="form-label" for="team-league">Liga</label>
