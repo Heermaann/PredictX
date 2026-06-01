@@ -1658,10 +1658,27 @@ function renderUsers(users){
   const userBets={};
   _cache.bets.forEach(b=>{ userBets[b.user_email]=(userBets[b.user_email]||0)+1; });
   const body=document.getElementById('adm-users-body');
-  if(!users.length){ body.innerHTML=`<tr><td colspan="8" class="table-empty">Sin usuarios registrados</td></tr>`; return; }
-  body.innerHTML=users.map(u=>{
-    const color=avatarColor(u.email);
-    return `<tr>
+  if(!users.length){ body.innerHTML='<tr><td colspan="8" class="table-empty">Sin usuarios registrados</td></tr>'; return; }
+
+  // Sort: active users first, suspended at bottom
+  const active    = users.filter(u=>!u.is_suspended);
+  const suspended = users.filter(u=> u.is_suspended);
+  const sorted    = [...active, ...suspended];
+
+  let html = '';
+  sorted.forEach((u, idx) => {
+    // Insert section divider before first suspended user
+    if(suspended.length > 0 && idx === active.length){
+      html += `<tr><td colspan="8" style="background:#fff3f3;border-top:2px solid #ef9a9a;border-bottom:1px solid #ef9a9a;padding:8px 16px;font-size:11px;font-weight:700;color:#c62828;letter-spacing:.5px;text-transform:uppercase">🚫 Suspendidos — ${suspended.length} cuenta${suspended.length!==1?'s':''}</td></tr>`;
+    }
+
+    const color = avatarColor(u.email);
+    const rk = u.role||'user';
+    const rMap = {owner:['badge-purple','⚡ Owner'],admin:['badge-orange','🛡 Admin'],editor:['badge-blue','✏️ Editor'],user:['badge-green','👤 Cliente']};
+    const [cls,lbl] = rMap[rk]||['badge-green','👤 Cliente'];
+    const roleBadge = `<span class="badge ${cls}" style="cursor:pointer" onclick="admFilterUsersByRole('${rk}')" title="Ver todos con este rol">${lbl}</span>`;
+
+    html += `<tr style="${u.is_suspended?'opacity:.65;background:#fff8f8;':''}">
       <td><div class="user-chip" style="cursor:pointer" onclick="admViewUser('${esc(u.email)}')" title="Ver detalle">
         <div class="user-chip-avatar" style="background:${color}">${(u.name||u.email||'?')[0].toUpperCase()}</div>
         <div><div class="user-chip-name" style="color:var(--blue)">${esc(u.name||'Sin nombre')}</div><div class="user-chip-email">@${esc(u.email.split('@')[0])}</div></div>
@@ -1670,17 +1687,21 @@ function renderUsers(users){
       <td><div class="amount-cell">${fMoney(u.balance)}</div></td>
       <td><div class="amount-cell" style="color:var(--green)">${fMoney(u.deposited)}</div></td>
       <td style="text-align:center"><span class="badge badge-purple">${userBets[u.email]||0}</span></td>
-      <td>${(()=>{const rk=u.role||'user';const rMap={owner:['badge-purple','⚡ Owner'],admin:['badge-orange','🛡 Admin'],editor:['badge-blue','✏️ Editor'],user:['badge-green','👤 Cliente']};const[cls,lbl]=rMap[rk]||['badge-green','👤 Cliente'];return`<span class="badge ${cls}" style="cursor:pointer" onclick="admFilterUsersByRole('${rk}')" title="Ver todos con este rol">${lbl}</span>`})()}</td>
-      <td>${u.is_suspended?'<span class="badge badge-red">Suspendido</span>':'<span class="badge badge-green">Activo</span>'}</td>
+      <td>${roleBadge}</td>
+      <td>${u.is_suspended?'<span class="badge badge-red">🚫 Suspendido</span>':'<span class="badge badge-green">Activo</span>'}</td>
       <td><div class="action-group">
         <button class="btn btn-outline btn-sm" onclick="admViewUser('${esc(u.email)}')">👁 Detalle</button>
         <button class="btn btn-primary btn-sm" onclick="admEditUser('${esc(u.email)}')">✏️ Editar</button>
-        <button class="btn btn-outline btn-sm" onclick="admResetUserPassword('${esc(u.email)}')" title="Enviar email de reseteo de contraseña">🔑 Reset</button>
+        <button class="btn btn-outline btn-sm" onclick="admResetUserPassword('${esc(u.email)}')" title="Enviar email de reseteo">🔑 Reset</button>
         ${u.is_suspended
-          ?`<button class="btn btn-success btn-sm" onclick="admToggleSuspend('${esc(u.email)}',false)">✅ Activar</button>`
-          :u.role!=='owner'&&u.role!=='admin'?`<button class="btn btn-danger btn-sm" onclick="admToggleSuspend('${esc(u.email)}',true)">🚫 Suspender</button>`:''}
+          ? `<button class="btn btn-success btn-sm" onclick="admToggleSuspend('${esc(u.email)}',false)">✅ Activar</button>`
+          : u.role!=='owner'&&u.role!=='admin'
+            ? `<button class="btn btn-danger btn-sm" onclick="admToggleSuspend('${esc(u.email)}',true)">🚫 Suspender</button>`
+            : ''}
       </div></td>
-    </tr>`;}).join('');
+    </tr>`;
+  });
+  body.innerHTML = html;
 }
 
 function admFilterUsers(q){
@@ -1713,11 +1734,26 @@ function admFilterUsersByRole(role){
   }
 }
 
-async function admToggleSuspend(email,suspend){
-  const {error}=await _SB.from('profiles').update({is_suspended:suspend}).eq('email',email);
-  if(error){showToast('❌ '+error.message,'error');return;}
-  showToast(suspend?'🚫 Usuario suspendido':'✅ Usuario reactivado','success');
-  await fetchAll(); renderUsers(_cache.users);
+async function admToggleSuspend(email, suspend){
+  if(suspend && !confirm(`¿Suspender la cuenta de ${email}? No podrá iniciar sesión hasta que lo reactives.`)) return;
+
+  // Update the profile
+  const {error} = await _SB.from('profiles').update({is_suspended: suspend}).eq('email', email);
+  if(error){
+    console.error('admToggleSuspend error:', error);
+    showToast('❌ Error al actualizar: '+error.message,'error');
+    return;
+  }
+
+  // Update local cache immediately so UI reflects change without waiting
+  const u = _cache.users.find(x=>x.email===email);
+  if(u) u.is_suspended = suspend;
+
+  showToast(suspend ? '🚫 '+email+' suspendido' : '✅ '+email+' reactivado', suspend?'error':'success');
+
+  // Re-fetch from Supabase to confirm the change persisted
+  await fetchAll();
+  renderUsers(_cache.users);
 }
 
 
