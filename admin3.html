@@ -524,7 +524,7 @@ tbody td { padding: 12px 16px; font-size: 13px; color: var(--text1); vertical-al
     </div>
     <nav class="sidebar-nav">
       <div class="nav-section-label">Principal</div>
-      <button class="nav-item active" id="nav-dashboard" onclick="admShowPage('dashboard',this)">
+      <button class="nav-item" id="nav-dashboard" onclick="admShowPage('dashboard',this)">
         <span class="nav-ico">📊</span> Dashboard
       </button>
       <button class="nav-item" id="nav-users" onclick="admShowPage('users',this)">
@@ -1480,8 +1480,12 @@ async function admEnterWithSession(session){
   document.getElementById('adm-gate').style.display        = 'none';
   document.getElementById('admin-layout').style.display    = 'flex';
   await fetchAll();
-  renderDashboard();
-  loadAdmConfig();
+  // Restore the last page the admin was on (persisted in localStorage)
+  const lastPage = (() => {
+    try { return localStorage.getItem('adm_last_page') || 'dashboard'; } catch(e) { return 'dashboard'; }
+  })();
+  const navBtn = document.getElementById('nav-' + lastPage);
+  admShowPage(lastPage, navBtn || document.getElementById('nav-dashboard'));
 }
 
 function toggleAdminUserMenu() {
@@ -1569,6 +1573,8 @@ function admShowPage(page, btn){
   if (window.innerWidth <= 768) admCloseSidebar();
   document.querySelectorAll('.adm-page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(b=>b.classList.remove('active'));
+  // Persist active page so reload restores it
+  try { localStorage.setItem('adm_last_page', page); } catch(e){}
   const el=document.getElementById('adm-'+page);
   if(el) el.classList.add('active');
   if(btn){ btn.classList.add('active'); document.getElementById('topbar-page-title').textContent=btn.textContent.trim(); }
