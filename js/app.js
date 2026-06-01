@@ -3818,7 +3818,7 @@ async function supLoadMyTickets() {
   const container = document.getElementById('sup-my-tickets');
   if (!container) return;
   const { data, error } = await _SB.from('support_tickets')
-    .select('id,subject,status,priority,created_at')
+    .select('id,subject,status,priority,created_at,response,updated_at')
     .eq('user_email', SESSION.email)
     .order('created_at', { ascending: false })
     .limit(10);
@@ -3827,15 +3827,36 @@ async function supLoadMyTickets() {
     return;
   }
   const statusLabel = { open:'🔴 Abierto', in_progress:'🟡 En proceso', closed:'🟢 Cerrado' };
-  container.innerHTML = data.map(t => `
-    <div style="padding:12px;border:1px solid var(--border);border-radius:10px;margin-bottom:10px">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
-        <div style="font-weight:600;font-size:13px">${esc(t.subject)}</div>
-        <span style="font-size:12px;white-space:nowrap">${statusLabel[t.status]||t.status}</span>
+  const statusBg    = { open:'#ffebee', in_progress:'#fff8e1', closed:'#e8f5e9' };
+  const statusColor = { open:'#c62828', in_progress:'#f9a825', closed:'#2e7d32' };
+  container.innerHTML = data.map(t => {
+    const hasReply = t.response && t.response.trim().length > 0;
+    const st = t.status || 'open';
+    return `
+    <div style="border:1px solid var(--border);border-radius:12px;margin-bottom:12px;overflow:hidden;${hasReply?'border-color:#4caf50;':''}">
+      <!-- Ticket header -->
+      <div style="padding:12px 14px;display:flex;justify-content:space-between;align-items:flex-start;gap:8px;background:var(--bg3)">
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:700;font-size:13px;color:var(--text);margin-bottom:2px">${esc(t.subject)}</div>
+          <div style="font-size:11px;color:var(--text2)">${fDate(t.created_at)}</div>
+        </div>
+        <span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;white-space:nowrap;background:${statusBg[st]||'#f5f5f5'};color:${statusColor[st]||'#555'}">${statusLabel[st]||st}</span>
       </div>
-      <div style="font-size:11px;color:var(--text2);margin-top:4px">${fDate(t.created_at)}</div>
-    </div>
-  `).join('');
+      <!-- Admin reply (if any) -->
+      ${hasReply ? `
+      <div style="padding:12px 14px;background:linear-gradient(135deg,#e8f5e9,#f1f8e9);border-top:1px solid #c8e6c9">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+          <span style="font-size:13px">⚡</span>
+          <span style="font-size:11px;font-weight:700;color:#2e7d32;text-transform:uppercase;letter-spacing:.5px">Respuesta del Admin</span>
+          ${t.updated_at ? `<span style="font-size:10px;color:#66bb6a;margin-left:auto">${fDate(t.updated_at)}</span>` : ''}
+        </div>
+        <div style="font-size:13px;color:#1b5e20;line-height:1.5">${esc(t.response)}</div>
+      </div>` : `
+      <div style="padding:10px 14px;font-size:12px;color:var(--text2);font-style:italic">
+        ⏳ Esperando respuesta del equipo de soporte...
+      </div>`}
+    </div>`;
+  }).join('');
 }
 
 /* ══════════════════════════════════════════════════ */
