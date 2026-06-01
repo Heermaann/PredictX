@@ -2688,10 +2688,17 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (sbSession?.user) {
     const email = sbSession.user.email;
     const profile = await loadProfile(email);
-    const name = profile?.name || email.split('@')[0];
-    SESSION = { id: sbSession.user.id, email, name, role: profile?.role || 'user' };
-    setTimeout(applyAdminOnlyVisibility, 200);
-    onLoginSuccess(false);
+    // If suspended: sign out silently and keep user logged out
+    if (profile?.is_suspended) {
+      await _SB.auth.signOut();
+      DB.remove('session');
+      showToast('🚫 Tu cuenta está suspendida. Contacta con soporte.');
+    } else {
+      const name = profile?.name || email.split('@')[0];
+      SESSION = { id: sbSession.user.id, email, name, role: profile?.role || 'user' };
+      setTimeout(applyAdminOnlyVisibility, 200);
+      onLoginSuccess(false);
+    }
   } else {
     // Fallback: check localStorage session — only restore if Supabase has a live token
     const saved = DB.get('session');
@@ -2870,6 +2877,13 @@ async function doLogin() {
   // Load profile from Supabase
   const profile = await loadProfile(email);
   const name = profile?.name || authData.user?.user_metadata?.name || email.split('@')[0];
+
+  // Block suspended users immediately — sign them out and show error
+  if (profile?.is_suspended) {
+    await _SB.auth.signOut();
+    if (btn) { btn.disabled = false; btn.textContent = 'Entrar →'; }
+    return fail('🚫 Tu cuenta ha sido suspendida. Contacta con soporte si crees que es un error.');
+  }
 
   SESSION = { id: authData.user?.id, email, name, role: profile?.role || 'user' };
   if (remember) DB.set('session', SESSION);
