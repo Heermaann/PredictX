@@ -3788,6 +3788,7 @@ async function supSubmit() {
   const ticketPayload = {
     user_email:  SESSION.email,
     subject,
+    message:     body,
     description: body,
     status:      'open',
     priority:    'normal',
