@@ -2626,9 +2626,20 @@ async function sbUpdate(table, match, values) {
 
 /* ── Profile helpers (sync with Supabase + local cache) ── */
 async function loadProfile(email) {
-  const rows = await sbQuery('profiles', {email});
-  _sbProfile = rows[0] || null;
-  return _sbProfile;
+  // Use direct query — never cached — to always get fresh is_suspended value
+  try {
+    const { data, error } = await _SB
+      .from('profiles')
+      .select('*')
+      .eq('email', email)
+      .maybeSingle();
+    if (error) { console.error('loadProfile error:', error); return null; }
+    _sbProfile = data || null;
+    return _sbProfile;
+  } catch(e) {
+    console.error('loadProfile exception:', e);
+    return null;
+  }
 }
 function defaultAdmin(s) {
   return {
@@ -2688,11 +2699,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (sbSession?.user) {
     const email = sbSession.user.email;
     const profile = await loadProfile(email);
-    // If suspended: sign out silently and keep user logged out
+    // If suspended: revoke session immediately and keep user out
     if (profile?.is_suspended) {
-      await _SB.auth.signOut();
-      DB.remove('session');
-      showToast('🚫 Tu cuenta está suspendida. Contacta con soporte.');
+      await _SB.auth.signOut(); // revoke Supabase session token
+      DB.remove('session');     // clear any local cache
+      SESSION = null;
+      // Show suspended message after a brief delay (let page finish loading)
+      setTimeout(() => showToast('🚫 Tu cuenta ha sido suspendida. Contacta con soporte si crees que es un error.', 'error'), 800);
     } else {
       const name = profile?.name || email.split('@')[0];
       SESSION = { id: sbSession.user.id, email, name, role: profile?.role || 'user' };
