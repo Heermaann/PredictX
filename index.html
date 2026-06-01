@@ -183,8 +183,8 @@
         <!-- Admin main content -->
         <div class="admin-main">
 
-          <!-- Mobile tab bar -->
-          <div class="admin-tab-bar" style="overflow-x:auto;display:flex;flex-wrap:nowrap;-webkit-overflow-scrolling:touch">
+          <!-- Mobile tab bar (shown only on ≤600px via CSS) -->
+          <div class="admin-tab-bar">
             <div class="admin-tab active" onclick="showAdminPage('dashboard',null,this)">📊 Dashboard</div>
             <div class="admin-tab" onclick="showAdminPage('bets',null,this)">🎟 Apuestas</div>
             <div class="admin-tab" onclick="showAdminPage('tx',null,this)">💳 Transacciones</div>

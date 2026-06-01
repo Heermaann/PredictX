@@ -2751,10 +2751,11 @@ async function admLoadRolesTable() {
   if (!body) return;
   body.innerHTML = '<tr><td colspan="5" class="table-empty">⏳ Cargando...</td></tr>';
   const { data, error } = await _SB.from('profiles')
-    .select('id,name,email,role')
+    .select('name,email,role')
     .order('created_at', { ascending: false });
   if (error) { body.innerHTML = `<tr><td colspan="5" class="table-empty">❌ ${error.message}</td></tr>`; return; }
-  _rolesData = (data || []).map(u => ({ ...u, role: u.role || 'user' }));
+  // Use email as unique key since profiles table has no 'id' column
+  _rolesData = (data || []).map(u => ({ ...u, id: u.email, role: u.role || 'user' }));
   admRenderRolesTable(_rolesData);
 }
 
@@ -2762,13 +2763,16 @@ function admRenderRolesTable(users) {
   const body = document.getElementById('roles-table-body');
   if (!body) return;
   if (!users.length) { body.innerHTML = '<tr><td colspan="5" class="table-empty">Sin usuarios</td></tr>'; return; }
-  body.innerHTML = users.map(u => `
-    <tr id="roles-row-${u.id}">
+  // Use email as safe DOM id (replace @ and . for valid selectors)
+  body.innerHTML = users.map(u => {
+    const safeId = u.email.replace(/[@.]/g, '_');
+    return `
+    <tr id="roles-row-${safeId}">
       <td><strong>${u.name || '—'}</strong></td>
       <td style="font-size:12px;color:var(--text2)">${u.email}</td>
       <td>${roleBadge(u.role)}</td>
       <td>
-        <select id="roles-sel-${u.id}" style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:5px 10px;color:var(--text);font-size:12px;outline:none">
+        <select id="roles-sel-${safeId}" style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:5px 10px;color:var(--text);font-size:12px;outline:none">
           <option value="user"  ${u.role==='user'  ?'selected':''}>Cliente</option>
           <option value="editor"${u.role==='editor'?'selected':''}>Editor</option>
           <option value="admin" ${u.role==='admin' ?'selected':''}>Administrador</option>
@@ -2776,32 +2780,35 @@ function admRenderRolesTable(users) {
         </select>
       </td>
       <td>
-        <button class="btn btn-primary btn-sm" onclick="admSaveRole('${u.id}','${u.email}')">Guardar</button>
+        <button class="btn btn-primary btn-sm" onclick="admSaveRole('${u.email}')">Guardar</button>
       </td>
-    </tr>`).join('');
+    </tr>`;
+  }).join('');
 }
 
 function admFilterRolesTable(q) {
   const query = q.toLowerCase();
-  const filtered = _rolesData.filter(u =>
-    (u.name||'').toLowerCase().includes(query) ||
-    (u.email||'').toLowerCase().includes(query) ||
-    (u.role||'').toLowerCase().includes(query)
-  );
+  const filtered = query
+    ? _rolesData.filter(u =>
+        (u.name||'').toLowerCase().includes(query) ||
+        (u.email||'').toLowerCase().includes(query) ||
+        (u.role||'').toLowerCase().includes(query))
+    : _rolesData;
   admRenderRolesTable(filtered);
 }
 
-async function admSaveRole(userId, email) {
-  const sel = document.getElementById('roles-sel-' + userId);
+async function admSaveRole(email) {
+  const safeId = email.replace(/[@.]/g, '_');
+  const sel = document.getElementById('roles-sel-' + safeId);
   if (!sel) return;
   const newRole = sel.value;
-  const { error } = await _SB.from('profiles').update({ role: newRole }).eq('id', userId);
+  const { error } = await _SB.from('profiles').update({ role: newRole }).eq('email', email);
   if (error) { showToast('❌ ' + error.message, 'error'); return; }
   // Update local cache
-  const u = _rolesData.find(x => x.id === userId);
+  const u = _rolesData.find(x => x.email === email);
   if (u) u.role = newRole;
   // Refresh badge in row
-  const row = document.getElementById('roles-row-' + userId);
+  const row = document.getElementById('roles-row-' + safeId);
   if (row) row.cells[2].innerHTML = roleBadge(newRole);
   showToast(`✅ Rol de ${email} actualizado a ${ROLE_CONFIG[newRole]?.label || newRole}`, 'success');
 }
